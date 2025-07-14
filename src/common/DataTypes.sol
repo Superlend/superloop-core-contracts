@@ -7,4 +7,9 @@ library DataTypes {
         string moduleName;
         address moduleAddress;
     }
+
+    struct WithdrawRequestData {
+        uint256 shares;
+        address user;
+    }
 }
