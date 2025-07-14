@@ -3,10 +3,28 @@
 pragma solidity ^0.8.13;
 
 import {WithdrawManagerStorage} from "./WithdrawManagerStorage.sol";
-// import {IERC20} from "";
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 
-contract WithdrawManager is WithdrawManagerStorage {
-    constructor() {}
+contract WithdrawManager is
+    WithdrawManagerStorage,
+    Initializable,
+    ReentrancyGuardUpgradeable
+{
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address _vault) public initializer {
+        __ReentrancyGuard_init_unchained();
+        __SuperloopWithdrawManager_init(_vault);
+    }
+
+    function __SuperloopWithdrawManager_init(
+        address _vault
+    ) internal onlyInitializing {
+        _setVault(_vault);
+    }
 
     function requestWithdraw(uint256 shares) external {
         // make sure the msg.sender has enough shares
