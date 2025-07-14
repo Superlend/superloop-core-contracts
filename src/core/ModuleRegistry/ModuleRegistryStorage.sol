@@ -2,21 +2,34 @@
 
 pragma solidity ^0.8.13;
 
-import {ISuperloopModuleRegistry} from "../interfaces/IModuleRegistry.sol";
-import {DataTypes} from "../common/DataTypes.sol";
-import {Errors} from "../common/Errors.sol";
+import {ISuperloopModuleRegistry} from "../../interfaces/IModuleRegistry.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
+import {Errors} from "../../common/Errors.sol";
 
 abstract contract SuperloopModuleRegistryStorage is ISuperloopModuleRegistry {
     string[] private _moduleNames;
     mapping(bytes32 => address) private _moduleRegistry;
+    mapping(address => string) private _moduleWhitelist;
 
-    function getModule(
+    function getModuleByName(
         string calldata name
     ) public view returns (DataTypes.ModuleData memory) {
         return
             DataTypes.ModuleData(
                 name,
                 _moduleRegistry[_getModuleIdFromName(name)]
+            );
+    }
+
+    function getModuleByAddress(
+        address moduleAddress
+    ) public view returns (DataTypes.ModuleData memory) {
+        string memory _moduleName = _moduleWhitelist[moduleAddress];
+
+        return
+            DataTypes.ModuleData(
+                _moduleName,
+                _moduleRegistry[_getModuleIdFromName(_moduleName)]
             );
     }
 
