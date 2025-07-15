@@ -11,4 +11,5 @@ library Errors {
     string public constant INVALID_WITHDRAW_WINDOW_START = "6"; // new start id should be = old end id + 1
     string public constant INVALID_WITHDRAW_WINDO_END = "7"; // new end id should be < current id
     string public constant CALLER_NOT_VAULT = "8"; // the caller of function is not vault
+    string public constant INVALID_WITHDRAW_REQUEST_STATE = "9"; // incorrect withdraw request state
 }

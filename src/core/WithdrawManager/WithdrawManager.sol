@@ -46,9 +46,14 @@ contract WithdrawManager is
         _handleReleaseWithdrawRequests(startId, endId, shares);
     }
 
+    function markWithdrawRequestProcessed(uint256 id) external onlyVault {
+        _validateWithdrawRequestProcessed(id);
+        _handleWithdrawRequestProcesessed(id);
+    }
+
     function getWithdrawRequestState(
         uint256 id
-    ) external view returns (DataTypes.WithdrawRequestState) {
+    ) public view returns (DataTypes.WithdrawRequestState) {
         DataTypes.WithdrawRequestData memory withdrawRequest = withdrawRequest(
             id
         );
@@ -83,6 +88,14 @@ contract WithdrawManager is
         }
     }
 
+    function _validateWithdrawRequestProcessed(uint256 id) internal view {
+        require(
+            getWithdrawRequestState(id) ==
+                DataTypes.WithdrawRequestState.CLAIMABLE,
+            Errors.INVALID_WITHDRAW_REQUEST_STATE
+        );
+    }
+
     function _validateReleaseWithdrawRequests(
         uint256 _newStartId,
         uint256 _newEndId
@@ -96,7 +109,8 @@ contract WithdrawManager is
 
     function _registerWithdrawRequest(address user, uint256 shares) internal {
         uint256 withdrawReqId = nextWithdrawRequestId();
-        _addWithdrawRequest(user, shares, withdrawReqId);
+        _setWithdrawRequest(user, shares, withdrawReqId, false);
+        _setUserWithdrawRequest(user, withdrawReqId);
         _setNextWithdrawRequestId(withdrawReqId + 1);
     }
 
@@ -108,6 +122,11 @@ contract WithdrawManager is
         _setWithdrawWindowStartId(startId);
         _setWithdrawWindowEndId(endId);
         _setTotalWithdrawableShares(shares);
+    }
+
+    function _handleWithdrawRequestProcesessed(uint256 id) internal {
+        address user = withdrawRequest(id).user;
+        _setUserWithdrawRequest(user, 0);
     }
 
     modifier onlyVault() {

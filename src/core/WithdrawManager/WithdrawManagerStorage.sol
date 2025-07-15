@@ -12,19 +12,19 @@ abstract contract WithdrawManagerStorage is
 {
     // Setters
 
-    function _addWithdrawRequest(
+    function _setWithdrawRequest(
         address user,
         uint256 shares,
-        uint256 id
+        uint256 id,
+        bool processed
     ) internal {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
 
         $.withdrawRequest[id] = DataTypes.WithdrawRequestData(
             shares,
             user,
-            false
+            processed
         );
-        $.userWithdrawRequestId[user] = id;
 
         emit WithdrawRequest(user, shares, id);
     }
