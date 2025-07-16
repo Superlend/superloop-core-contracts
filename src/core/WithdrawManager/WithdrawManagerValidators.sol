@@ -2,11 +2,12 @@
 
 pragma solidity ^0.8.13;
 
+import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 import {Storages} from "../../common/Storages.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {Errors} from "../../common/Errors.sol";
 
-abstract contract WithdrawManagerValidators {
+abstract contract WithdrawManagerValidators is Context {
     function _validateWithdrawRequest(Storages.WithdrawManagerState storage $, address user, uint256 shares)
         internal
         view
@@ -32,12 +33,12 @@ abstract contract WithdrawManagerValidators {
     }
 
     function _validateWithdraw(Storages.WithdrawManagerState storage $) internal view returns (uint256) {
-        uint256 id = $.userWithdrawRequestId[msg.sender];
+        uint256 id = $.userWithdrawRequestId[_msgSender()];
         require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
         DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
 
         require(
-            withdrawRequest.user == msg.sender && withdrawRequest.claimed == false,
+            withdrawRequest.user == _msgSender() && withdrawRequest.claimed == false,
             Errors.WITHDRAW_REQUEST_ALREADY_CLAIMED
         );
         require($.resolvedWithdrawRequestId >= id, Errors.WITHDRAW_REQUEST_NOT_RESOLVED);
@@ -50,7 +51,7 @@ abstract contract WithdrawManagerValidators {
         require(id > $.resolvedWithdrawRequestId, Errors.INVALID_WITHDRAW_REQUEST_STATE);
 
         DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
-        require(withdrawRequest.user == msg.sender, Errors.CALLER_NOT_WITHDRAW_REQUEST_OWNER);
+        require(withdrawRequest.user == _msgSender(), Errors.CALLER_NOT_WITHDRAW_REQUEST_OWNER);
         require(!withdrawRequest.claimed, Errors.WITHDRAW_REQUEST_ALREADY_CLAIMED);
     }
 }

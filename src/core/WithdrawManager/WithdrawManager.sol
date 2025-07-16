@@ -37,9 +37,9 @@ contract WithdrawManager is
 
     function requestWithdraw(uint256 shares) external override {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-        _validateWithdrawRequest($, msg.sender, shares);
+        _validateWithdrawRequest($, _msgSender(), shares);
         // TODO : Handle fees
-        _registerWithdrawRequest($, msg.sender, shares);
+        _registerWithdrawRequest($, _msgSender(), shares);
     }
 
     function cancelWithdrawRequest(uint256 id) external override nonReentrant {
@@ -118,7 +118,7 @@ contract WithdrawManager is
         $.withdrawRequest[id].claimed = true;
         _setUserWithdrawRequest(withdrawRequest.user, 0);
 
-        SafeERC20.safeTransfer(IERC20(asset()), msg.sender, withdrawRequest.amount);
+        SafeERC20.safeTransfer(IERC20(asset()), _msgSender(), withdrawRequest.amount);
     }
 
     function _handleCancelWithdrawRequest(Storages.WithdrawManagerState storage $, uint256 id) internal {
@@ -136,6 +136,6 @@ contract WithdrawManager is
     }
 
     function _onlyVault() internal view {
-        require(msg.sender == vault(), Errors.CALLER_NOT_VAULT);
+        require(_msgSender() == vault(), Errors.CALLER_NOT_VAULT);
     }
 }
