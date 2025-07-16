@@ -7,10 +7,9 @@ import {DataTypes} from "./DataTypes.sol";
 library Storages {
     struct WithdrawManagerState {
         address vault;
-        uint256 withdrawWindowStartId;
-        uint256 withdrawWindowEndId;
+        address asset;
         uint256 nextWithdrawRequestId;
-        uint256 totalWithdrawableShares;
+        uint256 resolvedWithdrawRequestId;
         mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
         mapping(address => uint256) userWithdrawRequestId;
     }

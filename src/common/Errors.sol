@@ -8,8 +8,12 @@ library Errors {
     string public constant INVALID_AMOUNT = "3"; // amount cannot be 0
     string public constant INSUFFICIENT_SHARE_AMOUNT = "4"; // share amount requested for withdraw exceeds balance
     string public constant WITHDRAW_REQUEST_ACTIVE = "5"; // one acitve withdraw request already exist
-    string public constant INVALID_WITHDRAW_WINDOW_START = "6"; // new start id should be = old end id + 1
-    string public constant INVALID_WITHDRAW_WINDO_END = "7"; // new end id should be < current id
+    string public constant INVALID_WITHDRAW_RESOLVED_START_ID_LIMIT = "6"; // new start id should be = old end id + 1
+    string public constant INVALID_WITHDRAW_RESOLVED_END_ID_LIMIT = "7"; // new end id should be < current id
     string public constant CALLER_NOT_VAULT = "8"; // the caller of function is not vault
     string public constant INVALID_WITHDRAW_REQUEST_STATE = "9"; // incorrect withdraw request state
+    string public constant INVALID_ASSETS_DISTRIBUTED = "10"; // total assets distributed does not match total assets redeemed
+    string public constant WITHDRAW_REQUEST_NOT_FOUND = "11"; // withdraw request not found
+    string public constant WITHDRAW_REQUEST_ALREADY_CLAIMED = "12"; // withdraw request already claimed
+    string public constant WITHDRAW_REQUEST_NOT_RESOLVED = "13"; // withdraw request not resolved
 }

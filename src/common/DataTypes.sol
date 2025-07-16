@@ -10,13 +10,13 @@ library DataTypes {
 
     struct WithdrawRequestData {
         uint256 shares;
+        uint256 amount;
         address user;
-        bool processed;
+        bool claimed;
     }
 
     enum WithdrawRequestState {
         NOT_EXIST,
-        EXPIRED,
         CLAIMED,
         UNPROCESSED,
         CLAIMABLE

@@ -11,40 +11,23 @@ abstract contract SuperloopModuleRegistryStorage is ISuperloopModuleRegistry {
     mapping(bytes32 => address) private _moduleRegistry;
     mapping(address => string) private _moduleWhitelist;
 
-    function getModuleByName(
-        string calldata name
-    ) public view returns (DataTypes.ModuleData memory) {
-        return
-            DataTypes.ModuleData(
-                name,
-                _moduleRegistry[_getModuleIdFromName(name)]
-            );
+    function getModuleByName(string calldata name) public view returns (DataTypes.ModuleData memory) {
+        return DataTypes.ModuleData(name, _moduleRegistry[_getModuleIdFromName(name)]);
     }
 
-    function getModuleByAddress(
-        address moduleAddress
-    ) public view returns (DataTypes.ModuleData memory) {
+    function getModuleByAddress(address moduleAddress) public view returns (DataTypes.ModuleData memory) {
         string memory _moduleName = _moduleWhitelist[moduleAddress];
 
-        return
-            DataTypes.ModuleData(
-                _moduleName,
-                _moduleRegistry[_getModuleIdFromName(_moduleName)]
-            );
+        return DataTypes.ModuleData(_moduleName, _moduleRegistry[_getModuleIdFromName(_moduleName)]);
     }
 
     function getModules() public view returns (DataTypes.ModuleData[] memory) {
         uint256 modulesCount = _moduleNames.length;
-        DataTypes.ModuleData[] memory moduleData = new DataTypes.ModuleData[](
-            modulesCount
-        );
+        DataTypes.ModuleData[] memory moduleData = new DataTypes.ModuleData[](modulesCount);
 
-        for (uint idx; idx < modulesCount; ) {
+        for (uint256 idx; idx < modulesCount;) {
             string memory _name = _moduleNames[idx];
-            moduleData[idx] = DataTypes.ModuleData(
-                _name,
-                _moduleRegistry[_getModuleIdFromName(_name)]
-            );
+            moduleData[idx] = DataTypes.ModuleData(_name, _moduleRegistry[_getModuleIdFromName(_name)]);
             unchecked {
                 ++idx;
             }
@@ -64,9 +47,7 @@ abstract contract SuperloopModuleRegistryStorage is ISuperloopModuleRegistry {
         emit ModuleSet(_name, id, _module);
     }
 
-    function _getModuleIdFromName(
-        string memory _name
-    ) internal pure returns (bytes32) {
+    function _getModuleIdFromName(string memory _name) internal pure returns (bytes32) {
         return keccak256(abi.encode(_name));
     }
 }

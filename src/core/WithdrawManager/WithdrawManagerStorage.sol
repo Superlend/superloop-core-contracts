@@ -1,42 +1,24 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.13;
+
 import {DataTypes} from "../../common/DataTypes.sol";
 import {Storages} from "../../common/Storages.sol";
 import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
 import {IWithdrawManager} from "../../interfaces/IWithdrawManager.sol";
 
-abstract contract WithdrawManagerStorage is
-    IWithdrawManager,
-    WithdrawManagerBase
-{
-    // Setters
-
-    function _setWithdrawRequest(
-        address user,
-        uint256 shares,
-        uint256 id,
-        bool processed
-    ) internal {
+abstract contract WithdrawManagerStorage is IWithdrawManager, WithdrawManagerBase {
+    function _setWithdrawRequest(address user, uint256 shares, uint256 amount, uint256 id, bool claimed) internal {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
 
-        $.withdrawRequest[id] = DataTypes.WithdrawRequestData(
-            shares,
-            user,
-            processed
-        );
+        $.withdrawRequest[id] = DataTypes.WithdrawRequestData(shares, amount, user, claimed);
 
-        emit WithdrawRequest(user, shares, id);
+        emit WithdrawRequest(user, shares, amount, id);
     }
 
-    function _setNextWithdrawRequestId(uint256 id) internal {
+    function _setNextWithdrawRequestId() internal {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-        $.nextWithdrawRequestId = id;
-    }
-
-    function _setTotalWithdrawableShares(uint256 amount) internal {
-        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-        $.totalWithdrawableShares = amount;
+        $.nextWithdrawRequestId = $.nextWithdrawRequestId + 1;
     }
 
     function _setUserWithdrawRequest(address user, uint256 id) internal {
@@ -44,14 +26,9 @@ abstract contract WithdrawManagerStorage is
         $.userWithdrawRequestId[user] = id;
     }
 
-    function _setWithdrawWindowStartId(uint256 id) internal {
+    function _setResolvedWithdrawRequestId(uint256 id) internal {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-        $.withdrawWindowStartId = id;
-    }
-
-    function _setWithdrawWindowEndId(uint256 id) internal {
-        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-        $.withdrawWindowEndId = id;
+        $.resolvedWithdrawRequestId = id;
     }
 
     function _setVault(address __vault) internal {
@@ -59,39 +36,40 @@ abstract contract WithdrawManagerStorage is
         $.vault = __vault;
     }
 
-    // Getters
+    function _setAsset(address __asset) internal {
+        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
+        $.asset = __asset;
+    }
 
-    function nextWithdrawRequestId() public view returns (uint256) {
+    function vault() public view override returns (address) {
+        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
+        return $.vault;
+    }
+
+    function asset() public view override returns (address) {
+        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
+        return $.asset;
+    }
+
+    function nextWithdrawRequestId() public view override returns (uint256) {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
         return $.nextWithdrawRequestId;
     }
 
-    function totalWithdrawableShares() public view returns (uint256) {
+    function resolvedWithdrawRequestId() public view override returns (uint256) {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-        return $.totalWithdrawableShares;
+        return $.resolvedWithdrawRequestId;
     }
 
-    function userWithdrawRequestId(address user) public view returns (uint256) {
-        user = user == address(0) ? msg.sender : user;
-        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-
-        return $.userWithdrawRequestId[user];
-    }
-
-    function withdrawRequest(
-        uint256 id
-    ) public view returns (DataTypes.WithdrawRequestData memory) {
+    function withdrawRequest(uint256 id) public view override returns (DataTypes.WithdrawRequestData memory) {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
         return $.withdrawRequest[id];
     }
 
-    function withdrawWindow() public view returns (uint256, uint256) {
+    function userWithdrawRequestId(address user) public view override returns (uint256) {
+        user = user == address(0) ? msg.sender : user;
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-        return ($.withdrawWindowStartId, $.withdrawWindowEndId);
-    }
 
-    function vault() public view returns (address) {
-        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
-        return $.vault;
+        return $.userWithdrawRequestId[user];
     }
 }

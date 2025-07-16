@@ -11,11 +11,7 @@ abstract contract WithdrawManagerBase {
     bytes32 private constant WithdrawManagerStorageLocation =
         0x423bea3933e6a497b6fb476970c32da2d847e7ebc3511b83b7ac2aafc89c0d00;
 
-    function _getWithdrawManagerStorage()
-        internal
-        pure
-        returns (Storages.WithdrawManagerState storage $)
-    {
+    function _getWithdrawManagerStorage() internal pure returns (Storages.WithdrawManagerState storage $) {
         assembly {
             $.slot := WithdrawManagerStorageLocation
         }
