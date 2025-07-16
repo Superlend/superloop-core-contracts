@@ -40,9 +40,17 @@ abstract contract WithdrawManagerValidators {
             withdrawRequest.user == msg.sender && withdrawRequest.claimed == false,
             Errors.WITHDRAW_REQUEST_ALREADY_CLAIMED
         );
-
         require($.resolvedWithdrawRequestId >= id, Errors.WITHDRAW_REQUEST_NOT_RESOLVED);
 
         return id;
+    }
+
+    function _validateCancelWithdrawRequest(Storages.WithdrawManagerState storage $, uint256 id) internal view {
+        require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
+        require(id > $.resolvedWithdrawRequestId, Errors.INVALID_WITHDRAW_REQUEST_STATE);
+
+        DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
+        require(withdrawRequest.user == msg.sender, Errors.CALLER_NOT_WITHDRAW_REQUEST_OWNER);
+        require(!withdrawRequest.claimed, Errors.WITHDRAW_REQUEST_ALREADY_CLAIMED);
     }
 }

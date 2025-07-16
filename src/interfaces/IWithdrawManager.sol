@@ -15,6 +15,8 @@ interface IWithdrawManager {
 
     function withdraw() external;
 
+    function cancelWithdrawRequest(uint256 id) external;
+
     function getWithdrawRequestState(uint256 id) external view returns (DataTypes.WithdrawRequestState);
 
     function vault() external view returns (address);

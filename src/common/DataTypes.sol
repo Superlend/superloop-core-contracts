@@ -13,12 +13,14 @@ library DataTypes {
         uint256 amount;
         address user;
         bool claimed;
+        bool cancelled;
     }
 
     enum WithdrawRequestState {
         NOT_EXIST,
         CLAIMED,
         UNPROCESSED,
-        CLAIMABLE
+        CLAIMABLE,
+        CANCELLED
     }
 }

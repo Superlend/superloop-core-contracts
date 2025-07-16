@@ -8,10 +8,12 @@ import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
 import {IWithdrawManager} from "../../interfaces/IWithdrawManager.sol";
 
 abstract contract WithdrawManagerStorage is IWithdrawManager, WithdrawManagerBase {
-    function _setWithdrawRequest(address user, uint256 shares, uint256 amount, uint256 id, bool claimed) internal {
+    function _setWithdrawRequest(address user, uint256 shares, uint256 amount, uint256 id, bool claimed, bool cancelled)
+        internal
+    {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
 
-        $.withdrawRequest[id] = DataTypes.WithdrawRequestData(shares, amount, user, claimed);
+        $.withdrawRequest[id] = DataTypes.WithdrawRequestData(shares, amount, user, claimed, cancelled);
 
         emit WithdrawRequest(user, shares, amount, id);
     }
