@@ -13,5 +13,7 @@ interface ISuperloopModuleRegistry {
 
     function getModules() external returns (DataTypes.ModuleData[] memory);
 
+    function isModuleWhitelisted(address moduleAddress) external view returns (bool);
+
     function setModule(string memory name, address module) external;
 }

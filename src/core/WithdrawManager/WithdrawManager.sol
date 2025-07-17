@@ -25,7 +25,7 @@ contract WithdrawManager is
     }
 
     function initialize(address _vault) public initializer {
-        __ReentrancyGuard_init_unchained();
+        __ReentrancyGuard_init();
         __SuperloopWithdrawManager_init(_vault);
     }
 
@@ -33,6 +33,7 @@ contract WithdrawManager is
         _setVault(_vault);
         _setAsset(IERC4626(_vault).asset());
         _setNextWithdrawRequestId();
+        // TODO: set fee manager
     }
 
     function requestWithdraw(uint256 shares) external override {

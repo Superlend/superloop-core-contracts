@@ -13,4 +13,16 @@ library Storages {
         mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
         mapping(address => uint256) userWithdrawRequestId;
     }
+
+    struct SuperloopState {
+        uint256 supplyCap;
+        address feeManager;
+        address withdrawManager;
+        address commonPriceOracle;
+        address vaultAdmin;
+        address treasury;
+        uint16 performanceFee; // BPS
+        mapping(address => uint256) userLastRealizedFeeExchangeRate;
+        mapping(address => bool) registeredModules;
+    }
 }

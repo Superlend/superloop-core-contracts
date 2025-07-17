@@ -36,6 +36,10 @@ abstract contract SuperloopModuleRegistryStorage is ISuperloopModuleRegistry {
         return moduleData;
     }
 
+    function isModuleWhitelisted(address moduleAddress) public view returns (bool) {
+        return bytes(_moduleWhitelist[moduleAddress]).length > 0;
+    }
+
     function _setModule(string memory _name, address _module) internal {
         require(bytes(_name).length > 0, Errors.INVALID_MODULE_NAME);
         require(_module != address(0), Errors.INVALID_ADDRESS);

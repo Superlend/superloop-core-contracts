@@ -17,4 +17,6 @@ library Errors {
     string public constant WITHDRAW_REQUEST_ALREADY_CLAIMED = "12"; // withdraw request already claimed
     string public constant WITHDRAW_REQUEST_NOT_RESOLVED = "13"; // withdraw request not resolved
     string public constant CALLER_NOT_WITHDRAW_REQUEST_OWNER = "14"; // the caller of function is not the owner of the withdraw request
+    string public constant INVALID_PERFORMANCE_FEE = "15"; // performance fee is greater than max performance fee
+    string public constant INVALID_MODULE = "16"; // module is not whitelisted
 }

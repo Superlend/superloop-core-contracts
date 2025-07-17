@@ -23,4 +23,21 @@ library DataTypes {
         CLAIMABLE,
         CANCELLED
     }
+
+    struct VaultInitData {
+        // vault specific
+        address asset;
+        string name;
+        string symbol;
+        // superloop specific
+        uint256 supplyCap;
+        address feeManager;
+        address withdrawManager;
+        address commonPriceOracle;
+        // management specific
+        address vaultAdmin;
+        address treasury;
+        uint16 performanceFee; // BPS
+        address[] modules;
+    }
 }
