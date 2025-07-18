@@ -48,7 +48,6 @@ contract UniversalDexModule is ReentrancyGuard, Context {
         address self = address(this);
         to = to == address(0) ? _msgSender() : to;
 
-        SafeERC20.safeTransferFrom(IERC20(params.tokenIn), msg.sender, address(this), params.amountIn);
 
         DataTypes.BalancesDifference memory balances = DataTypes.BalancesDifference({
             tokenInBalanceBefore: IERC20(params.tokenIn).balanceOf(self),
@@ -56,6 +55,8 @@ contract UniversalDexModule is ReentrancyGuard, Context {
             tokenInBalanceAfter: 0,
             tokenOutBalanceAfter: 0
         });
+
+        SafeERC20.safeTransferFrom(IERC20(params.tokenIn), msg.sender, address(this), params.amountIn);
 
         _executeSwap(params);
 
@@ -81,9 +82,6 @@ contract UniversalDexModule is ReentrancyGuard, Context {
 
     function _executeSwap(DataTypes.ExecuteSwapParams memory params) internal {
         require(params.data.length > 0, Errors.INVALID_SWAP_DATA);
-
-        // transfer the tokenIn to the first dex pool
-        SafeERC20.safeTransfer(IERC20(params.tokenIn), params.data[0].target, params.amountIn);
 
         uint256 len = params.data.length;
         for (uint256 i; i < len;) {
