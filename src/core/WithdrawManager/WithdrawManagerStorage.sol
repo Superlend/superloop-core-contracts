@@ -68,6 +68,25 @@ abstract contract WithdrawManagerStorage is IWithdrawManager, WithdrawManagerBas
         return $.withdrawRequest[id];
     }
 
+    function withdrawRequests(uint256[] memory ids)
+        public
+        view
+        override
+        returns (DataTypes.WithdrawRequestData[] memory)
+    {
+        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
+        DataTypes.WithdrawRequestData[] memory _withdrawRequests = new DataTypes.WithdrawRequestData[](ids.length);
+        uint256 length = ids.length;
+        for (uint256 i; i < length;) {
+            _withdrawRequests[i] = $.withdrawRequest[ids[i]];
+            unchecked {
+                ++i;
+            }
+        }
+
+        return _withdrawRequests;
+    }
+
     function userWithdrawRequestId(address user) public view override returns (uint256) {
         user = user == address(0) ? msg.sender : user;
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();

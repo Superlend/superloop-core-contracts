@@ -55,10 +55,7 @@ abstract contract SuperloopStorage is SuperloopBase {
         $.registeredModules[module_] = registered_;
     }
 
-    function _setUserLastRealizedFeeExchangeRate(
-        address user_,
-        uint256 lastRealizedFeeExchangeRate_
-    ) internal {
+    function _setUserLastRealizedFeeExchangeRate(address user_, uint256 lastRealizedFeeExchangeRate_) internal {
         Storages.SuperloopState storage $ = _getSuperloopStorage();
         $.userLastRealizedFeeExchangeRate[user_] = lastRealizedFeeExchangeRate_;
     }
@@ -103,9 +100,7 @@ abstract contract SuperloopStorage is SuperloopBase {
         return $.registeredModules[module_];
     }
 
-    function userLastRealizedFeeExchangeRate(
-        address user_
-    ) internal view returns (uint256) {
+    function userLastRealizedFeeExchangeRate(address user_) internal view returns (uint256) {
         Storages.SuperloopState storage $ = _getSuperloopStorage();
         return $.userLastRealizedFeeExchangeRate[user_];
     }

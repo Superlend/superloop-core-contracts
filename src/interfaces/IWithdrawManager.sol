@@ -29,5 +29,7 @@ interface IWithdrawManager {
 
     function withdrawRequest(uint256 id) external view returns (DataTypes.WithdrawRequestData memory);
 
+    function withdrawRequests(uint256[] memory ids) external view returns (DataTypes.WithdrawRequestData[] memory);
+
     function userWithdrawRequestId(address user) external view returns (uint256);
 }

@@ -40,4 +40,26 @@ library DataTypes {
         uint16 performanceFee; // BPS
         address[] modules;
     }
+
+    // UniversalDexModule data types
+    struct ExecuteSwapParamsData {
+        address target;
+        bytes data;
+    }
+
+    struct ExecuteSwapParams {
+        address tokenIn;
+        address tokenOut;
+        uint256 amountIn;
+        uint256 maxAmountIn;
+        uint256 minAmountOut;
+        ExecuteSwapParamsData[] data;
+    }
+
+    struct BalancesDifference {
+        uint256 tokenInBalanceBefore;
+        uint256 tokenOutBalanceBefore;
+        uint256 tokenInBalanceAfter;
+        uint256 tokenOutBalanceAfter;
+    }
 }

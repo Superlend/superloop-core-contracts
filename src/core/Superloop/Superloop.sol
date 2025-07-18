@@ -3,37 +3,29 @@
 pragma solidity ^0.8.13;
 
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import {ERC4626Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {ERC4626Upgradeable} from
+    "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {ReentrancyGuardUpgradeable} from
+    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {SuperloopStorage} from "./SuperloopStorage.sol";
 import {ISuperloopModuleRegistry} from "../../interfaces/IModuleRegistry.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {Errors} from "../../common/Errors.sol";
 
-contract Superloop is
-    SuperloopStorage,
-    ReentrancyGuardUpgradeable,
-    ERC4626Upgradeable
-{
-    constructor(
-        address superloopModuleRegistry_
-    ) SuperloopStorage(superloopModuleRegistry_) {
+contract Superloop is SuperloopStorage, ReentrancyGuardUpgradeable, ERC4626Upgradeable {
+    constructor(address superloopModuleRegistry_) SuperloopStorage(superloopModuleRegistry_) {
         _disableInitializers();
     }
 
-    function initialize(
-        DataTypes.VaultInitData memory data
-    ) public initializer {
+    function initialize(DataTypes.VaultInitData memory data) public initializer {
         __ReentrancyGuard_init();
         __ERC4626_init(IERC20(data.asset));
         __ERC20_init(data.name, data.symbol);
         __Superloop_init(data);
     }
 
-    function __Superloop_init(
-        DataTypes.VaultInitData memory data
-    ) internal onlyInitializing {
+    function __Superloop_init(DataTypes.VaultInitData memory data) internal onlyInitializing {
         _setSupplyCap(data.supplyCap);
         _setFeeManager(data.feeManager);
         _setWithdrawManager(data.withdrawManager);
@@ -43,10 +35,7 @@ contract Superloop is
         _setPerformanceFee(data.performanceFee);
 
         for (uint256 i = 0; i < data.modules.length; i++) {
-            if (
-                !ISuperloopModuleRegistry(SUPERLOOP_MODULE_REGISTRY)
-                    .isModuleWhitelisted(data.modules[i])
-            ) {
+            if (!ISuperloopModuleRegistry(SUPERLOOP_MODULE_REGISTRY).isModuleWhitelisted(data.modules[i])) {
                 revert(Errors.INVALID_MODULE);
             }
             _setRegisteredModule(data.modules[i], true);
@@ -81,10 +70,7 @@ contract Superloop is
         return 0;
     }
 
-    function deposit(
-        uint256 assets,
-        address receiver
-    ) public override nonReentrant returns (uint256) {
+    function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256) {
         // require(assets > 0, "ERC4626: zero deposit");
         // require(
         //     assets <= maxDeposit(receiver),
@@ -100,11 +86,7 @@ contract Superloop is
     /**
      * @dev Withdraws assets by burning shares.
      */
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public override nonReentrant returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner) public override nonReentrant returns (uint256) {
         // require(assets > 0, "ERC4626: zero withdraw");
         // require(
         //     assets <= maxWithdraw(owner),
@@ -116,12 +98,7 @@ contract Superloop is
         return 0;
     }
 
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
         // SafeERC20.safeTransferFrom(
         //     IERC20(asset()),
         //     caller,
@@ -136,13 +113,10 @@ contract Superloop is
         // emit Deposit(caller, receiver, assets, shares);
     }
 
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal override {
+    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+        internal
+        override
+    {
         // if (caller != owner) {
         //     _spendAllowance(owner, caller, shares);
         // }

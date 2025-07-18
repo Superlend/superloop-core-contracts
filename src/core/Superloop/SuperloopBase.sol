@@ -11,11 +11,7 @@ abstract contract SuperloopBase {
     bytes32 private constant SuperloopStorageLocation =
         0x7342146a526b3b84c4d05641666cb2b0fcedad328645911961c67d0832ae3400;
 
-    function _getSuperloopStorage()
-        internal
-        pure
-        returns (Storages.SuperloopState storage $)
-    {
+    function _getSuperloopStorage() internal pure returns (Storages.SuperloopState storage $) {
         assembly {
             $.slot := SuperloopStorageLocation
         }

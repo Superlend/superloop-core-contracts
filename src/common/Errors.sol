@@ -19,4 +19,7 @@ library Errors {
     string public constant CALLER_NOT_WITHDRAW_REQUEST_OWNER = "14"; // the caller of function is not the owner of the withdraw request
     string public constant INVALID_PERFORMANCE_FEE = "15"; // performance fee is greater than max performance fee
     string public constant INVALID_MODULE = "16"; // module is not whitelisted
+    string public constant INVALID_SWAP_DATA = "17"; // invalid swap data
+    string public constant INVALID_AMOUNT_IN = "18"; // amount in is greater than max amount in
+    string public constant INVALID_AMOUNT_OUT = "19"; // amount out is less than min amount out
 }
