@@ -8,12 +8,10 @@ import {Errors} from "../../common/Errors.sol";
 
 abstract contract SuperloopStorage is SuperloopBase {
     uint8 public immutable DECIMALS_OFFSET = 2;
-    uint16 public immutable MAX_PERFORMANCE_FEE = 1000; // 10%
     address public immutable SUPERLOOP_MODULE_REGISTRY;
 
     constructor(address superloopModuleRegistry_) {
         DECIMALS_OFFSET = 2;
-        MAX_PERFORMANCE_FEE = 1000; // 10%
         SUPERLOOP_MODULE_REGISTRY = superloopModuleRegistry_;
     }
 
@@ -48,11 +46,6 @@ abstract contract SuperloopStorage is SuperloopBase {
     }
 
     function _setPerformanceFee(uint16 performanceFee_) internal {
-        require(
-            performanceFee_ <= MAX_PERFORMANCE_FEE,
-            Errors.INVALID_PERFORMANCE_FEE
-        );
-
         Storages.SuperloopState storage $ = _getSuperloopStorage();
         $.performanceFee = performanceFee_;
     }

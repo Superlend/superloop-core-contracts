@@ -5,7 +5,7 @@ import {Storages} from "../../common/Storages.sol";
 
 abstract contract SuperloopBase {
     /**
-     * @dev Storage location constant for the Aave V3 strategy storage.
+     * @dev Storage location constant for the superloop storage.
      * Computed using: keccak256(abi.encode(uint256(keccak256("superloop.storage.Superloop")) - 1)) & ~bytes32(uint256(0xff))
      */
     bytes32 private constant SuperloopStorageLocation =

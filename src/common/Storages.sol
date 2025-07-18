@@ -25,4 +25,13 @@ library Storages {
         mapping(address => uint256) userLastRealizedFeeExchangeRate;
         mapping(address => bool) registeredModules;
     }
+
+    struct SuperloopAccountantAaveV3State {
+        address poolAddressesProvider;
+        address[] lendAssets;
+        address[] borrowAssets;
+        address oraclePriceStandard;
+        uint16 performanceFee; // BPS
+        mapping(address => uint256) userLastRealizedFeeExchangeRate;
+    }
 }

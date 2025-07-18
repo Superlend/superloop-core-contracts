@@ -5,7 +5,7 @@ import {Storages} from "../../common/Storages.sol";
 
 abstract contract WithdrawManagerBase {
     /**
-     * @dev Storage location constant for the Aave V3 strategy storage.
+     * @dev Storage location constant for the withdraw manager storage.
      * Computed using: keccak256(abi.encode(uint256(keccak256("superloop.storage.WithdrawManager")) - 1)) & ~bytes32(uint256(0xff))
      */
     bytes32 private constant WithdrawManagerStorageLocation =
