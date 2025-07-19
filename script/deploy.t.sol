@@ -4,7 +4,10 @@ pragma solidity ^0.8.13;
 
 import {Script} from "forge-std/Script.sol";
 import {console} from "forge-std/console.sol";
-import {UniversalDexModule} from "../src/modules/UniversalDexModule.sol";
+// import {UniversalDexModule} from "../src/modules/UniversalDexModule.sol";
+import {MockVault} from "../src/mock/MockVault.sol";
+import {MockWithdrawManager} from "../src/mock/MockWithdrawManager.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 contract Deploy is Script {
     address public admin;
@@ -21,9 +24,18 @@ contract Deploy is Script {
     function run() public {
         vm.startBroadcast(deployerPvtKey);
 
-        UniversalDexModule universalDexModule = new UniversalDexModule();
+        MockVault mockVault = new MockVault(
+            IERC20(0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb),
+            "SuperLoopMockVault",
+            "SLMV"
+        );
 
-        console.log("universalDexModule", address(universalDexModule));
+        MockWithdrawManager mockWithdrawManager = new MockWithdrawManager();
+
+        mockWithdrawManager.initialize(address(mockVault));
+
+        console.log("mockVault", address(mockVault));
+        console.log("mockWithdrawManager", address(mockWithdrawManager));
 
         vm.stopBroadcast();
     }

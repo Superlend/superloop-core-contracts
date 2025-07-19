@@ -32,7 +32,7 @@ abstract contract WithdrawManagerValidators is Context {
         require(resolvedIdLimit > $.resolvedWithdrawRequestId, Errors.INVALID_WITHDRAW_RESOLVED_END_ID_LIMIT);
     }
 
-    function _validateWithdraw(Storages.WithdrawManagerState storage $) internal view returns (uint256) {
+    function _validateWithdraw(Storages.WithdrawManagerState storage $) internal view virtual returns (uint256) {
         uint256 id = $.userWithdrawRequestId[_msgSender()];
         require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
         DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
