@@ -25,4 +25,5 @@ library Errors {
     string public constant TRANSFER_NOT_SUPPORTED = "20"; // transfer is not supported
     string public constant SUPPLY_CAP_EXCEEDED = "21"; // supply cap exceeded
     string public constant INVALID_SHARES_AMOUNT = "22"; // shares amount cannot be 0
+    string public constant INSUFFICIENT_BALANCE = "23"; // insufficient balance
 }

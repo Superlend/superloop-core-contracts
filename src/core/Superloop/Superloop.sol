@@ -136,15 +136,21 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         return assets;
     }
 
-    /**
-     * @dev Withdraws assets by burning shares.
-     */
     function withdraw(
         uint256 assets,
         address receiver,
         address owner
     ) public override nonReentrant returns (uint256) {
-        return 0;
+        // realize performance fee
+        _realizePerformanceFee();
+
+        // check for max withdraw
+        require(assets <= maxWithdraw(owner), Errors.INSUFFICIENT_BALANCE);
+
+        uint256 shares = previewWithdraw(assets);
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
+
+        return shares;
     }
 
     function redeem(
@@ -152,7 +158,16 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         address receiver,
         address owner
     ) public override nonReentrant returns (uint256) {
-        return 0;
+        // realize performance fee
+        _realizePerformanceFee();
+
+        // check for max redeem
+        require(shares <= maxRedeem(owner), Errors.INSUFFICIENT_BALANCE);
+
+        uint256 assets = previewRedeem(shares);
+        _withdraw(_msgSender(), receiver, owner, assets, shares);
+
+        return assets;
     }
 
     function _decimalsOffset() internal pure override returns (uint8) {
