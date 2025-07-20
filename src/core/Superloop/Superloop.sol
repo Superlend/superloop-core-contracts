@@ -44,6 +44,9 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         SuperloopStorage.setWithdrawManagerModule(data.withdrawManagerModule);
         SuperloopStorage.setVaultAdmin(data.vaultAdmin);
         SuperloopStorage.setTreasury(data.treasury);
+        SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
+        SuperloopStorage.setPrivilegedAddress(data.treasury, true);
+        SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
     }
 
     fallback() external payable {
@@ -52,6 +55,8 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
     }
 
     function operate() external pure {
+        // TODO : handle execution context and upate in dex module
+
         // restrictions
         // TODO: implement operate logic
     }
@@ -165,19 +170,16 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         return SuperloopStorage.DECIMALS_OFFSET;
     }
 
-    function transfer(address to, uint256 amount) public override(ERC20Upgradeable, IERC20) returns (bool) {
-        // only allow privileged addresses to transfer tokens
-        // TODO: implement privileged addresses logic
+    function transfer(address to, uint256 amount) public override(ERC20Upgradeable, IERC20) onlyPrivileged returns (bool) {
         return super.transfer(to, amount);
     }
 
     function transferFrom(address from, address to, uint256 amount)
         public
         override(ERC20Upgradeable, IERC20)
+        onlyPrivileged
         returns (bool)
     {
-        // only allow privileged addresses to transfer tokens
-        // TODO: implement privileged addresses logic
         return super.transferFrom(from, to, amount);
     }
 
@@ -241,5 +243,15 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         uint256 assets = Math.mulDiv(shares, _totalAssets, _totalSupply, Math.Rounding.Ceil);
 
         return assets;
+    }
+
+    modifier onlyPrivileged() {
+        _onlyPrivileged();
+        _;
+    }
+
+    function _onlyPrivileged() internal view {
+        SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
+        require($.privilegedAddresses[_msgSender()], Errors.CALLER_NOT_PRIVILEGED);
     }
 }

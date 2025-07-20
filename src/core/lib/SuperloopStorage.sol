@@ -45,6 +45,7 @@ library SuperloopStorage {
         address withdrawManagerModule;
         address vaultAdmin;
         address treasury;
+        mapping(address => bool) privilegedAddresses;
     }
 
     /**
@@ -78,5 +79,10 @@ library SuperloopStorage {
     function setTreasury(address treasury_) internal {
         SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
         $.treasury = treasury_;
+    }
+
+    function setPrivilegedAddress(address privilegedAddress_, bool isPrivileged_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.privilegedAddresses[privilegedAddress_] = isPrivileged_;
     }
 }
