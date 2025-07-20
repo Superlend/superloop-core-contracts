@@ -28,9 +28,7 @@ interface IRouter {
         uint160 sqrtPriceLimitX96;
     }
 
-    function exactInputSingle(
-        ExactInputSingleParams calldata params
-    ) external payable returns (uint256 amountOut);
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
 }
 
 contract UniversalDexModuleTest is Test {
@@ -72,16 +70,11 @@ contract UniversalDexModuleTest is Test {
         uint256 maxAmountIn = 1000 * 10 ** 6;
         uint256 minAmountOut = 0;
 
-        DataTypes.ExecuteSwapParamsData[]
-            memory data = new DataTypes.ExecuteSwapParamsData[](2);
+        DataTypes.ExecuteSwapParamsData[] memory data = new DataTypes.ExecuteSwapParamsData[](2);
 
         data[0] = DataTypes.ExecuteSwapParamsData({
             target: USDT,
-            data: abi.encodeWithSelector(
-                IERC20.approve.selector,
-                ROUTER,
-                amountIn
-            )
+            data: abi.encodeWithSelector(IERC20.approve.selector, ROUTER, amountIn)
         });
 
         data[1] = DataTypes.ExecuteSwapParamsData({
@@ -100,15 +93,14 @@ contract UniversalDexModuleTest is Test {
             )
         });
 
-        DataTypes.ExecuteSwapParams memory params = DataTypes
-            .ExecuteSwapParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                amountIn: amountIn,
-                maxAmountIn: maxAmountIn,
-                minAmountOut: minAmountOut,
-                data: data
-            });
+        DataTypes.ExecuteSwapParams memory params = DataTypes.ExecuteSwapParams({
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
+            amountIn: amountIn,
+            maxAmountIn: maxAmountIn,
+            minAmountOut: minAmountOut,
+            data: data
+        });
 
         vm.startPrank(USER);
 
@@ -128,16 +120,11 @@ contract UniversalDexModuleTest is Test {
         uint256 maxAmountIn = 1000 * 10 ** 6;
         uint256 minAmountOut = 0;
 
-        DataTypes.ExecuteSwapParamsData[]
-            memory data = new DataTypes.ExecuteSwapParamsData[](2);
+        DataTypes.ExecuteSwapParamsData[] memory data = new DataTypes.ExecuteSwapParamsData[](2);
 
         data[0] = DataTypes.ExecuteSwapParamsData({
             target: USDT,
-            data: abi.encodeWithSelector(
-                IERC20.approve.selector,
-                ROUTER,
-                amountIn
-            )
+            data: abi.encodeWithSelector(IERC20.approve.selector, ROUTER, amountIn)
         });
 
         data[1] = DataTypes.ExecuteSwapParamsData({
@@ -156,15 +143,14 @@ contract UniversalDexModuleTest is Test {
             )
         });
 
-        DataTypes.ExecuteSwapParams memory params = DataTypes
-            .ExecuteSwapParams({
-                tokenIn: tokenIn,
-                tokenOut: tokenOut,
-                amountIn: amountIn,
-                maxAmountIn: maxAmountIn,
-                minAmountOut: minAmountOut,
-                data: data
-            });
+        DataTypes.ExecuteSwapParams memory params = DataTypes.ExecuteSwapParams({
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
+            amountIn: amountIn,
+            maxAmountIn: maxAmountIn,
+            minAmountOut: minAmountOut,
+            data: data
+        });
 
         vm.startPrank(USER);
 

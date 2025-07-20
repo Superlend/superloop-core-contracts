@@ -24,11 +24,8 @@ contract Deploy is Script {
     function run() public {
         vm.startBroadcast(deployerPvtKey);
 
-        MockVault mockVault = new MockVault(
-            IERC20(0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb),
-            "SuperLoopMockVault",
-            "SLMV"
-        );
+        MockVault mockVault =
+            new MockVault(IERC20(0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb), "SuperLoopMockVault", "SLMV");
 
         MockWithdrawManager mockWithdrawManager = new MockWithdrawManager();
 

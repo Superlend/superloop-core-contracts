@@ -18,11 +18,7 @@ library SuperloopStorage {
     bytes32 private constant SuperloopStateStorageLocation =
         0xa35af3fd1440912a5a47a30e9b58a4830f4700f48114569c6bb05e8eec37b600;
 
-    function getSuperloopStorage()
-        internal
-        pure
-        returns (SuperloopState storage $)
-    {
+    function getSuperloopStorage() internal pure returns (SuperloopState storage $) {
         assembly {
             $.slot := SuperloopStateStorageLocation
         }
@@ -39,9 +35,7 @@ library SuperloopStorage {
         $.registeredModules[module_] = registered_;
     }
 
-    function setSuperloopModuleRegistry(
-        address superloopModuleRegistry_
-    ) internal {
+    function setSuperloopModuleRegistry(address superloopModuleRegistry_) internal {
         SuperloopState storage $ = getSuperloopStorage();
         $.superloopModuleRegistry = superloopModuleRegistry_;
     }
@@ -60,11 +54,7 @@ library SuperloopStorage {
     bytes32 private constant SuperloopEssentialRolesStorageLocation =
         0xa51d4770eb956a5b972557fe35f195397c0ff8923964914a00aee9bbbf6e6700;
 
-    function getSuperloopEssentialRolesStorage()
-        internal
-        pure
-        returns (SuperloopEssentialRoles storage $)
-    {
+    function getSuperloopEssentialRolesStorage() internal pure returns (SuperloopEssentialRoles storage $) {
         assembly {
             $.slot := SuperloopEssentialRolesStorageLocation
         }

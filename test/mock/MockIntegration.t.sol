@@ -110,34 +110,34 @@ contract MockIntegrationTest is Test {
     MockWithdrawManager public withdrawManager;
     MockVault public vault;
     MockERC20 public asset;
-    
+
     address public alice = address(0x1);
     address public bob = address(0x2);
     address public charlie = address(0x3);
     address public dave = address(0x4);
-    
-    uint256 public constant INITIAL_BALANCE = 10000 * 10**18;
-    uint256 public constant DEPOSIT_AMOUNT = 2000 * 10**18;
-    uint256 public constant WITHDRAW_AMOUNT = 1000 * 10**18;
+
+    uint256 public constant INITIAL_BALANCE = 10000 * 10 ** 18;
+    uint256 public constant DEPOSIT_AMOUNT = 2000 * 10 ** 18;
+    uint256 public constant WITHDRAW_AMOUNT = 1000 * 10 ** 18;
     uint256 public constant WITHDRAW_DELAY = 30 minutes;
 
     function setUp() public {
         // Deploy mock asset
         asset = new MockERC20("Mock Token", "MTK", 18);
-        
+
         // Deploy vault
         vault = new MockVault(IERC20(asset), "Mock Vault", "mvMTK");
-        
+
         // Deploy withdraw manager
         withdrawManager = new MockWithdrawManager();
         withdrawManager.initialize(address(vault));
-        
+
         // Give initial balances to test users
         asset.mint(alice, INITIAL_BALANCE);
         asset.mint(bob, INITIAL_BALANCE);
         asset.mint(charlie, INITIAL_BALANCE);
         asset.mint(dave, INITIAL_BALANCE);
-        
+
         // Label addresses for better test output
         vm.label(address(asset), "MockAsset");
         vm.label(address(vault), "MockVault");
@@ -154,66 +154,66 @@ contract MockIntegrationTest is Test {
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 aliceShares = vault.deposit(DEPOSIT_AMOUNT, alice);
         vm.stopPrank();
-        
+
         vm.startPrank(bob);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 bobShares = vault.deposit(DEPOSIT_AMOUNT, bob);
         vm.stopPrank();
-        
+
         vm.startPrank(charlie);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 charlieShares = vault.deposit(DEPOSIT_AMOUNT, charlie);
         vm.stopPrank();
-        
+
         // Verify vault state
         assertEq(vault.totalAssets(), DEPOSIT_AMOUNT * 3);
         assertEq(vault.totalSupply(), aliceShares + bobShares + charlieShares);
-        
+
         // Step 2: Users request withdrawals
         vm.startPrank(alice);
         vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
         withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
         vm.stopPrank();
-        
+
         vm.startPrank(bob);
         vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
         withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
         vm.stopPrank();
-        
+
         // Verify withdraw requests
         assertEq(withdrawManager.nextWithdrawRequestId(), 3);
         assertEq(withdrawManager.userWithdrawRequestId(alice), 1);
         assertEq(withdrawManager.userWithdrawRequestId(bob), 2);
-        
+
         // Step 3: Try to withdraw before delay (should fail)
         vm.startPrank(alice);
         vm.expectRevert("Withdraw request not yet claimable");
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         // Step 4: Warp time and withdraw
         vm.warp(block.timestamp + WITHDRAW_DELAY);
-        
+
         vm.startPrank(alice);
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         vm.startPrank(bob);
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         // Verify withdrawals were processed
         assertEq(withdrawManager.withdrawRequest(1).claimed, true);
         assertEq(withdrawManager.withdrawRequest(2).claimed, true);
         assertEq(withdrawManager.userWithdrawRequestId(alice), 0);
         assertEq(withdrawManager.userWithdrawRequestId(bob), 0);
-        
+
         // Step 5: Users can request new withdrawals
         vm.startPrank(alice);
         vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
         withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
         vm.stopPrank();
-        
+
         assertEq(withdrawManager.userWithdrawRequestId(alice), 3);
     }
 
@@ -223,38 +223,38 @@ contract MockIntegrationTest is Test {
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 aliceShares = vault.deposit(DEPOSIT_AMOUNT, alice);
         vm.stopPrank();
-        
+
         vm.startPrank(bob);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 bobShares = vault.deposit(DEPOSIT_AMOUNT, bob);
         vm.stopPrank();
-        
+
         // Simulate yield by adding virtual assets
         uint256 yield = DEPOSIT_AMOUNT / 10; // 10% yield
         vault.addVirtualAssets(yield);
-        
+
         // Users request withdrawals
         vm.startPrank(alice);
         vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
         withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
         vm.stopPrank();
-        
+
         vm.startPrank(bob);
         vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
         withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
         vm.stopPrank();
-        
+
         // Warp time and withdraw
         vm.warp(block.timestamp + WITHDRAW_DELAY);
-        
+
         vm.startPrank(alice);
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         vm.startPrank(bob);
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         // Verify that users received their proportional share of yield
         // The mock uses shares as amount, so they get the same amount they requested
         assertEq(withdrawManager.withdrawRequest(1).amount, WITHDRAW_AMOUNT);
@@ -266,26 +266,26 @@ contract MockIntegrationTest is Test {
         vm.startPrank(alice);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 aliceShares = vault.deposit(DEPOSIT_AMOUNT, alice);
-        
+
         vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
         withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
         vm.stopPrank();
-        
+
         // User cancels the request
         vm.startPrank(alice);
         withdrawManager.cancelWithdrawRequest(1);
         vm.stopPrank();
-        
+
         // Verify cancellation
         assertEq(withdrawManager.withdrawRequest(1).cancelled, true);
         assertEq(withdrawManager.userWithdrawRequestId(alice), 0);
-        
+
         // User can request a new withdrawal
         vm.startPrank(alice);
         vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
         withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
         vm.stopPrank();
-        
+
         assertEq(withdrawManager.userWithdrawRequestId(alice), 2);
     }
 
@@ -297,10 +297,10 @@ contract MockIntegrationTest is Test {
     //     vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
     //     withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
     //     vm.stopPrank();
-        
+
     //     // Warp time forward 15 minutes
     //     vm.warp(block.timestamp + 15 minutes);
-        
+
     //     // Bob deposits and requests withdrawal
     //     vm.startPrank(bob);
     //     asset.approve(address(vault), DEPOSIT_AMOUNT);
@@ -308,30 +308,30 @@ contract MockIntegrationTest is Test {
     //     vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
     //     withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
     //     vm.stopPrank();
-        
+
     //     // Alice's request should be claimable, Bob's should not
     //     assertEq(withdrawManager.isWithdrawRequestClaimable(1), true);
     //     assertEq(withdrawManager.isWithdrawRequestClaimable(2), false);
-        
+
     //     // Alice can withdraw
     //     vm.startPrank(alice);
     //     withdrawManager.withdraw();
     //     vm.stopPrank();
-        
+
     //     // Bob cannot withdraw yet
     //     vm.startPrank(bob);
     //     vm.expectRevert("Withdraw request not yet claimable");
     //     withdrawManager.withdraw();
     //     vm.stopPrank();
-        
+
     //     // Warp time forward another 15 minutes
     //     vm.warp(block.timestamp + 15 minutes);
-        
+
     //     // Now Bob can withdraw
     //     vm.startPrank(bob);
     //     withdrawManager.withdraw();
     //     vm.stopPrank();
-        
+
     //     assertEq(withdrawManager.withdrawRequest(1).claimed, true);
     //     assertEq(withdrawManager.withdrawRequest(2).claimed, true);
     // }
@@ -341,30 +341,30 @@ contract MockIntegrationTest is Test {
         assertEq(vault.totalAssets(), 0);
         assertEq(withdrawManager.nextWithdrawRequestId(), 1);
         assertEq(withdrawManager.resolvedWithdrawRequestId(), 0);
-        
+
         // After deposits
         vm.startPrank(alice);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         vault.deposit(DEPOSIT_AMOUNT, alice);
         vm.stopPrank();
-        
+
         assertEq(vault.totalAssets(), DEPOSIT_AMOUNT);
-        
+
         // After withdrawal request
         vm.startPrank(alice);
         vault.approve(address(withdrawManager), WITHDRAW_AMOUNT);
         withdrawManager.requestWithdraw(WITHDRAW_AMOUNT);
         vm.stopPrank();
-        
+
         assertEq(withdrawManager.nextWithdrawRequestId(), 2);
         assertEq(withdrawManager.userWithdrawRequestId(alice), 1);
-        
+
         // After withdrawal
         vm.warp(block.timestamp + WITHDRAW_DELAY);
         vm.startPrank(alice);
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         assertEq(withdrawManager.userWithdrawRequestId(alice), 0);
         assertEq(withdrawManager.withdrawRequest(1).claimed, true);
     }
@@ -377,14 +377,14 @@ contract MockIntegrationTest is Test {
         vault.approve(address(withdrawManager), 1);
         withdrawManager.requestWithdraw(1);
         vm.stopPrank();
-        
+
         vm.warp(block.timestamp + WITHDRAW_DELAY);
         vm.startPrank(alice);
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         assertEq(withdrawManager.withdrawRequest(1).claimed, true);
-        
+
         // Test with large amounts
         vm.startPrank(bob);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
@@ -392,40 +392,40 @@ contract MockIntegrationTest is Test {
         vault.approve(address(withdrawManager), DEPOSIT_AMOUNT);
         withdrawManager.requestWithdraw(DEPOSIT_AMOUNT);
         vm.stopPrank();
-        
+
         vm.warp(block.timestamp + WITHDRAW_DELAY);
         vm.startPrank(bob);
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         assertEq(withdrawManager.withdrawRequest(2).claimed, true);
     }
 
     function testFuzz_IntegrationFlow(uint256 depositAmount, uint256 withdrawAmount) public {
         vm.assume(depositAmount > 0 && depositAmount <= INITIAL_BALANCE);
         vm.assume(withdrawAmount > 0 && withdrawAmount <= depositAmount);
-        
+
         // Deposit
         vm.startPrank(alice);
         asset.approve(address(vault), depositAmount);
         vault.deposit(depositAmount, alice);
         vm.stopPrank();
-        
+
         // Request withdrawal
         vm.startPrank(alice);
         vault.approve(address(withdrawManager), withdrawAmount);
         withdrawManager.requestWithdraw(withdrawAmount);
         vm.stopPrank();
-        
+
         // Warp time and withdraw
         vm.warp(block.timestamp + WITHDRAW_DELAY);
-        
+
         vm.startPrank(alice);
         withdrawManager.withdraw();
         vm.stopPrank();
-        
+
         // Verify
         assertEq(withdrawManager.withdrawRequest(1).claimed, true);
         assertEq(withdrawManager.withdrawRequest(1).amount, withdrawAmount);
     }
-} 
+}

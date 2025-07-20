@@ -35,20 +35,17 @@ library SuperloopAccountantAaveV3ModuleStorage {
     }
 
     function setPoolAddressesProvider(address poolAddressesProvider_) internal {
-        SuperloopAccountantAaveV3ModuleState
-            storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
         $.poolAddressesProvider = poolAddressesProvider_;
     }
 
     function setLendAssets(address[] memory lendAssets_) internal {
-        SuperloopAccountantAaveV3ModuleState
-            storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
         $.lendAssets = lendAssets_;
     }
 
     function setBorrowAssets(address[] memory borrowAssets_) internal {
-        SuperloopAccountantAaveV3ModuleState
-            storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
         $.borrowAssets = borrowAssets_;
     }
 
@@ -57,22 +54,17 @@ library SuperloopAccountantAaveV3ModuleStorage {
             revert(Errors.INVALID_PERFORMANCE_FEE);
         }
 
-        SuperloopAccountantAaveV3ModuleState
-            storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
         $.performanceFee = performanceFee_;
     }
 
-    function setLastRealizedFeeExchangeRate(
-        uint256 lastRealizedFeeExchangeRate_
-    ) internal {
-        SuperloopAccountantAaveV3ModuleState
-            storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+    function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_) internal {
+        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
         $.lastRealizedFeeExchangeRate = lastRealizedFeeExchangeRate_;
     }
 
     function setVault(address vault_) internal {
-        SuperloopAccountantAaveV3ModuleState
-            storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
         $.vault = vault_;
     }
 }

@@ -107,26 +107,26 @@ contract MockERC20 is IERC20 {
 contract MockVaultTest is Test {
     MockVault public vault;
     MockERC20 public asset;
-    
+
     address public alice = address(0x1);
     address public bob = address(0x2);
     address public charlie = address(0x3);
-    
-    uint256 public constant INITIAL_BALANCE = 10000 * 10**18;
-    uint256 public constant DEPOSIT_AMOUNT = 1000 * 10**18;
+
+    uint256 public constant INITIAL_BALANCE = 10000 * 10 ** 18;
+    uint256 public constant DEPOSIT_AMOUNT = 1000 * 10 ** 18;
 
     function setUp() public {
         // Deploy mock asset
         asset = new MockERC20("Mock Token", "MTK", 18);
-        
+
         // Deploy vault
         vault = new MockVault(IERC20(asset), "Mock Vault", "mvMTK");
-        
+
         // Give initial balances to test users
         asset.mint(alice, INITIAL_BALANCE);
         asset.mint(bob, INITIAL_BALANCE);
         asset.mint(charlie, INITIAL_BALANCE);
-        
+
         // Label addresses for better test output
         vm.label(address(asset), "MockAsset");
         vm.label(address(vault), "MockVault");
@@ -150,42 +150,42 @@ contract MockVaultTest is Test {
 
     function test_Deposit() public {
         vm.startPrank(alice);
-        
+
         uint256 assets = DEPOSIT_AMOUNT;
         uint256 shares = vault.previewDeposit(assets);
-        
+
         // Approve vault to spend assets
         asset.approve(address(vault), assets);
-        
+
         // Perform deposit
         uint256 mintedShares = vault.deposit(assets, alice);
-        
+
         vm.stopPrank();
-        
+
         // Verify shares were minted
         assertEq(mintedShares, shares);
         assertEq(vault.balanceOf(alice), shares);
         assertEq(vault.totalSupply(), shares);
-        
+
         // Verify virtual assets were updated
         assertEq(vault.totalAssets(), assets);
         assertEq(vault.getVirtualAssets(), assets);
-        
+
         // Verify no actual tokens were transferred
         assertEq(asset.balanceOf(address(vault)), 0);
     }
 
     function test_DepositWithDifferentReceiver() public {
         vm.startPrank(alice);
-        
+
         uint256 assets = DEPOSIT_AMOUNT;
         asset.approve(address(vault), assets);
-        
+
         // Deposit to bob's address
         uint256 shares = vault.deposit(assets, bob);
-        
+
         vm.stopPrank();
-        
+
         // Verify shares went to bob
         assertEq(vault.balanceOf(bob), shares);
         assertEq(vault.balanceOf(alice), 0);
@@ -193,16 +193,16 @@ contract MockVaultTest is Test {
 
     function test_Mint() public {
         vm.startPrank(alice);
-        
+
         uint256 shares = DEPOSIT_AMOUNT;
         uint256 assets = vault.previewMint(shares);
-        
+
         asset.approve(address(vault), assets);
-        
+
         uint256 assetsUsed = vault.mint(shares, alice);
-        
+
         vm.stopPrank();
-        
+
         assertEq(assetsUsed, assets);
         assertEq(vault.balanceOf(alice), shares);
     }
@@ -213,16 +213,16 @@ contract MockVaultTest is Test {
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 shares = vault.deposit(DEPOSIT_AMOUNT, alice);
         vm.stopPrank();
-        
+
         // Then withdraw
         vm.startPrank(alice);
         uint256 withdrawAssets = DEPOSIT_AMOUNT / 2;
         uint256 burnShares = vault.previewWithdraw(withdrawAssets);
-        
+
         uint256 burnedShares = vault.withdraw(withdrawAssets, alice, alice);
-        
+
         vm.stopPrank();
-        
+
         assertEq(burnedShares, burnShares);
         assertEq(vault.balanceOf(alice), shares - burnShares);
         assertEq(vault.totalSupply(), shares - burnShares);
@@ -235,16 +235,16 @@ contract MockVaultTest is Test {
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 shares = vault.deposit(DEPOSIT_AMOUNT, alice);
         vm.stopPrank();
-        
+
         // Then redeem
         vm.startPrank(alice);
         uint256 redeemShares = shares / 2;
         uint256 assets = vault.previewRedeem(redeemShares);
-        
+
         uint256 assetsReceived = vault.redeem(redeemShares, alice, alice);
-        
+
         vm.stopPrank();
-        
+
         assertEq(assetsReceived, assets);
         assertEq(vault.balanceOf(alice), shares - redeemShares);
     }
@@ -252,15 +252,15 @@ contract MockVaultTest is Test {
     function test_PreviewFunctions() public {
         // Set some virtual assets to test preview functions
         vault.setVirtualAssets(DEPOSIT_AMOUNT);
-        
-        uint256 assets = 1000 * 10**18;
-        uint256 shares = 500 * 10**18;
-        
+
+        uint256 assets = 1000 * 10 ** 18;
+        uint256 shares = 500 * 10 ** 18;
+
         uint256 previewDeposit = vault.previewDeposit(assets);
         uint256 previewMint = vault.previewMint(shares);
         uint256 previewWithdraw = vault.previewWithdraw(assets);
         uint256 previewRedeem = vault.previewRedeem(shares);
-        
+
         assertGt(previewDeposit, 0);
         assertGt(previewMint, 0);
         assertGt(previewWithdraw, 0);
@@ -268,15 +268,15 @@ contract MockVaultTest is Test {
     }
 
     function test_VirtualAssetsManagement() public {
-        uint256 virtualAssets = 5000 * 10**18;
-        
+        uint256 virtualAssets = 5000 * 10 ** 18;
+
         // Set virtual assets
         vault.setVirtualAssets(virtualAssets);
         assertEq(vault.totalAssets(), virtualAssets);
         assertEq(vault.getVirtualAssets(), virtualAssets);
-        
+
         // Add virtual assets
-        uint256 additionalAssets = 1000 * 10**18;
+        uint256 additionalAssets = 1000 * 10 ** 18;
         vault.addVirtualAssets(additionalAssets);
         assertEq(vault.totalAssets(), virtualAssets + additionalAssets);
         assertEq(vault.getVirtualAssets(), virtualAssets + additionalAssets);
@@ -287,11 +287,11 @@ contract MockVaultTest is Test {
         vm.startPrank(alice);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         vault.deposit(DEPOSIT_AMOUNT, alice);
-        
+
         // Try to withdraw more than available
         vm.expectRevert();
         vault.withdraw(DEPOSIT_AMOUNT + 1, alice, alice);
-        
+
         vm.stopPrank();
     }
 
@@ -300,11 +300,11 @@ contract MockVaultTest is Test {
         vm.startPrank(alice);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 shares = vault.deposit(DEPOSIT_AMOUNT, alice);
-        
+
         // Try to redeem more than owned
         vm.expectRevert();
         vault.redeem(shares + 1, alice, alice);
-        
+
         vm.stopPrank();
     }
 
@@ -312,11 +312,11 @@ contract MockVaultTest is Test {
     //     vm.startPrank(alice);
     //     asset.approve(address(vault), DEPOSIT_AMOUNT);
     //     vault.deposit(DEPOSIT_AMOUNT, alice);
-        
+
     //     // Should revert when trying to withdraw to zero address
     //     vm.expectRevert();
     //     vault.withdraw(DEPOSIT_AMOUNT / 2, address(0), alice);
-        
+
     //     vm.stopPrank();
     // }
 
@@ -326,19 +326,19 @@ contract MockVaultTest is Test {
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 aliceShares = vault.deposit(DEPOSIT_AMOUNT, alice);
         vm.stopPrank();
-        
+
         // Bob deposits
         vm.startPrank(bob);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 bobShares = vault.deposit(DEPOSIT_AMOUNT, bob);
         vm.stopPrank();
-        
+
         // Charlie deposits
         vm.startPrank(charlie);
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 charlieShares = vault.deposit(DEPOSIT_AMOUNT, charlie);
         vm.stopPrank();
-        
+
         assertEq(vault.balanceOf(alice), aliceShares);
         assertEq(vault.balanceOf(bob), bobShares);
         assertEq(vault.balanceOf(charlie), charlieShares);
@@ -351,15 +351,15 @@ contract MockVaultTest is Test {
         asset.approve(address(vault), DEPOSIT_AMOUNT);
         uint256 shares = vault.deposit(DEPOSIT_AMOUNT, alice);
         vm.stopPrank();
-        
+
         // Alice approves bob to spend her shares
         vm.prank(alice);
         vault.approve(bob, shares / 2);
-        
+
         // Bob transfers Alice's shares to Charlie
         vm.prank(bob);
         vault.transferFrom(alice, charlie, shares / 2);
-        
+
         assertEq(vault.balanceOf(alice), shares / 2);
         assertEq(vault.balanceOf(charlie), shares / 2);
         assertEq(vault.balanceOf(bob), 0);
@@ -368,17 +368,17 @@ contract MockVaultTest is Test {
     // function test_VirtualAssetsUnderflow() public {
     //     // Set virtual assets to a small amount
     //     vault.setVirtualAssets(100 * 10**18);
-        
+
     //     // Try to withdraw more than available
     //     vm.startPrank(alice);
     //     asset.approve(address(vault), 100 * 10**18);
     //     vault.deposit(100 * 10**18, alice);
-        
+
     //     // This should not revert due to the underflow protection in _withdraw
     //     vault.withdraw(200 * 10**18, alice, alice);
-        
+
     //     vm.stopPrank();
-        
+
     //     // Virtual assets should be 0, not negative
     //     assertEq(vault.totalAssets(), 0);
     //     assertEq(vault.getVirtualAssets(), 0);
@@ -386,18 +386,18 @@ contract MockVaultTest is Test {
 
     // function testFuzz_DepositAndWithdraw(uint256 depositAmount) public {
     //     vm.assume(depositAmount > 0 && depositAmount <= INITIAL_BALANCE);
-        
+
     //     vm.startPrank(alice);
     //     asset.approve(address(vault), depositAmount);
     //     uint256 shares = vault.deposit(depositAmount, alice);
-        
+
     //     // Withdraw half
     //     uint256 withdrawAmount = depositAmount / 2;
     //     vault.withdraw(withdrawAmount, alice, alice);
-        
+
     //     vm.stopPrank();
-        
+
     //     assertEq(vault.totalAssets(), depositAmount - withdrawAmount);
     //     assertLt(vault.balanceOf(alice), shares);
     // }
-} 
+}

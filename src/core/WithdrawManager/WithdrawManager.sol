@@ -39,7 +39,6 @@ contract WithdrawManager is
     function requestWithdraw(uint256 shares) external override {
         Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
         _validateWithdrawRequest($, _msgSender(), shares);
-        // TODO : Handle fees
         _registerWithdrawRequest($, _msgSender(), shares);
     }
 

@@ -98,7 +98,7 @@ contract MockWithdrawManager is
         _setWithdrawRequest(user, shares, shares, withdrawReqId, false, false);
         _setUserWithdrawRequest(user, withdrawReqId);
         _setNextWithdrawRequestId();
-        
+
         // Store the timestamp for the 30-minute delay
         withdrawRequestTimestamps[withdrawReqId] = block.timestamp;
     }
@@ -113,13 +113,10 @@ contract MockWithdrawManager is
 
     function _handleWithdraw(Storages.WithdrawManagerState storage $, uint256 id) internal {
         DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
-        
+
         // Validate that 30 minutes have passed
-        require(
-            block.timestamp >= withdrawRequestTimestamps[id] + WITHDRAW_DELAY,
-            "Withdraw request not yet claimable"
-        );
-        
+        require(block.timestamp >= withdrawRequestTimestamps[id] + WITHDRAW_DELAY, "Withdraw request not yet claimable");
+
         $.withdrawRequest[id].claimed = true;
         _setUserWithdrawRequest(withdrawRequest.user, 0);
 
@@ -147,12 +144,9 @@ contract MockWithdrawManager is
             withdrawRequest.user == _msgSender() && withdrawRequest.claimed == false,
             Errors.WITHDRAW_REQUEST_ALREADY_CLAIMED
         );
-        
+
         // Check if 30 minutes have passed instead of checking resolution
-        require(
-            block.timestamp >= withdrawRequestTimestamps[id] + WITHDRAW_DELAY,
-            "Withdraw request not yet claimable"
-        );
+        require(block.timestamp >= withdrawRequestTimestamps[id] + WITHDRAW_DELAY, "Withdraw request not yet claimable");
 
         return id;
     }
@@ -175,4 +169,4 @@ contract MockWithdrawManager is
     function isWithdrawRequestClaimable(uint256 id) external view returns (bool) {
         return block.timestamp >= withdrawRequestTimestamps[id] + WITHDRAW_DELAY;
     }
-} 
+}

@@ -17,11 +17,7 @@ contract MockVault is ERC4626 {
      * @param name_ The name of the vault shares token
      * @param symbol_ The symbol of the vault shares token
      */
-    constructor(
-        IERC20 asset_,
-        string memory name_,
-        string memory symbol_
-    ) ERC4626(asset_) ERC20(name_, symbol_) {}
+    constructor(IERC20 asset_, string memory name_, string memory symbol_) ERC4626(asset_) ERC20(name_, symbol_) {}
 
     /**
      * @dev Override totalAssets to return virtual assets instead of actual balance
@@ -35,12 +31,7 @@ contract MockVault is ERC4626 {
      * @dev Override _deposit to skip actual token transfer but still mint shares
      * This is the core mock behavior - no actual tokens are transferred
      */
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal virtual override {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal virtual override {
         // Skip the actual token transfer from caller to this contract
         // SafeERC20.safeTransferFrom(IERC20(asset()), caller, address(this), assets);
 
@@ -57,13 +48,11 @@ contract MockVault is ERC4626 {
      * @dev Override _withdraw to skip actual token transfer but still burn shares
      * This is the core mock behavior - no actual tokens are transferred
      */
-    function _withdraw(
-        address caller,
-        address receiver,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal virtual override {
+    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
+        internal
+        virtual
+        override
+    {
         if (caller != owner) {
             _spendAllowance(owner, caller, shares);
         }
