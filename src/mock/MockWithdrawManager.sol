@@ -8,8 +8,6 @@ import {ReentrancyGuardUpgradeable} from
 import {IERC20} from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {WithdrawManagerStorage} from "../core/WithdrawManager/WithdrawManagerStorage.sol";
-import {WithdrawManagerValidators} from "../core/WithdrawManager/WithdrawManagerValidators.sol";
 import {Errors} from "../common/Errors.sol";
 import {DataTypes} from "../common/DataTypes.sol";
 import {Storages} from "../common/Storages.sol";

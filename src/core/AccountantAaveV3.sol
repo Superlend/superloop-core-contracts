@@ -7,12 +7,12 @@ import {ReentrancyGuardUpgradeable} from
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
-import {AccountantAaveV3Storage} from "../../core/lib/AccountantAaveV3Storage.sol";
+import {AccountantAaveV3Storage} from "./lib/AccountantAaveV3Storage.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
-import {DataTypes} from "../../common/DataTypes.sol";
+import {IAccountantModule} from "../interfaces/IAccountantModule.sol";
+import {DataTypes} from "../common/DataTypes.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
-import {Errors} from "../../common/Errors.sol";
+import {Errors} from "../common/Errors.sol";
 
 contract AccountantAaveV3 is ReentrancyGuardUpgradeable, IAccountantModule {
     constructor() {

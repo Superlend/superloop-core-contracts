@@ -10,11 +10,11 @@ import {
 import {IERC20Metadata, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {ReentrancyGuardUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
-import {ISuperloopModuleRegistry} from "../../interfaces/IModuleRegistry.sol";
-import {DataTypes} from "../../common/DataTypes.sol";
-import {Errors} from "../../common/Errors.sol";
-import {SuperloopStorage} from "../lib/SuperLoopStorage.sol";
-import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
+import {ISuperloopModuleRegistry} from "../interfaces/IModuleRegistry.sol";
+import {DataTypes} from "../common/DataTypes.sol";
+import {Errors} from "../common/Errors.sol";
+import {SuperloopStorage} from "./lib/SuperLoopStorage.sol";
+import {IAccountantModule} from "../interfaces/IAccountantModule.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
@@ -170,7 +170,12 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         return SuperloopStorage.DECIMALS_OFFSET;
     }
 
-    function transfer(address to, uint256 amount) public override(ERC20Upgradeable, IERC20) onlyPrivileged returns (bool) {
+    function transfer(address to, uint256 amount)
+        public
+        override(ERC20Upgradeable, IERC20)
+        onlyPrivileged
+        returns (bool)
+    {
         return super.transfer(to, amount);
     }
 
