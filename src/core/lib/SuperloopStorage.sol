@@ -7,14 +7,7 @@ library SuperloopStorage {
 
     struct SuperloopState {
         uint256 supplyCap;
-        address feeManager;
-        address withdrawManager;
-        address commonPriceOracle;
-        address vaultAdmin;
-        address treasury;
-        uint16 performanceFee; // BPS
         address superloopModuleRegistry;
-        mapping(address => uint256) userLastRealizedFeeExchangeRate;
         mapping(address => bool) registeredModules;
     }
 
@@ -41,47 +34,9 @@ library SuperloopStorage {
         $.supplyCap = supplyCap_;
     }
 
-    function setFeeManager(address feeManager_) internal {
-        SuperloopState storage $ = getSuperloopStorage();
-        $.feeManager = feeManager_;
-    }
-
-    function setWithdrawManager(address withdrawManager_) internal {
-        SuperloopState storage $ = getSuperloopStorage();
-        $.withdrawManager = withdrawManager_;
-    }
-
-    function setCommonPriceOracle(address commonPriceOracle_) internal {
-        SuperloopState storage $ = getSuperloopStorage();
-        $.commonPriceOracle = commonPriceOracle_;
-    }
-
-    function setVaultAdmin(address vaultAdmin_) internal {
-        SuperloopState storage $ = getSuperloopStorage();
-        $.vaultAdmin = vaultAdmin_;
-    }
-
-    function setTreasury(address treasury_) internal {
-        SuperloopState storage $ = getSuperloopStorage();
-        $.treasury = treasury_;
-    }
-
-    function setPerformanceFee(uint16 performanceFee_) internal {
-        SuperloopState storage $ = getSuperloopStorage();
-        $.performanceFee = performanceFee_;
-    }
-
     function setRegisteredModule(address module_, bool registered_) internal {
         SuperloopState storage $ = getSuperloopStorage();
         $.registeredModules[module_] = registered_;
-    }
-
-    function setUserLastRealizedFeeExchangeRate(
-        address user_,
-        uint256 lastRealizedFeeExchangeRate_
-    ) internal {
-        SuperloopState storage $ = getSuperloopStorage();
-        $.userLastRealizedFeeExchangeRate[user_] = lastRealizedFeeExchangeRate_;
     }
 
     function setSuperloopModuleRegistry(
@@ -89,5 +44,49 @@ library SuperloopStorage {
     ) internal {
         SuperloopState storage $ = getSuperloopStorage();
         $.superloopModuleRegistry = superloopModuleRegistry_;
+    }
+
+    struct SuperloopEssentialRoles {
+        address accountantModule;
+        address withdrawManagerModule;
+        address vaultAdmin;
+        address treasury;
+    }
+
+    /**
+     * @dev Storage location constant for the superloop essential roles storage.
+     * Computed using: keccak256(abi.encode(uint256(keccak256("superloop.Superloop.essentialRoles")) - 1)) & ~bytes32(uint256(0xff))
+     */
+    bytes32 private constant SuperloopEssentialRolesStorageLocation =
+        0xa51d4770eb956a5b972557fe35f195397c0ff8923964914a00aee9bbbf6e6700;
+
+    function getSuperloopEssentialRolesStorage()
+        internal
+        pure
+        returns (SuperloopEssentialRoles storage $)
+    {
+        assembly {
+            $.slot := SuperloopEssentialRolesStorageLocation
+        }
+    }
+
+    function setAccountantModule(address accountantModule_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.accountantModule = accountantModule_;
+    }
+
+    function setWithdrawManagerModule(address withdrawManagerModule_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.withdrawManagerModule = withdrawManagerModule_;
+    }
+
+    function setVaultAdmin(address vaultAdmin_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.vaultAdmin = vaultAdmin_;
+    }
+
+    function setTreasury(address treasury_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.treasury = treasury_;
     }
 }

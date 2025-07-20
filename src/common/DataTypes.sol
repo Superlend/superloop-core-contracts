@@ -31,15 +31,13 @@ library DataTypes {
         string symbol;
         // superloop specific
         uint256 supplyCap;
-        address feeManager;
-        address withdrawManager;
-        address commonPriceOracle;
-        // management specific
-        address vaultAdmin;
-        address treasury;
-        uint16 performanceFee; // BPS
         address superloopModuleRegistry;
         address[] modules;
+        // essential roles
+        address accountantModule;
+        address withdrawManagerModule;
+        address vaultAdmin;
+        address treasury;
     }
 
     // UniversalDexModule data types
@@ -62,5 +60,13 @@ library DataTypes {
         uint256 tokenOutBalanceBefore;
         uint256 tokenInBalanceAfter;
         uint256 tokenOutBalanceAfter;
+    }
+
+    struct AaveV3AccountantModuleInitData {
+        address poolAddressesProvider;
+        address[] lendAssets;
+        address[] borrowAssets;
+        uint16 performanceFee;
+        address vault;
     }
 }

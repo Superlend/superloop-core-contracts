@@ -22,4 +22,7 @@ library Errors {
     string public constant INVALID_SWAP_DATA = "17"; // invalid swap data
     string public constant INVALID_AMOUNT_IN = "18"; // amount in is greater than max amount in
     string public constant INVALID_AMOUNT_OUT = "19"; // amount out is less than min amount out
+    string public constant TRANSFER_NOT_SUPPORTED = "20"; // transfer is not supported
+    string public constant SUPPLY_CAP_EXCEEDED = "21"; // supply cap exceeded
+    string public constant INVALID_SHARES_AMOUNT = "22"; // shares amount cannot be 0
 }
