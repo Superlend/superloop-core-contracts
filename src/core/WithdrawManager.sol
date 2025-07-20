@@ -67,11 +67,11 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
             return DataTypes.WithdrawRequestState.CLAIMED;
         }
 
-        if (id > resolvedId) return DataTypes.WithdrawRequestState.UNPROCESSED;
-
         if (_withdrawRequest.cancelled) {
             return DataTypes.WithdrawRequestState.CANCELLED;
         }
+
+        if (id > resolvedId) return DataTypes.WithdrawRequestState.UNPROCESSED;
 
         return DataTypes.WithdrawRequestState.CLAIMABLE;
     }
@@ -180,7 +180,6 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
 
         DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
         require(_withdrawRequest.user == _msgSender(), Errors.CALLER_NOT_WITHDRAW_REQUEST_OWNER);
-        require(!_withdrawRequest.claimed, Errors.WITHDRAW_REQUEST_ALREADY_CLAIMED);
     }
 
     function _registerWithdrawRequest(

@@ -9,13 +9,13 @@ import {Errors} from "../../src/common/Errors.sol";
 
 contract ModuleRegistryTest is Test {
     SuperloopModuleRegistry public moduleRegistry;
-    
+
     address public owner;
     address public user;
     address public module1;
     address public module2;
     address public module3;
-    
+
     string public constant MODULE_NAME_1 = "UniversalDexModule";
     string public constant MODULE_NAME_2 = "AccountantModule";
     string public constant MODULE_NAME_3 = "WithdrawManagerModule";
@@ -44,12 +44,12 @@ contract ModuleRegistryTest is Test {
 
     function test_SetModule_Success() public {
         vm.startPrank(owner);
-        
+
         vm.expectEmit(true, true, false, true);
         emit ModuleSet(MODULE_NAME_1, keccak256(abi.encode(MODULE_NAME_1)), module1);
-        
+
         moduleRegistry.setModule(MODULE_NAME_1, module1);
-        
+
         vm.stopPrank();
 
         // Verify module was set correctly
@@ -60,38 +60,38 @@ contract ModuleRegistryTest is Test {
 
     function test_SetModule_OnlyOwner() public {
         vm.startPrank(user);
-        
+
         vm.expectRevert();
         moduleRegistry.setModule(MODULE_NAME_1, module1);
-        
+
         vm.stopPrank();
     }
 
     function test_SetModule_EmptyName() public {
         vm.startPrank(owner);
-        
+
         vm.expectRevert();
         moduleRegistry.setModule("", module1);
-        
+
         vm.stopPrank();
     }
 
     function test_SetModule_ZeroAddress() public {
         vm.startPrank(owner);
-        
+
         vm.expectRevert();
         moduleRegistry.setModule(MODULE_NAME_1, address(0));
-        
+
         vm.stopPrank();
     }
 
     function test_SetModule_MultipleModules() public {
         vm.startPrank(owner);
-        
+
         moduleRegistry.setModule(MODULE_NAME_1, module1);
         moduleRegistry.setModule(MODULE_NAME_2, module2);
         moduleRegistry.setModule(MODULE_NAME_3, module3);
-        
+
         vm.stopPrank();
 
         // Verify all modules were set correctly
@@ -109,10 +109,10 @@ contract ModuleRegistryTest is Test {
 
     function test_SetModule_OverwriteExisting() public {
         vm.startPrank(owner);
-        
+
         moduleRegistry.setModule(MODULE_NAME_1, module1);
         moduleRegistry.setModule(MODULE_NAME_1, module2); // Overwrite with different address
-        
+
         vm.stopPrank();
 
         // Verify module was overwritten
@@ -201,12 +201,12 @@ contract ModuleRegistryTest is Test {
 
         DataTypes.ModuleData[] memory modules = moduleRegistry.getModules();
         assertEq(modules.length, 3);
-        
+
         // Verify all modules are present (order may vary)
         bool found1 = false;
         bool found2 = false;
         bool found3 = false;
-        
+
         for (uint256 i = 0; i < modules.length; i++) {
             if (keccak256(abi.encode(modules[i].moduleName)) == keccak256(abi.encode(MODULE_NAME_1))) {
                 assertEq(modules[i].moduleAddress, module1);
@@ -219,7 +219,7 @@ contract ModuleRegistryTest is Test {
                 found3 = true;
             }
         }
-        
+
         assertTrue(found1 && found2 && found3, "All modules should be found");
     }
 
@@ -245,12 +245,12 @@ contract ModuleRegistryTest is Test {
 
     function test_Integration_FullWorkflow() public {
         vm.startPrank(owner);
-        
+
         // Set multiple modules
         moduleRegistry.setModule(MODULE_NAME_1, module1);
         moduleRegistry.setModule(MODULE_NAME_2, module2);
         moduleRegistry.setModule(MODULE_NAME_3, module3);
-        
+
         vm.stopPrank();
 
         // Test getModuleByName for all modules
