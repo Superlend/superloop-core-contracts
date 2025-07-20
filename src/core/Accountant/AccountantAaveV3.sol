@@ -7,14 +7,14 @@ import {ReentrancyGuardUpgradeable} from
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
-import {SuperloopAccountantAaveV3ModuleStorage} from "../core/lib/SuperloopAccountantAaveV3ModuleStorage.sol";
+import {AccountantAaveV3Storage} from "../../core/lib/AccountantAaveV3Storage.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IAccountantModule} from "../interfaces/IAccountantModule.sol";
-import {DataTypes} from "../common/DataTypes.sol";
+import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
-import {Errors} from "../common/Errors.sol";
+import {Errors} from "../../common/Errors.sol";
 
-contract SuperloopAccountantAaveV3Module is ReentrancyGuardUpgradeable, IAccountantModule {
+contract AccountantAaveV3 is ReentrancyGuardUpgradeable, IAccountantModule {
     constructor() {
         _disableInitializers();
     }
@@ -28,17 +28,16 @@ contract SuperloopAccountantAaveV3Module is ReentrancyGuardUpgradeable, IAccount
         internal
         onlyInitializing
     {
-        SuperloopAccountantAaveV3ModuleStorage.setPoolAddressesProvider(data.poolAddressesProvider);
-        SuperloopAccountantAaveV3ModuleStorage.setLendAssets(data.lendAssets);
-        SuperloopAccountantAaveV3ModuleStorage.setBorrowAssets(data.borrowAssets);
-        SuperloopAccountantAaveV3ModuleStorage.setPerformanceFee(data.performanceFee);
-        SuperloopAccountantAaveV3ModuleStorage.setVault(data.vault);
+        AccountantAaveV3Storage.setPoolAddressesProvider(data.poolAddressesProvider);
+        AccountantAaveV3Storage.setLendAssets(data.lendAssets);
+        AccountantAaveV3Storage.setBorrowAssets(data.borrowAssets);
+        AccountantAaveV3Storage.setPerformanceFee(data.performanceFee);
+        AccountantAaveV3Storage.setVault(data.vault);
     }
 
     // get total assets for the contract
     function getTotalAssets() public view returns (uint256) {
-        SuperloopAccountantAaveV3ModuleStorage.SuperloopAccountantAaveV3ModuleState storage $ =
-            SuperloopAccountantAaveV3ModuleStorage.getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
         address baseAsset = IERC4626($.vault).asset();
 
         // get poolDataProvider from poolAddressesProvider
@@ -82,8 +81,7 @@ contract SuperloopAccountantAaveV3Module is ReentrancyGuardUpgradeable, IAccount
     }
 
     function getPerformanceFee(uint256 totalShares, uint256 exchangeRate) public view onlyVault returns (uint256) {
-        SuperloopAccountantAaveV3ModuleStorage.SuperloopAccountantAaveV3ModuleState storage $ =
-            SuperloopAccountantAaveV3ModuleStorage.getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
 
         uint256 latestAssetAmount = totalShares * exchangeRate;
         uint256 prevAssetAmount = totalShares * $.lastRealizedFeeExchangeRate;
@@ -91,15 +89,13 @@ contract SuperloopAccountantAaveV3Module is ReentrancyGuardUpgradeable, IAccount
         if (prevAssetAmount > latestAssetAmount) return 0;
 
         uint256 interestGenerated = latestAssetAmount - prevAssetAmount;
-        uint256 performanceFee =
-            (interestGenerated * $.performanceFee) / SuperloopAccountantAaveV3ModuleStorage.BPS_DENOMINATOR;
+        uint256 performanceFee = (interestGenerated * $.performanceFee) / AccountantAaveV3Storage.BPS_DENOMINATOR;
 
         return performanceFee;
     }
 
     function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_) public onlyVault {
-        SuperloopAccountantAaveV3ModuleStorage.SuperloopAccountantAaveV3ModuleState storage $ =
-            SuperloopAccountantAaveV3ModuleStorage.getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
         $.lastRealizedFeeExchangeRate = lastRealizedFeeExchangeRate_;
     }
 
@@ -109,8 +105,7 @@ contract SuperloopAccountantAaveV3Module is ReentrancyGuardUpgradeable, IAccount
     }
 
     function _onlyVault() internal view {
-        SuperloopAccountantAaveV3ModuleStorage.SuperloopAccountantAaveV3ModuleState storage $ =
-            SuperloopAccountantAaveV3ModuleStorage.getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
         require(msg.sender == $.vault, Errors.CALLER_NOT_VAULT);
     }
 }

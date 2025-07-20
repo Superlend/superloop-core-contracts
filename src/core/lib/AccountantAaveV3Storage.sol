@@ -4,11 +4,11 @@ pragma solidity ^0.8.13;
 
 import {Errors} from "../../common/Errors.sol";
 
-library SuperloopAccountantAaveV3ModuleStorage {
+library AccountantAaveV3Storage {
     uint256 constant BPS_DENOMINATOR = 10000;
     uint16 constant PERFORMANCE_FEE_CAP = 5000; // 50%
 
-    struct SuperloopAccountantAaveV3ModuleState {
+    struct AccountantAaveV3State {
         address poolAddressesProvider;
         address[] lendAssets;
         address[] borrowAssets;
@@ -24,28 +24,24 @@ library SuperloopAccountantAaveV3ModuleStorage {
     bytes32 private constant SuperloopStateStorageLocation =
         0x598833bb6e5b117dbde0d7085bdc6742e065fbf9b5d0a2add3a41c4c0587f600;
 
-    function getSuperloopAccountantAaveV3ModuleStorage()
-        internal
-        pure
-        returns (SuperloopAccountantAaveV3ModuleState storage $)
-    {
+    function getAccountantAaveV3Storage() internal pure returns (AccountantAaveV3State storage $) {
         assembly {
             $.slot := SuperloopStateStorageLocation
         }
     }
 
     function setPoolAddressesProvider(address poolAddressesProvider_) internal {
-        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3State storage $ = getAccountantAaveV3Storage();
         $.poolAddressesProvider = poolAddressesProvider_;
     }
 
     function setLendAssets(address[] memory lendAssets_) internal {
-        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3State storage $ = getAccountantAaveV3Storage();
         $.lendAssets = lendAssets_;
     }
 
     function setBorrowAssets(address[] memory borrowAssets_) internal {
-        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3State storage $ = getAccountantAaveV3Storage();
         $.borrowAssets = borrowAssets_;
     }
 
@@ -54,17 +50,17 @@ library SuperloopAccountantAaveV3ModuleStorage {
             revert(Errors.INVALID_PERFORMANCE_FEE);
         }
 
-        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3State storage $ = getAccountantAaveV3Storage();
         $.performanceFee = performanceFee_;
     }
 
     function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_) internal {
-        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3State storage $ = getAccountantAaveV3Storage();
         $.lastRealizedFeeExchangeRate = lastRealizedFeeExchangeRate_;
     }
 
     function setVault(address vault_) internal {
-        SuperloopAccountantAaveV3ModuleState storage $ = getSuperloopAccountantAaveV3ModuleStorage();
+        AccountantAaveV3State storage $ = getAccountantAaveV3Storage();
         $.vault = vault_;
     }
 }

@@ -8,18 +8,13 @@ import {ReentrancyGuardUpgradeable} from
 import {IERC20} from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {WithdrawManagerStorage} from "./WithdrawManagerStorage.sol";
 import {WithdrawManagerValidators} from "./WithdrawManagerValidators.sol";
 import {Errors} from "../../common/Errors.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
-import {Storages} from "../../common/Storages.sol";
+import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
+import {IWithdrawManager} from "../../interfaces/IWithdrawManager.sol";
 
-contract WithdrawManager is
-    WithdrawManagerStorage,
-    Initializable,
-    ReentrancyGuardUpgradeable,
-    WithdrawManagerValidators
-{
+contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, WithdrawManagerValidators, IWithdrawManager {
     constructor() {
         _disableInitializers();
     }
@@ -30,70 +25,126 @@ contract WithdrawManager is
     }
 
     function __SuperloopWithdrawManager_init(address _vault) internal onlyInitializing {
-        _setVault(_vault);
-        _setAsset(IERC4626(_vault).asset());
-        _setNextWithdrawRequestId();
-        // TODO: set fee manager
+        WithdrawManagerStorage.setVault(_vault);
+        WithdrawManagerStorage.setAsset(IERC4626(_vault).asset());
+        WithdrawManagerStorage.setNextWithdrawRequestId();
     }
 
     function requestWithdraw(uint256 shares) external override {
-        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         _validateWithdrawRequest($, _msgSender(), shares);
         _registerWithdrawRequest($, _msgSender(), shares);
     }
 
     function cancelWithdrawRequest(uint256 id) external override nonReentrant {
-        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         _validateCancelWithdrawRequest($, id);
         _handleCancelWithdrawRequest($, id);
     }
 
     function resolveWithdrawRequests(uint256 resolvedIdLimit) external override onlyVault {
-        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         _validateResolveWithdrawRequests($, resolvedIdLimit);
         _handleResolveWithdrawRequests($, resolvedIdLimit);
     }
 
     function withdraw() external override nonReentrant {
-        Storages.WithdrawManagerState storage $ = _getWithdrawManagerStorage();
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         uint256 id = _validateWithdraw($);
         _handleWithdraw($, id);
     }
 
     function getWithdrawRequestState(uint256 id) public view override returns (DataTypes.WithdrawRequestState) {
-        DataTypes.WithdrawRequestData memory withdrawRequest = withdrawRequest(id);
-        uint256 resolvedId = resolvedWithdrawRequestId();
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
+        uint256 resolvedId = $.resolvedWithdrawRequestId;
 
-        if (withdrawRequest.user == address(0)) {
+        if (_withdrawRequest.user == address(0)) {
             return DataTypes.WithdrawRequestState.NOT_EXIST;
         }
 
-        if (withdrawRequest.claimed) {
+        if (_withdrawRequest.claimed) {
             return DataTypes.WithdrawRequestState.CLAIMED;
         }
 
         if (id > resolvedId) return DataTypes.WithdrawRequestState.UNPROCESSED;
 
-        if (withdrawRequest.cancelled) {
+        if (_withdrawRequest.cancelled) {
             return DataTypes.WithdrawRequestState.CANCELLED;
         }
 
         return DataTypes.WithdrawRequestState.CLAIMABLE;
     }
 
-    function _registerWithdrawRequest(Storages.WithdrawManagerState storage $, address user, uint256 shares) internal {
-        SafeERC20.safeTransferFrom(IERC20(vault()), user, address(this), shares);
+    function vault() public view override returns (address) {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return $.vault;
+    }
+
+    function asset() public view override returns (address) {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return $.asset;
+    }
+
+    function nextWithdrawRequestId() public view override returns (uint256) {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return $.nextWithdrawRequestId;
+    }
+
+    function resolvedWithdrawRequestId() public view override returns (uint256) {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return $.resolvedWithdrawRequestId;
+    }
+
+    function withdrawRequest(uint256 id) public view override returns (DataTypes.WithdrawRequestData memory) {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return $.withdrawRequest[id];
+    }
+
+    function withdrawRequests(uint256[] memory ids)
+        public
+        view
+        override
+        returns (DataTypes.WithdrawRequestData[] memory)
+    {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        DataTypes.WithdrawRequestData[] memory _withdrawRequests = new DataTypes.WithdrawRequestData[](ids.length);
+        uint256 length = ids.length;
+        for (uint256 i; i < length;) {
+            _withdrawRequests[i] = $.withdrawRequest[ids[i]];
+            unchecked {
+                ++i;
+            }
+        }
+
+        return _withdrawRequests;
+    }
+
+    function userWithdrawRequestId(address user) public view override returns (uint256) {
+        user = user == address(0) ? msg.sender : user;
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+
+        return $.userWithdrawRequestId[user];
+    }
+
+    function _registerWithdrawRequest(
+        WithdrawManagerStorage.WithdrawManagerState storage $,
+        address user,
+        uint256 shares
+    ) internal {
+        SafeERC20.safeTransferFrom(IERC20($.vault), user, address(this), shares);
 
         uint256 withdrawReqId = $.nextWithdrawRequestId;
 
-        _setWithdrawRequest(user, shares, 0, withdrawReqId, false, false);
-        _setUserWithdrawRequest(user, withdrawReqId);
-        _setNextWithdrawRequestId();
+        WithdrawManagerStorage.setWithdrawRequest(user, shares, 0, withdrawReqId, false, false);
+        WithdrawManagerStorage.setUserWithdrawRequest(user, withdrawReqId);
+        WithdrawManagerStorage.setNextWithdrawRequestId();
     }
 
-    function _handleResolveWithdrawRequests(Storages.WithdrawManagerState storage $, uint256 resolvedIdLimit)
-        internal
-    {
+    function _handleResolveWithdrawRequests(
+        WithdrawManagerStorage.WithdrawManagerState storage $,
+        uint256 resolvedIdLimit
+    ) internal {
         // for each of the withdarw request from current resolved window to resolvedIdLimit
         // sum the shares and call the withdraw function on the vault
         uint256 totalShares = 0;
@@ -101,33 +152,33 @@ contract WithdrawManager is
         for (uint256 id = $.resolvedWithdrawRequestId + 1; id <= resolvedIdLimit; id++) {
             if ($.withdrawRequest[id].cancelled) continue;
             totalShares += $.withdrawRequest[id].shares;
-            uint256 amount = IERC4626(vault()).previewRedeem($.withdrawRequest[id].shares);
+            uint256 amount = IERC4626($.vault).previewRedeem($.withdrawRequest[id].shares);
             $.withdrawRequest[id].amount = amount;
             totalAssetsDistributed += amount;
         }
         // call the redeem function on the vault
-        uint256 totalAssetsRedeemed = IERC4626(vault()).redeem(totalShares, address(this), address(this));
+        uint256 totalAssetsRedeemed = IERC4626($.vault).redeem(totalShares, address(this), address(this));
 
         require(totalAssetsRedeemed == totalAssetsDistributed, Errors.INVALID_ASSETS_DISTRIBUTED);
 
-        _setResolvedWithdrawRequestId(resolvedIdLimit);
+        WithdrawManagerStorage.setResolvedWithdrawRequestId(resolvedIdLimit);
     }
 
-    function _handleWithdraw(Storages.WithdrawManagerState storage $, uint256 id) internal {
-        DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
+    function _handleWithdraw(WithdrawManagerStorage.WithdrawManagerState storage $, uint256 id) internal {
+        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
         $.withdrawRequest[id].claimed = true;
-        _setUserWithdrawRequest(withdrawRequest.user, 0);
+        WithdrawManagerStorage.setUserWithdrawRequest(_withdrawRequest.user, 0);
 
-        SafeERC20.safeTransfer(IERC20(asset()), _msgSender(), withdrawRequest.amount);
+        SafeERC20.safeTransfer(IERC20($.asset), _msgSender(), _withdrawRequest.amount);
     }
 
-    function _handleCancelWithdrawRequest(Storages.WithdrawManagerState storage $, uint256 id) internal {
-        DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
+    function _handleCancelWithdrawRequest(WithdrawManagerStorage.WithdrawManagerState storage $, uint256 id) internal {
+        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
 
         $.withdrawRequest[id].cancelled = true;
-        _setUserWithdrawRequest(withdrawRequest.user, 0);
+        WithdrawManagerStorage.setUserWithdrawRequest(_withdrawRequest.user, 0);
 
-        SafeERC20.safeTransfer(IERC20(vault()), withdrawRequest.user, withdrawRequest.shares);
+        SafeERC20.safeTransfer(IERC20($.vault), _withdrawRequest.user, _withdrawRequest.shares);
     }
 
     modifier onlyVault() {
@@ -136,6 +187,7 @@ contract WithdrawManager is
     }
 
     function _onlyVault() internal view {
-        require(_msgSender() == vault(), Errors.CALLER_NOT_VAULT);
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        require(_msgSender() == $.vault, Errors.CALLER_NOT_VAULT);
     }
 }

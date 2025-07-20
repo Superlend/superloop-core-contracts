@@ -3,15 +3,16 @@
 pragma solidity ^0.8.13;
 
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
-import {Storages} from "../../common/Storages.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {Errors} from "../../common/Errors.sol";
+import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
 
 abstract contract WithdrawManagerValidators is Context {
-    function _validateWithdrawRequest(Storages.WithdrawManagerState storage $, address user, uint256 shares)
-        internal
-        view
-    {
+    function _validateWithdrawRequest(
+        WithdrawManagerStorage.WithdrawManagerState storage $,
+        address user,
+        uint256 shares
+    ) internal view {
         require(shares > 0, Errors.INVALID_AMOUNT);
         uint256 id = $.userWithdrawRequestId[user];
         DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
@@ -21,10 +22,10 @@ abstract contract WithdrawManagerValidators is Context {
         }
     }
 
-    function _validateResolveWithdrawRequests(Storages.WithdrawManagerState storage $, uint256 resolvedIdLimit)
-        internal
-        view
-    {
+    function _validateResolveWithdrawRequests(
+        WithdrawManagerStorage.WithdrawManagerState storage $,
+        uint256 resolvedIdLimit
+    ) internal view {
         // this id needs to be less than the nextWithdrawRequestId
         require(resolvedIdLimit < $.nextWithdrawRequestId, Errors.INVALID_WITHDRAW_RESOLVED_START_ID_LIMIT);
 
@@ -32,7 +33,12 @@ abstract contract WithdrawManagerValidators is Context {
         require(resolvedIdLimit > $.resolvedWithdrawRequestId, Errors.INVALID_WITHDRAW_RESOLVED_END_ID_LIMIT);
     }
 
-    function _validateWithdraw(Storages.WithdrawManagerState storage $) internal view virtual returns (uint256) {
+    function _validateWithdraw(WithdrawManagerStorage.WithdrawManagerState storage $)
+        internal
+        view
+        virtual
+        returns (uint256)
+    {
         uint256 id = $.userWithdrawRequestId[_msgSender()];
         require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
         DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
@@ -46,7 +52,10 @@ abstract contract WithdrawManagerValidators is Context {
         return id;
     }
 
-    function _validateCancelWithdrawRequest(Storages.WithdrawManagerState storage $, uint256 id) internal view {
+    function _validateCancelWithdrawRequest(WithdrawManagerStorage.WithdrawManagerState storage $, uint256 id)
+        internal
+        view
+    {
         require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
         require(id > $.resolvedWithdrawRequestId, Errors.INVALID_WITHDRAW_REQUEST_STATE);
 
