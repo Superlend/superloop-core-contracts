@@ -12,7 +12,11 @@ abstract contract SuperloopModuleRegistryStorage is ISuperloopModuleRegistry {
     mapping(address => string) private _moduleWhitelist;
 
     function getModuleByName(string calldata name) public view returns (DataTypes.ModuleData memory) {
-        return DataTypes.ModuleData(name, _moduleRegistry[_getModuleIdFromName(name)]);
+        address moduleAddress = _moduleRegistry[_getModuleIdFromName(name)];
+        if (moduleAddress == address(0)) {
+            return DataTypes.ModuleData("", address(0));
+        }
+        return DataTypes.ModuleData(name, moduleAddress);
     }
 
     function getModuleByAddress(address moduleAddress) public view returns (DataTypes.ModuleData memory) {
@@ -47,6 +51,7 @@ abstract contract SuperloopModuleRegistryStorage is ISuperloopModuleRegistry {
         bytes32 id = _getModuleIdFromName(_name);
         _moduleNames.push(_name);
         _moduleRegistry[id] = _module;
+        _moduleWhitelist[_module] = _name;
 
         emit ModuleSet(_name, id, _module);
     }
