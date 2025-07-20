@@ -3,42 +3,51 @@
 pragma solidity ^0.8.13;
 
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import {ERC4626Upgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {ERC4626Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {ReentrancyGuardUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
-import {SuperloopStorage} from "./SuperloopStorage.sol";
+import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {ISuperloopModuleRegistry} from "../../interfaces/IModuleRegistry.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {Errors} from "../../common/Errors.sol";
+import {SuperloopStorage} from "../lib/SuperLoopStorage.sol";
 
-contract Superloop is SuperloopStorage, ReentrancyGuardUpgradeable, ERC4626Upgradeable {
-    constructor(address superloopModuleRegistry_) SuperloopStorage(superloopModuleRegistry_) {
+contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
+    constructor() {
         _disableInitializers();
     }
 
-    function initialize(DataTypes.VaultInitData memory data) public initializer {
+    function initialize(
+        DataTypes.VaultInitData memory data
+    ) public initializer {
         __ReentrancyGuard_init();
         __ERC4626_init(IERC20(data.asset));
         __ERC20_init(data.name, data.symbol);
         __Superloop_init(data);
     }
 
-    function __Superloop_init(DataTypes.VaultInitData memory data) internal onlyInitializing {
-        _setSupplyCap(data.supplyCap);
-        _setFeeManager(data.feeManager);
-        _setWithdrawManager(data.withdrawManager);
-        _setCommonPriceOracle(data.commonPriceOracle);
-        _setVaultAdmin(data.vaultAdmin);
-        _setTreasury(data.treasury);
-        _setPerformanceFee(data.performanceFee);
+    function __Superloop_init(
+        DataTypes.VaultInitData memory data
+    ) internal onlyInitializing {
+        SuperloopStorage.setSupplyCap(data.supplyCap);
+        SuperloopStorage.setFeeManager(data.feeManager);
+        SuperloopStorage.setWithdrawManager(data.withdrawManager);
+        SuperloopStorage.setCommonPriceOracle(data.commonPriceOracle);
+        SuperloopStorage.setVaultAdmin(data.vaultAdmin);
+        SuperloopStorage.setTreasury(data.treasury);
+        SuperloopStorage.setPerformanceFee(data.performanceFee);
+        SuperloopStorage.setSuperloopModuleRegistry(
+            data.superloopModuleRegistry
+        );
 
         for (uint256 i = 0; i < data.modules.length; i++) {
-            if (!ISuperloopModuleRegistry(SUPERLOOP_MODULE_REGISTRY).isModuleWhitelisted(data.modules[i])) {
+            if (
+                !ISuperloopModuleRegistry(address(0)).isModuleWhitelisted(
+                    data.modules[i]
+                )
+            ) {
                 revert(Errors.INVALID_MODULE);
             }
-            _setRegisteredModule(data.modules[i], true);
+            SuperloopStorage.setRegisteredModule(data.modules[i], true);
         }
     }
 
@@ -70,12 +79,22 @@ contract Superloop is SuperloopStorage, ReentrancyGuardUpgradeable, ERC4626Upgra
         return 0;
     }
 
-    function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256) {
-        // require(assets > 0, "ERC4626: zero deposit");
-        // require(
-        //     assets <= maxDeposit(receiver),
-        //     "ERC4626: deposit more than max"
-        // );
+    function deposit(
+        uint256 assets,
+        address receiver
+    ) public override nonReentrant returns (uint256) {
+        require(assets > 0, Errors.INVALID_AMOUNT);
+
+        // realize performance fee
+
+        // preview deposit
+
+        // require(shares > 0, Errors.INVALID_AMOUNT);
+
+        // _deposit();
+
+        // return shares;
+
         // uint256 shares = previewDeposit(assets);
         // require(shares > 0, "ERC4626: zero shares mint");
         // _deposit(_msgSender(), receiver, assets, shares);
@@ -83,10 +102,21 @@ contract Superloop is SuperloopStorage, ReentrancyGuardUpgradeable, ERC4626Upgra
         return 0;
     }
 
+    function mint(
+        uint256 shares,
+        address receiver
+    ) public override nonReentrant returns (uint256) {
+        return 0;
+    }
+
     /**
      * @dev Withdraws assets by burning shares.
      */
-    function withdraw(uint256 assets, address receiver, address owner) public override nonReentrant returns (uint256) {
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) public override nonReentrant returns (uint256) {
         // require(assets > 0, "ERC4626: zero withdraw");
         // require(
         //     assets <= maxWithdraw(owner),
@@ -98,7 +128,12 @@ contract Superloop is SuperloopStorage, ReentrancyGuardUpgradeable, ERC4626Upgra
         return 0;
     }
 
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
         // SafeERC20.safeTransferFrom(
         //     IERC20(asset()),
         //     caller,
@@ -113,10 +148,13 @@ contract Superloop is SuperloopStorage, ReentrancyGuardUpgradeable, ERC4626Upgra
         // emit Deposit(caller, receiver, assets, shares);
     }
 
-    function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
-        internal
-        override
-    {
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
         // if (caller != owner) {
         //     _spendAllowance(owner, caller, shares);
         // }
@@ -156,6 +194,6 @@ contract Superloop is SuperloopStorage, ReentrancyGuardUpgradeable, ERC4626Upgra
     }
 
     function _decimalsOffset() internal view override returns (uint8) {
-        return DECIMALS_OFFSET;
+        return SuperloopStorage.DECIMALS_OFFSET;
     }
 }

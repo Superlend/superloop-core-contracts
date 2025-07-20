@@ -38,6 +38,7 @@ library DataTypes {
         address vaultAdmin;
         address treasury;
         uint16 performanceFee; // BPS
+        address superloopModuleRegistry;
         address[] modules;
     }
 
