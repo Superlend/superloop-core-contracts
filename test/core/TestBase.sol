@@ -24,6 +24,7 @@ contract TestBase is Test {
     address public constant AAVE_V3_PRICE_ORACLE = 0xeCF313dE38aA85EF618D06D1A602bAa917D62525;
     address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
     address public constant XTZ_WHALE = 0x008ae222661B6A42e3A097bd7AAC15412829106b;
+    address public constant STXTZ_WHALE = 0x65142dEC2969f1a3083Ad31541Ef4B73871C8C9B;
 
     address public admin;
     address public treasury;
@@ -65,6 +66,7 @@ contract TestBase is Test {
         vm.label(AAVE_V3_PRICE_ORACLE, "AAVE_V3_PRICE_ORACLE");
         vm.label(POOL, "POOL");
         vm.label(XTZ_WHALE, "XTZ_WHALE");
+        vm.label(STXTZ_WHALE, "STXTZ_WHALE");
         vm.label(address(poolDataProvider), "poolDataProvider");
         vm.label(address(pool), "pool");
     }
@@ -83,6 +85,7 @@ contract TestBase is Test {
         borrowModule = new AaveV3BorrowModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3BorrowModule", address(borrowModule));
         repayModule = new AaveV3RepayModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        moduleRegistry.setModule("AaveV3RepayModule", address(repayModule));
 
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");
