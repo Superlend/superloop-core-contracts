@@ -76,7 +76,7 @@ contract AaveV3SupplyModuleTest is TestBase {
 
         // current supply
         (uint256 currentSupply,,,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
-        console.log("currentSupply", currentSupply);
+        uint256 currentBalance = IERC20(XTZ).balanceOf(address(superloop));
 
         // Act
         vm.prank(admin);
@@ -84,7 +84,9 @@ contract AaveV3SupplyModuleTest is TestBase {
 
         // Assert
         (uint256 finalSupply,,,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
+        uint256 finalBalance = IERC20(XTZ).balanceOf(address(superloop));
 
         assertEq(finalSupply, currentSupply + supplyAmount);
+        assertEq(finalBalance, currentBalance - supplyAmount);
     }
 }

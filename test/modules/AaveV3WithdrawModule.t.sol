@@ -73,13 +73,16 @@ contract AaveV3WithdrawModuleTest is TestBase {
         });
 
         (uint256 currentSupply,,,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
+        uint256 currentBalance = IERC20(XTZ).balanceOf(address(superloop));
 
         vm.prank(admin);
         superloop.operate(moduleExecutionData);
 
         (uint256 finalSupply,,,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
+        uint256 finalBalance = IERC20(XTZ).balanceOf(address(superloop));
 
         assertTrue(finalSupply <= currentSupply);
+        assertTrue(finalBalance > currentBalance);
     }
 
     function _supply() internal {
