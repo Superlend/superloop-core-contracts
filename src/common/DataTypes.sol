@@ -98,4 +98,9 @@ library DataTypes {
     struct AaveV3EmodeParams {
         uint8 emodeCategory;
     }
+
+    struct AaveV3ActionParams {
+        address asset;
+        uint256 amount;
+    }
 }
