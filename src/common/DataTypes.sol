@@ -94,4 +94,8 @@ library DataTypes {
         uint256 amountToApprove;
         bytes executionData;
     }
+
+    struct AaveV3EmodeParams {
+        uint8 emodeCategory;
+    }
 }

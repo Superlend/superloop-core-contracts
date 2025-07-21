@@ -8,6 +8,9 @@ import {DataTypes} from "../../src/common/DataTypes.sol";
 import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegistry.sol";
 import {AaveV3FlashloanModule} from "../../src/modules/AaveV3FlashloanModule.sol";
 import {AaveV3CallbackHandler} from "../../src/modules/AaveV3CallbackHandler.sol";
+import {AaveV3EmodeModule} from "../../src/modules/AaveV3EmodeModule.sol";
+import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
+import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 
 contract TestBase is Test {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -26,6 +29,9 @@ contract TestBase is Test {
     AaveV3FlashloanModule public flashloanModule;
     AaveV3CallbackHandler public callbackHandler;
     address public mockModule;
+    AaveV3EmodeModule public emodeModule;
+    IPoolDataProvider public poolDataProvider;
+    IPool public pool;
 
     function setUp() public virtual {
         vm.createSelectFork("etherlink");
@@ -36,6 +42,8 @@ contract TestBase is Test {
         moduleRegistry = new SuperloopModuleRegistry();
         mockModule = makeAddr("mockModule");
         moduleRegistry.setModule("MockModule", mockModule);
+        poolDataProvider = IPoolDataProvider(AAVE_V3_POOL_DATA_PROVIDER);
+        pool = IPool(POOL);
         vm.stopPrank();
 
         vm.label(admin, "admin");
@@ -49,6 +57,8 @@ contract TestBase is Test {
         vm.label(AAVE_V3_PRICE_ORACLE, "AAVE_V3_PRICE_ORACLE");
         vm.label(POOL, "POOL");
         vm.label(XTZ_WHALE, "XTZ_WHALE");
+        vm.label(address(poolDataProvider), "poolDataProvider");
+        vm.label(address(pool), "pool");
     }
 
     function _deployModules() internal {
@@ -56,8 +66,11 @@ contract TestBase is Test {
         moduleRegistry.setModule("AaveV3FlashloanModule", address(flashloanModule));
         callbackHandler = new AaveV3CallbackHandler();
         moduleRegistry.setModule("AaveV3CallbackHandler", address(callbackHandler));
+        emodeModule = new AaveV3EmodeModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        moduleRegistry.setModule("AaveV3EmodeModule", address(emodeModule));
 
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");
+        vm.label(address(emodeModule), "emodeModule");
     }
 }
