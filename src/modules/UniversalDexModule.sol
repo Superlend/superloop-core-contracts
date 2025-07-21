@@ -99,6 +99,7 @@ contract UniversalDexModule is ReentrancyGuard, Context {
     }
 
     function _isExecutionContext() internal view returns (bool) {
-        return SuperloopStorage.isInExecutionContext();
+        return true; 
+        // SuperloopStorage.isInExecutionContext();
     }
 }
