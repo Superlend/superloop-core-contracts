@@ -9,6 +9,10 @@ import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegis
 import {AaveV3FlashloanModule} from "../../src/modules/AaveV3FlashloanModule.sol";
 import {AaveV3CallbackHandler} from "../../src/modules/AaveV3CallbackHandler.sol";
 import {AaveV3EmodeModule} from "../../src/modules/AaveV3EmodeModule.sol";
+import {AaveV3SupplyModule} from "../../src/modules/AaveV3SupplyModule.sol";
+import {AaveV3WithdrawModule} from "../../src/modules/AaveV3WithdrawModule.sol";
+import {AaveV3BorrowModule} from "../../src/modules/AaveV3BorrowModule.sol";
+import {AaveV3RepayModule} from "../../src/modules/AaveV3RepayModule.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 
@@ -28,6 +32,10 @@ contract TestBase is Test {
     Superloop public superloop;
     AaveV3FlashloanModule public flashloanModule;
     AaveV3CallbackHandler public callbackHandler;
+    AaveV3SupplyModule public supplyModule;
+    AaveV3WithdrawModule public withdrawModule;
+    AaveV3BorrowModule public borrowModule;
+    AaveV3RepayModule public repayModule;
     address public mockModule;
     AaveV3EmodeModule public emodeModule;
     IPoolDataProvider public poolDataProvider;
@@ -68,9 +76,20 @@ contract TestBase is Test {
         moduleRegistry.setModule("AaveV3CallbackHandler", address(callbackHandler));
         emodeModule = new AaveV3EmodeModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3EmodeModule", address(emodeModule));
+        supplyModule = new AaveV3SupplyModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        moduleRegistry.setModule("AaveV3SupplyModule", address(supplyModule));
+        withdrawModule = new AaveV3WithdrawModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        moduleRegistry.setModule("AaveV3WithdrawModule", address(withdrawModule));
+        borrowModule = new AaveV3BorrowModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        moduleRegistry.setModule("AaveV3BorrowModule", address(borrowModule));
+        repayModule = new AaveV3RepayModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
 
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");
         vm.label(address(emodeModule), "emodeModule");
+        vm.label(address(supplyModule), "supplyModule");
+        vm.label(address(withdrawModule), "withdrawModule");
+        vm.label(address(borrowModule), "borrowModule");
+        vm.label(address(repayModule), "repayModule");
     }
 }
