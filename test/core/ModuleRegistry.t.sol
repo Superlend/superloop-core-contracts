@@ -36,7 +36,7 @@ contract ModuleRegistryTest is Test {
 
     // ============ Constructor Tests ============
 
-    function test_Constructor_SetsOwner() public {
+    function test_Constructor_SetsOwner() public view {
         assertEq(moduleRegistry.owner(), owner);
     }
 
@@ -133,7 +133,7 @@ contract ModuleRegistryTest is Test {
         assertEq(moduleData.moduleAddress, module1);
     }
 
-    function test_GetModuleByName_NonExistentModule() public {
+    function test_GetModuleByName_NonExistentModule() public view {
         DataTypes.ModuleData memory moduleData = moduleRegistry.getModuleByName("NonExistentModule");
         assertEq(moduleData.moduleName, "");
         assertEq(moduleData.moduleAddress, address(0));
@@ -168,7 +168,7 @@ contract ModuleRegistryTest is Test {
         assertEq(moduleData.moduleAddress, address(0));
     }
 
-    function test_GetModuleByAddress_ZeroAddress() public {
+    function test_GetModuleByAddress_ZeroAddress() public view {
         DataTypes.ModuleData memory moduleData = moduleRegistry.getModuleByAddress(address(0));
         assertEq(moduleData.moduleName, "");
         assertEq(moduleData.moduleAddress, address(0));
@@ -176,7 +176,7 @@ contract ModuleRegistryTest is Test {
 
     // ============ getModules Tests ============
 
-    function test_GetModules_EmptyRegistry() public {
+    function test_GetModules_EmptyRegistry() public view {
         DataTypes.ModuleData[] memory modules = moduleRegistry.getModules();
         assertEq(modules.length, 0);
     }
@@ -233,11 +233,11 @@ contract ModuleRegistryTest is Test {
         assertTrue(moduleRegistry.isModuleWhitelisted(module1));
     }
 
-    function test_IsModuleWhitelisted_NonWhitelistedModule() public {
+    function test_IsModuleWhitelisted_NonWhitelistedModule() public view {
         assertFalse(moduleRegistry.isModuleWhitelisted(module1));
     }
 
-    function test_IsModuleWhitelisted_ZeroAddress() public {
+    function test_IsModuleWhitelisted_ZeroAddress() public view {
         assertFalse(moduleRegistry.isModuleWhitelisted(address(0)));
     }
 

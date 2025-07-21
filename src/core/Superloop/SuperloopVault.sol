@@ -2,107 +2,25 @@
 
 pragma solidity ^0.8.13;
 
-import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {
     ERC4626Upgradeable,
     ERC20Upgradeable
 } from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import {IERC20Metadata, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
+import {SuperloopStorage} from "../lib/SuperLoopStorage.sol";
 import {ReentrancyGuardUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
-import {ISuperloopModuleRegistry} from "../interfaces/IModuleRegistry.sol";
-import {DataTypes} from "../common/DataTypes.sol";
-import {Errors} from "../common/Errors.sol";
-import {SuperloopStorage} from "./lib/SuperLoopStorage.sol";
-import {IAccountantModule} from "../interfaces/IAccountantModule.sol";
+import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Errors} from "../../common/Errors.sol";
 
-contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(DataTypes.VaultInitData memory data) public initializer {
+abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeable {
+    function __SuperloopVault_init(address asset, string memory name, string memory symbol) internal onlyInitializing {
         __ReentrancyGuard_init();
-        __ERC4626_init(IERC20(data.asset));
-        __ERC20_init(data.name, data.symbol);
-        __Superloop_init(data);
-    }
-
-    function __Superloop_init(DataTypes.VaultInitData memory data) internal onlyInitializing {
-        SuperloopStorage.setSupplyCap(data.supplyCap);
-        SuperloopStorage.setSuperloopModuleRegistry(data.superloopModuleRegistry);
-
-        for (uint256 i = 0; i < data.modules.length; i++) {
-            if (!ISuperloopModuleRegistry(address(0)).isModuleWhitelisted(data.modules[i])) {
-                revert(Errors.INVALID_MODULE);
-            }
-            SuperloopStorage.setRegisteredModule(data.modules[i], true);
-        }
-
-        SuperloopStorage.setAccountantModule(data.accountantModule);
-        SuperloopStorage.setWithdrawManagerModule(data.withdrawManagerModule);
-        SuperloopStorage.setVaultAdmin(data.vaultAdmin);
-        SuperloopStorage.setTreasury(data.treasury);
-        SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
-        SuperloopStorage.setPrivilegedAddress(data.treasury, true);
-        SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
-    }
-
-    fallback() external {
-        if (SuperloopStorage.isInExecutionContext()) {
-            _handleCallback();
-        }
-    }
-
-    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external nonReentrant {
-        // TODO : add restriction
-        SuperloopStorage.beginExecutionContext();
-
-        uint256 len = moduleExecutionData.length;
-        for (uint256 i; i < len;) {
-            // check if the module is registered
-            if (!SuperloopStorage.getSuperloopStorage().registeredModules[moduleExecutionData[i].module]) {
-                revert(Errors.MODULE_NOT_REGISTERED);
-            }
-
-            if (moduleExecutionData[i].executionType == DataTypes.CallType.CALL) {
-                Address.functionCall(moduleExecutionData[i].module, moduleExecutionData[i].data);
-            } else {
-                Address.functionDelegateCall(moduleExecutionData[i].module, moduleExecutionData[i].data);
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
-        SuperloopStorage.endExecutionContext();
-    }
-
-    function operateSelf(DataTypes.ModuleExecutionData[] memory moduleExecutionData)
-        external
-        nonReentrant
-        onlyExecutionContext
-        onlySelf
-    {
-        uint256 len = moduleExecutionData.length;
-        for (uint256 i; i < len;) {
-            // check if the module is registered
-            if (!SuperloopStorage.getSuperloopStorage().registeredModules[moduleExecutionData[i].module]) {
-                revert(Errors.MODULE_NOT_REGISTERED);
-            }
-
-            if (moduleExecutionData[i].executionType == DataTypes.CallType.CALL) {
-                Address.functionCall(moduleExecutionData[i].module, moduleExecutionData[i].data);
-            } else {
-                Address.functionDelegateCall(moduleExecutionData[i].module, moduleExecutionData[i].data);
-            }
-
-            unchecked {
-                ++i;
-            }
-        }
+        __ERC4626_init(IERC20(asset));
+        __ERC20_init(name, symbol);
     }
 
     function totalAssets() public view override returns (uint256) {
@@ -228,10 +146,6 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         return super.transferFrom(from, to, amount);
     }
 
-    function _decimalsOffset() internal pure override returns (uint8) {
-        return SuperloopStorage.DECIMALS_OFFSET;
-    }
-
     function _realizePerformanceFee() internal {
         SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
 
@@ -245,11 +159,6 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
 
         // update the last realized fee exchange rate on the accountant module via delegate call
         IAccountantModule($.accountantModule).setLastRealizedFeeExchangeRate(exchangeRate);
-    }
-
-    function _getCurrentExchangeRate() internal view returns (uint256) {
-        uint256 assets = 1 * 10 ** IERC20Metadata(asset()).decimals();
-        return Math.mulDiv(assets, totalAssets() + 1, totalSupply() + 10 ** _decimalsOffset(), Math.Rounding.Floor);
     }
 
     function _getPerformanceFeeAndShares(uint256 exchangeRate, address accountantModule)
@@ -268,6 +177,11 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         shares = numerator / denominator;
 
         return shares;
+    }
+
+    function _getCurrentExchangeRate() internal view returns (uint256) {
+        uint256 assets = 1 * 10 ** IERC20Metadata(asset()).decimals();
+        return Math.mulDiv(assets, totalAssets() + 1, totalSupply() + 10 ** _decimalsOffset(), Math.Rounding.Floor);
     }
 
     function _convertToSharesWithPerformanceFee(uint256 assets) internal view returns (uint256) {
@@ -294,48 +208,13 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         return assets;
     }
 
-    function _handleCallback() internal {
-        address handler =
-            SuperloopStorage.getSuperloopStorage().callbackHandlers[keccak256(abi.encodePacked(msg.sender, msg.sig))];
-        require(handler != address(0), Errors.CALLBACK_HANDLER_NOT_FOUND);
-
-        bytes memory data = Address.functionCall(handler, msg.data);
-
-        if (data.length == 0) {
-            return;
-        }
-
-        DataTypes.CallbackData memory calls = abi.decode(data, (DataTypes.CallbackData));
-        DataTypes.ModuleExecutionData[] memory moduleExecutionData =
-            abi.decode(calls.executionData, (DataTypes.ModuleExecutionData[]));
-
-        Superloop(payable(address(this))).operateSelf(moduleExecutionData);
-
-        SafeERC20.forceApprove(IERC20(calls.asset), calls.addressToApprove, calls.amountToApprove);
+    function _decimalsOffset() internal pure override returns (uint8) {
+        return SuperloopStorage.DECIMALS_OFFSET;
     }
 
     modifier onlyPrivileged() {
         _onlyPrivileged();
         _;
-    }
-
-    modifier onlyExecutionContext() {
-        _isExecutionContext();
-        _;
-    }
-
-    modifier onlySelf() {
-        _onlySelf();
-        _;
-    }
-
-    function _onlySelf() internal view {
-        require(_msgSender() == address(this), Errors.CALLER_NOT_SELF);
-    }
-
-    function _isExecutionContext() internal view {
-        bool value = SuperloopStorage.isInExecutionContext();
-        require(value, Errors.NOT_IN_EXECUTION_CONTEXT);
     }
 
     function _onlyPrivileged() internal view {

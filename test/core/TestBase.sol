@@ -3,7 +3,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {Superloop} from "../../src/core/Superloop.sol";
+import {Superloop} from "../../src/core/Superloop/Superloop.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegistry.sol";
 

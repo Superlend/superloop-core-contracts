@@ -6,7 +6,7 @@ import {TestBase} from "./TestBase.sol";
 import {console} from "forge-std/console.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {MockVault} from "../../src/mock/MockVault.sol";
-import {AccountantAaveV3} from "../../src/core/AccountantAaveV3.sol";
+import {AccountantAaveV3} from "../../src/core/Accountant/AccountantAaveV3.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";

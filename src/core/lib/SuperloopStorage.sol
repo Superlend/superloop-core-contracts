@@ -41,6 +41,11 @@ library SuperloopStorage {
         $.superloopModuleRegistry = superloopModuleRegistry_;
     }
 
+    function setCallbackHandler(bytes32 key, address handler_) internal {
+        SuperloopState storage $ = getSuperloopStorage();
+        $.callbackHandlers[key] = handler_;
+    }
+
     struct SuperloopEssentialRoles {
         address accountantModule;
         address withdrawManagerModule;
