@@ -13,13 +13,14 @@ import {ReentrancyGuardUpgradeable} from
 import {ISuperloopModuleRegistry} from "../../interfaces/IModuleRegistry.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {Errors} from "../../common/Errors.sol";
-import {SuperloopStorage} from "../lib/SuperLoopStorage.sol";
+import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
 import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SuperloopActions} from "./SuperloopActions.sol";
 import {SuperloopVault} from "./SuperloopVault.sol";
 import {SuperloopBase} from "./SuperloopBase.sol";
+import {console} from "forge-std/console.sol";
 
 contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
     constructor() {
@@ -36,7 +37,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setSuperloopModuleRegistry(data.superloopModuleRegistry);
 
         for (uint256 i = 0; i < data.modules.length; i++) {
-            if (!ISuperloopModuleRegistry(address(0)).isModuleWhitelisted(data.modules[i])) {
+            if (!ISuperloopModuleRegistry(data.superloopModuleRegistry).isModuleWhitelisted(data.modules[i])) {
                 revert(Errors.INVALID_MODULE);
             }
             SuperloopStorage.setRegisteredModule(data.modules[i], true);
@@ -51,13 +52,15 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
     }
 
-    fallback() external {
+    fallback(bytes calldata) external returns (bytes memory) {
         if (SuperloopStorage.isInExecutionContext()) {
-            _handleCallback();
+            return _handleCallback();
+        } else {
+            revert(Errors.NOT_IN_EXECUTION_CONTEXT);
         }
     }
 
-    function _handleCallback() internal {
+    function _handleCallback() internal returns (bytes memory) {
         address handler =
             SuperloopStorage.getSuperloopStorage().callbackHandlers[keccak256(abi.encodePacked(msg.sender, msg.sig))];
         require(handler != address(0), Errors.CALLBACK_HANDLER_NOT_FOUND);
@@ -65,15 +68,19 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         bytes memory data = Address.functionCall(handler, msg.data);
 
         if (data.length == 0) {
-            return;
+            return abi.encode(false);
         }
 
-        DataTypes.CallbackData memory calls = abi.decode(data, (DataTypes.CallbackData));
-        DataTypes.ModuleExecutionData[] memory moduleExecutionData =
-            abi.decode(calls.executionData, (DataTypes.ModuleExecutionData[]));
+        (DataTypes.CallbackData memory calls, bool success) = abi.decode(data, (DataTypes.CallbackData, bool));
+        if (calls.executionData.length != 0) {
+            DataTypes.ModuleExecutionData[] memory moduleExecutionData =
+                abi.decode(calls.executionData, (DataTypes.ModuleExecutionData[]));
 
-        Superloop(payable(address(this))).operateSelf(moduleExecutionData);
+            Superloop(payable(address(this))).operateSelf(moduleExecutionData);
+        }
 
         SafeERC20.forceApprove(IERC20(calls.asset), calls.addressToApprove, calls.amountToApprove);
+
+        return abi.encode(success);
     }
 }

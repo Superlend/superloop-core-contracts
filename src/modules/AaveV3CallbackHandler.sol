@@ -8,11 +8,11 @@ contract AaveV3CallbackHandler is Context {
     function executeOperation(address, uint256, uint256 premium, address, bytes calldata params)
         external
         pure
-        returns (DataTypes.CallbackData memory)
+        returns (DataTypes.CallbackData memory, bool)
     {
         DataTypes.CallbackData memory callbackData = abi.decode(params, (DataTypes.CallbackData));
         callbackData.amountToApprove = callbackData.amountToApprove + premium;
 
-        return callbackData;
+        return (callbackData, true);
     }
 }

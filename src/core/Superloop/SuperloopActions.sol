@@ -3,7 +3,7 @@
 pragma solidity ^0.8.13;
 
 import {DataTypes} from "../../common/DataTypes.sol";
-import {SuperloopStorage} from "../lib/SuperLoopStorage.sol";
+import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
 import {Errors} from "../../common/Errors.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 

@@ -8,7 +8,7 @@ import {
 } from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
-import {SuperloopStorage} from "../lib/SuperLoopStorage.sol";
+import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
 import {ReentrancyGuardUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";

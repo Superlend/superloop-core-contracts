@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.13;
 
-import {SuperloopStorage} from "../lib/SuperLoopStorage.sol";
+import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
 import {Errors} from "../../common/Errors.sol";
 
 abstract contract SuperloopBase {
