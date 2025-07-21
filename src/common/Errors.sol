@@ -27,4 +27,8 @@ library Errors {
     string public constant INVALID_SHARES_AMOUNT = "22"; // shares amount cannot be 0
     string public constant INSUFFICIENT_BALANCE = "23"; // insufficient balance
     string public constant CALLER_NOT_PRIVILEGED = "24"; // the caller of function is not privileged
+    string public constant NOT_IN_EXECUTION_CONTEXT = "25"; // the caller of function is not in execution context
+    string public constant MODULE_NOT_REGISTERED = "26"; // module is not registered
+    string public constant CALLBACK_HANDLER_NOT_FOUND = "27"; // callback handler not found
+    string public constant CALLER_NOT_SELF = "28"; // the caller of function is not self
 }

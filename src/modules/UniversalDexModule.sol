@@ -7,11 +7,12 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
+import {SuperloopStorage} from "../core/lib/SuperloopStorage.sol";
 import {Errors} from "../common/Errors.sol";
 import {DataTypes} from "../common/DataTypes.sol";
 
 contract UniversalDexModule is ReentrancyGuard, Context {
-    function executeSwap(DataTypes.ExecuteSwapParams memory params)
+    function execute(DataTypes.ExecuteSwapParams memory params)
         external
         nonReentrant
         onlyExecutionContext
@@ -40,7 +41,7 @@ contract UniversalDexModule is ReentrancyGuard, Context {
         return diffInTokenOutBalance;
     }
 
-    function executeSwapAndExit(DataTypes.ExecuteSwapParams memory params, address to)
+    function executeAndExit(DataTypes.ExecuteSwapParams memory params, address to)
         external
         nonReentrant
         returns (uint256)
@@ -55,7 +56,7 @@ contract UniversalDexModule is ReentrancyGuard, Context {
             tokenOutBalanceAfter: 0
         });
 
-        SafeERC20.safeTransferFrom(IERC20(params.tokenIn), msg.sender, address(this), params.amountIn);
+        SafeERC20.safeTransferFrom(IERC20(params.tokenIn), _msgSender(), address(this), params.amountIn);
 
         _executeSwap(params);
 
@@ -93,12 +94,11 @@ contract UniversalDexModule is ReentrancyGuard, Context {
     }
 
     modifier onlyExecutionContext() {
-        _isExecutionContext();
+        require(_isExecutionContext(), Errors.NOT_IN_EXECUTION_CONTEXT);
         _;
     }
 
     function _isExecutionContext() internal view returns (bool) {
-        // TODO: implement this
-        return true;
+        return SuperloopStorage.isInExecutionContext();
     }
 }

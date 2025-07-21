@@ -105,7 +105,7 @@ contract UniversalDexModuleTest is Test {
         vm.startPrank(USER);
 
         IERC20(USDT).transfer(address(dexModule), amountIn);
-        uint256 amountOut = dexModule.executeSwap(params);
+        uint256 amountOut = dexModule.execute(params);
 
         vm.stopPrank();
 
@@ -155,7 +155,7 @@ contract UniversalDexModuleTest is Test {
         vm.startPrank(USER);
 
         IERC20(USDT).approve(address(dexModule), amountIn);
-        uint256 amountOut = dexModule.executeSwapAndExit(params, USER);
+        uint256 amountOut = dexModule.executeAndExit(params, USER);
 
         vm.stopPrank();
         uint256 usdcBalance = IERC20(USDC).balanceOf(USER);

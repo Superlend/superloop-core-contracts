@@ -69,4 +69,29 @@ library DataTypes {
         uint16 performanceFee;
         address vault;
     }
+
+    struct ModuleExecutionData {
+        CallType executionType;
+        address module;
+        bytes data;
+    }
+
+    enum CallType {
+        CALL,
+        DELEGATECALL
+    }
+
+    struct AaveV3FlashloanParams {
+        address asset;
+        uint256 amount;
+        uint16 referralCode;
+        bytes callbackExecutionData;
+    }
+
+    struct CallbackData {
+        address asset;
+        address addressToApprove;
+        uint256 amountToApprove;
+        bytes executionData;
+    }
 }

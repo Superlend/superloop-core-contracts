@@ -112,7 +112,7 @@ contract AccountantAaveV3Test is TestBase {
         accountantAaveV3.initialize(initData);
     }
 
-    function test_GetTotalAssets() public {
+    function test_GetTotalAssets() public view {
         // Test getTotalAssets calculation using actual fork data
         uint256 totalAssets = accountantAaveV3.getTotalAssets();
 
@@ -246,7 +246,7 @@ contract AccountantAaveV3Test is TestBase {
         newContract.initialize(initData);
     }
 
-    function test_GetTotalAssetsWithZeroBalances() public {
+    function test_GetTotalAssetsWithZeroBalances() public view {
         // Test getTotalAssets when there are no lend/borrow positions
         // This should be the default state since we haven't interacted with Aave V3
         uint256 totalAssets = accountantAaveV3.getTotalAssets();

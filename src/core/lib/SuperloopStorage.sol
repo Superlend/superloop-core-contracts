@@ -9,6 +9,7 @@ library SuperloopStorage {
         uint256 supplyCap;
         address superloopModuleRegistry;
         mapping(address => bool) registeredModules;
+        mapping(bytes32 => address) callbackHandlers;
     }
 
     /**
@@ -84,5 +85,37 @@ library SuperloopStorage {
     function setPrivilegedAddress(address privilegedAddress_, bool isPrivileged_) internal {
         SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
         $.privilegedAddresses[privilegedAddress_] = isPrivileged_;
+    }
+
+    struct SuperloopExecutionContext {
+        bool value;
+    }
+
+    /**
+     * @dev Storage location constant for the superloop essential roles storage.
+     * Computed using: keccak256(abi.encode(uint256(keccak256("superloop.Superloop.executionContext")) - 1)) & ~bytes32(uint256(0xff))
+     */
+    bytes32 private constant SuperloopExecutionContextStorageLocation =
+        0x09ba4f032e25ab064c0a0b578597c657b2f04d2ad4f0677d98d0b504efa6c800;
+
+    function getSuperloopExecutionContextStorage() internal pure returns (SuperloopExecutionContext storage $) {
+        assembly {
+            $.slot := SuperloopExecutionContextStorageLocation
+        }
+    }
+
+    function beginExecutionContext() internal {
+        SuperloopExecutionContext storage $ = getSuperloopExecutionContextStorage();
+        $.value = true;
+    }
+
+    function endExecutionContext() internal {
+        SuperloopExecutionContext storage $ = getSuperloopExecutionContextStorage();
+        $.value = false;
+    }
+
+    function isInExecutionContext() internal view returns (bool) {
+        SuperloopExecutionContext storage $ = getSuperloopExecutionContextStorage();
+        return $.value;
     }
 }

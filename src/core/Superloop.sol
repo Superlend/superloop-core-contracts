@@ -16,6 +16,7 @@ import {Errors} from "../common/Errors.sol";
 import {SuperloopStorage} from "./lib/SuperLoopStorage.sol";
 import {IAccountantModule} from "../interfaces/IAccountantModule.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
     constructor() {
@@ -49,16 +50,59 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
     }
 
-    fallback() external payable {
-        // TODO: implement fallback with callbacks logic
-        revert("Superloop: fallback not allowed");
+    fallback() external {
+        if (SuperloopStorage.isInExecutionContext()) {
+            _handleCallback();
+        }
     }
 
-    function operate() external pure {
-        // TODO : handle execution context and upate in dex module
+    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external nonReentrant {
+        // TODO : add restriction
+        SuperloopStorage.beginExecutionContext();
 
-        // restrictions
-        // TODO: implement operate logic
+        uint256 len = moduleExecutionData.length;
+        for (uint256 i; i < len;) {
+            // check if the module is registered
+            if (!SuperloopStorage.getSuperloopStorage().registeredModules[moduleExecutionData[i].module]) {
+                revert(Errors.MODULE_NOT_REGISTERED);
+            }
+
+            if (moduleExecutionData[i].executionType == DataTypes.CallType.CALL) {
+                Address.functionCall(moduleExecutionData[i].module, moduleExecutionData[i].data);
+            } else {
+                Address.functionDelegateCall(moduleExecutionData[i].module, moduleExecutionData[i].data);
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
+        SuperloopStorage.endExecutionContext();
+    }
+
+    function operateSelf(DataTypes.ModuleExecutionData[] memory moduleExecutionData)
+        external
+        nonReentrant
+        onlyExecutionContext
+        onlySelf
+    {
+        uint256 len = moduleExecutionData.length;
+        for (uint256 i; i < len;) {
+            // check if the module is registered
+            if (!SuperloopStorage.getSuperloopStorage().registeredModules[moduleExecutionData[i].module]) {
+                revert(Errors.MODULE_NOT_REGISTERED);
+            }
+
+            if (moduleExecutionData[i].executionType == DataTypes.CallType.CALL) {
+                Address.functionCall(moduleExecutionData[i].module, moduleExecutionData[i].data);
+            } else {
+                Address.functionDelegateCall(moduleExecutionData[i].module, moduleExecutionData[i].data);
+            }
+
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     function totalAssets() public view override returns (uint256) {
@@ -166,10 +210,6 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         return assets;
     }
 
-    function _decimalsOffset() internal pure override returns (uint8) {
-        return SuperloopStorage.DECIMALS_OFFSET;
-    }
-
     function transfer(address to, uint256 amount)
         public
         override(ERC20Upgradeable, IERC20)
@@ -186,6 +226,10 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         returns (bool)
     {
         return super.transferFrom(from, to, amount);
+    }
+
+    function _decimalsOffset() internal pure override returns (uint8) {
+        return SuperloopStorage.DECIMALS_OFFSET;
     }
 
     function _realizePerformanceFee() internal {
@@ -250,9 +294,48 @@ contract Superloop is ReentrancyGuardUpgradeable, ERC4626Upgradeable {
         return assets;
     }
 
+    function _handleCallback() internal {
+        address handler =
+            SuperloopStorage.getSuperloopStorage().callbackHandlers[keccak256(abi.encodePacked(msg.sender, msg.sig))];
+        require(handler != address(0), Errors.CALLBACK_HANDLER_NOT_FOUND);
+
+        bytes memory data = Address.functionCall(handler, msg.data);
+
+        if (data.length == 0) {
+            return;
+        }
+
+        DataTypes.CallbackData memory calls = abi.decode(data, (DataTypes.CallbackData));
+        DataTypes.ModuleExecutionData[] memory moduleExecutionData =
+            abi.decode(calls.executionData, (DataTypes.ModuleExecutionData[]));
+
+        Superloop(payable(address(this))).operateSelf(moduleExecutionData);
+
+        SafeERC20.forceApprove(IERC20(calls.asset), calls.addressToApprove, calls.amountToApprove);
+    }
+
     modifier onlyPrivileged() {
         _onlyPrivileged();
         _;
+    }
+
+    modifier onlyExecutionContext() {
+        _isExecutionContext();
+        _;
+    }
+
+    modifier onlySelf() {
+        _onlySelf();
+        _;
+    }
+
+    function _onlySelf() internal view {
+        require(_msgSender() == address(this), Errors.CALLER_NOT_SELF);
+    }
+
+    function _isExecutionContext() internal view {
+        bool value = SuperloopStorage.isInExecutionContext();
+        require(value, Errors.NOT_IN_EXECUTION_CONTEXT);
     }
 
     function _onlyPrivileged() internal view {
