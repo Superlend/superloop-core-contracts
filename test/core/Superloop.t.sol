@@ -902,6 +902,25 @@ contract SuperloopTest is TestBase {
         vm.stopPrank();
     }
 
+    function test_skimRevertIfInvalidAsset() public {
+        deal(XTZ, address(superloop), 1000 * 10 ** 18);
+
+        vm.expectRevert(bytes(Errors.INVALID_SKIM_ASSET));
+
+        vm.prank(admin);
+        superloop.skim(XTZ);
+    }
+
+    function test_skim() public {
+        deal(ST_XTZ, address(superloop), 1000 * 10 ** 18);
+
+        vm.prank(admin);
+        superloop.skim(ST_XTZ);
+
+        assertEq(IERC20(ST_XTZ).balanceOf(treasury), 1000 * 10 ** 18);
+        assertEq(IERC20(ST_XTZ).balanceOf(address(superloop)), 0);
+    }
+
     function _seed() internal {
         vm.startPrank(admin);
         deal(XTZ, admin, 1000 * 10 ** 18);

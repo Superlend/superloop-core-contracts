@@ -54,6 +54,10 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         _handleWithdraw($, id);
     }
 
+    function withdrawInstant() external nonReentrant {
+        // TODO: implement this
+    }
+
     function getWithdrawRequestState(uint256 id) public view override returns (DataTypes.WithdrawRequestState) {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
