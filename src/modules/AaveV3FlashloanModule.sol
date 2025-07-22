@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -11,14 +10,14 @@ import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 import {DataTypes} from "../common/DataTypes.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract AaveV3FlashloanModule is ReentrancyGuard, Context {
+contract AaveV3FlashloanModule is Context {
     IPoolAddressesProvider public immutable poolAddressesProvider;
 
     constructor(address poolAddressesProvider_) {
         poolAddressesProvider = IPoolAddressesProvider(poolAddressesProvider_);
     }
 
-    function execute(DataTypes.AaveV3FlashloanParams memory params) external nonReentrant onlyExecutionContext {
+    function execute(DataTypes.AaveV3FlashloanParams memory params) external onlyExecutionContext {
         // fetch pool
         IPool pool = IPool(poolAddressesProvider.getPool());
 

@@ -9,6 +9,7 @@ import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProv
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 import {AccountantAaveV3Storage} from "../lib/AccountantAaveV3Storage.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
@@ -41,6 +42,8 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
     function getTotalAssets() public view returns (uint256) {
         AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
         address baseAsset = IERC4626($.vault).asset();
+        uint8 baseDecimals = IERC20Metadata(baseAsset).decimals();
+        uint256 commonDecimalFactor = 10 ** baseDecimals;
 
         // get poolDataProvider from poolAddressesProvider
         IPoolAddressesProvider poolAddressesProvider = IPoolAddressesProvider($.poolAddressesProvider);
@@ -49,12 +52,15 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
 
         // read the lend amount from lendAssets
         uint256 len = $.lendAssets.length;
-        uint256 totalAssetsInMarketReferenceCurrency = 0;
+        uint256 positiveBalance = 0;
+        uint256 negativeBalance = 0;
         for (uint256 i; i < len;) {
             address lendAsset = $.lendAssets[i];
             (uint256 currentATokenBalance,,,,,,,,) = poolDataProvider.getUserReserveData(lendAsset, $.vault);
             uint256 price = aaveOracle.getAssetPrice(lendAsset);
-            totalAssetsInMarketReferenceCurrency += currentATokenBalance * price;
+            uint8 decimals = IERC20Metadata(lendAsset).decimals();
+            uint256 balanceFormatted = (currentATokenBalance * commonDecimalFactor * price) / (10 ** decimals);
+            positiveBalance += balanceFormatted;
 
             unchecked {
                 ++i;
@@ -66,7 +72,9 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
             address borrowAsset = $.borrowAssets[i];
             (,, uint256 currentVariableDebt,,,,,,) = poolDataProvider.getUserReserveData(borrowAsset, $.vault);
             uint256 price = aaveOracle.getAssetPrice(borrowAsset);
-            totalAssetsInMarketReferenceCurrency -= currentVariableDebt * price;
+            uint8 decimals = IERC20Metadata(borrowAsset).decimals();
+            uint256 balanceFormatted = (currentVariableDebt * commonDecimalFactor * price) / (10 ** decimals);
+            negativeBalance += balanceFormatted;
 
             unchecked {
                 ++i;
@@ -74,10 +82,11 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
         }
 
         uint256 baseAssetPrice = aaveOracle.getAssetPrice(baseAsset);
-        totalAssetsInMarketReferenceCurrency += IERC20(baseAsset).balanceOf($.vault) * baseAssetPrice;
+        positiveBalance +=
+            (IERC20(baseAsset).balanceOf($.vault) * commonDecimalFactor * baseAssetPrice) / (10 ** baseDecimals);
 
         // convert to base asset
-        uint256 totalAssetsInBaseAsset = totalAssetsInMarketReferenceCurrency / baseAssetPrice;
+        uint256 totalAssetsInBaseAsset = (positiveBalance - negativeBalance) / baseAssetPrice;
 
         return totalAssetsInBaseAsset;
     }

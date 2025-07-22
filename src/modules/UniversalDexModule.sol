@@ -12,12 +12,7 @@ import {Errors} from "../common/Errors.sol";
 import {DataTypes} from "../common/DataTypes.sol";
 
 contract UniversalDexModule is ReentrancyGuard, Context {
-    function execute(DataTypes.ExecuteSwapParams memory params)
-        external
-        nonReentrant
-        onlyExecutionContext
-        returns (uint256)
-    {
+    function execute(DataTypes.ExecuteSwapParams memory params) external onlyExecutionContext returns (uint256) {
         address self = address(this);
 
         DataTypes.BalancesDifference memory balances = DataTypes.BalancesDifference({

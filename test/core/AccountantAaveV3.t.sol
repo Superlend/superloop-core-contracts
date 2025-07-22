@@ -310,7 +310,7 @@ contract AccountantAaveV3Test is TestBase {
         vm.mockCall(
             AAVE_V3_POOL_DATA_PROVIDER,
             abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, ST_XTZ, address(vault)),
-            abi.encode(1000 ether, 0, 0, 0, 0, 0, 0, 0, 0)
+            abi.encode(1000 * 10 ** 6, 0, 0, 0, 0, 0, 0, 0, 0)
         );
 
         vm.mockCall(
