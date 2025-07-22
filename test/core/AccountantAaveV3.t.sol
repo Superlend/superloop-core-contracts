@@ -17,7 +17,6 @@ import {IPriceOracleGetter} from "aave-v3-core/contracts/interfaces/IPriceOracle
 
 contract AccountantAaveV3Test is TestBase {
     AccountantAaveV3 public accountantAaveV3Implementation;
-    AccountantAaveV3 public accountantAaveV3;
     ProxyAdmin public proxyAdmin;
 
     IERC20 public asset;
@@ -25,7 +24,6 @@ contract AccountantAaveV3Test is TestBase {
 
     // Test data
     uint256 public constant INITIAL_WHALE_BALANCE = 1000 ether;
-    uint256 public constant PERFORMANCE_FEE = 2000; // 20%
 
     function setUp() public override {
         super.setUp();

@@ -32,4 +32,5 @@ library Errors {
     string public constant CALLBACK_HANDLER_NOT_FOUND = "27"; // callback handler not found
     string public constant CALLER_NOT_SELF = "28"; // the caller of function is not self
     string public constant CALLER_NOT_VAULT_ADMIN = "29"; // the caller of function is not vault admin
+    string public constant INVALID_SKIM_ASSET = "30"; // invalid asset
 }

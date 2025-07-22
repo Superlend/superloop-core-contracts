@@ -15,6 +15,7 @@ import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Errors} from "../../common/Errors.sol";
+import {console} from "forge-std/console.sol";
 
 abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeable {
     function __SuperloopVault_init(address asset, string memory name, string memory symbol) internal onlyInitializing {
@@ -78,7 +79,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
 
         require(assets > 0, Errors.INVALID_AMOUNT);
         // check supply cap
-        require(totalSupply() + assets <= maxDeposit(address(0)), Errors.SUPPLY_CAP_EXCEEDED);
+        require(assets <= maxDeposit(address(0)), Errors.SUPPLY_CAP_EXCEEDED);
 
         // preview deposit
         uint256 shares = previewDeposit(assets);
@@ -174,7 +175,10 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         uint256 totalSupplyCached = totalSupply();
         uint256 denominator = totalAssetsCached - assets;
         uint256 numerator = (totalAssetsCached * totalSupplyCached) - (totalSupplyCached * denominator);
-        shares = numerator / denominator;
+
+        if (numerator != 0) {
+            shares = numerator / denominator;
+        }
 
         return shares;
     }

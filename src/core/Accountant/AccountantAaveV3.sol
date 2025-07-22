@@ -52,7 +52,7 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
         uint256 totalAssetsInMarketReferenceCurrency = 0;
         for (uint256 i; i < len;) {
             address lendAsset = $.lendAssets[i];
-            (uint256 currentATokenBalance,,,,,,,,) = poolDataProvider.getUserReserveData(lendAsset, address(this));
+            (uint256 currentATokenBalance,,,,,,,,) = poolDataProvider.getUserReserveData(lendAsset, $.vault);
             uint256 price = aaveOracle.getAssetPrice(lendAsset);
             totalAssetsInMarketReferenceCurrency += currentATokenBalance * price;
 
@@ -64,7 +64,7 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
         len = $.borrowAssets.length;
         for (uint256 i; i < len;) {
             address borrowAsset = $.borrowAssets[i];
-            (,, uint256 currentVariableDebt,,,,,,) = poolDataProvider.getUserReserveData(borrowAsset, address(this));
+            (,, uint256 currentVariableDebt,,,,,,) = poolDataProvider.getUserReserveData(borrowAsset, $.vault);
             uint256 price = aaveOracle.getAssetPrice(borrowAsset);
             totalAssetsInMarketReferenceCurrency -= currentVariableDebt * price;
 
@@ -74,7 +74,7 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
         }
 
         uint256 baseAssetPrice = aaveOracle.getAssetPrice(baseAsset);
-        totalAssetsInMarketReferenceCurrency += IERC20(baseAsset).balanceOf(address(this)) * baseAssetPrice;
+        totalAssetsInMarketReferenceCurrency += IERC20(baseAsset).balanceOf($.vault) * baseAssetPrice;
 
         // convert to base asset
         uint256 totalAssetsInBaseAsset = totalAssetsInMarketReferenceCurrency / baseAssetPrice;
@@ -91,7 +91,9 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
         if (prevAssetAmount > latestAssetAmount) return 0;
 
         uint256 interestGenerated = latestAssetAmount - prevAssetAmount;
-        uint256 performanceFee = (interestGenerated * $.performanceFee) / AccountantAaveV3Storage.BPS_DENOMINATOR;
+
+        uint256 performanceFee = (interestGenerated * $.performanceFee)
+            / (AccountantAaveV3Storage.BPS_DENOMINATOR * 10 ** _getDecimalsForExchangeRate(exchangeRate));
 
         return performanceFee;
     }
@@ -99,6 +101,15 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
     function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_) public onlyVault {
         AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
         $.lastRealizedFeeExchangeRate = lastRealizedFeeExchangeRate_;
+    }
+
+    function _getDecimalsForExchangeRate(uint256 exchangeRate) internal pure returns (uint256) {
+        uint256 decimals = 0;
+        while (exchangeRate > 0) {
+            decimals++;
+            exchangeRate /= 10;
+        }
+        return decimals;
     }
 
     modifier onlyVault() {

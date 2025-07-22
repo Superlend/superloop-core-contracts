@@ -20,7 +20,6 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {SuperloopActions} from "./SuperloopActions.sol";
 import {SuperloopVault} from "./SuperloopVault.sol";
 import {SuperloopBase} from "./SuperloopBase.sol";
-import {console} from "forge-std/console.sol";
 
 contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
     constructor() {
@@ -50,6 +49,12 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
         SuperloopStorage.setPrivilegedAddress(data.treasury, true);
         SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
+    }
+
+    function skim(address asset_) public onlyVaultAdmin {
+        require(asset_ != asset(), Errors.INVALID_SKIM_ASSET);
+        uint256 balance = IERC20(asset_).balanceOf(address(this));
+        SafeERC20.safeTransfer(IERC20(asset_), SuperloopStorage.getSuperloopEssentialRolesStorage().treasury, balance);
     }
 
     fallback(bytes calldata) external returns (bytes memory) {

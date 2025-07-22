@@ -15,6 +15,12 @@ import {AaveV3BorrowModule} from "../../src/modules/AaveV3BorrowModule.sol";
 import {AaveV3RepayModule} from "../../src/modules/AaveV3RepayModule.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
+import {UniversalDexModule} from "../../src/modules/UniversalDexModule.sol";
+import {AccountantAaveV3} from "../../src/core/Accountant/AccountantAaveV3.sol";
+import {WithdrawManager} from "../../src/core/WithdrawManager.sol";
+import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
+import {TransparentUpgradeableProxy} from
+    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract TestBase is Test {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -25,6 +31,7 @@ contract TestBase is Test {
     address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
     address public constant XTZ_WHALE = 0x008ae222661B6A42e3A097bd7AAC15412829106b;
     address public constant STXTZ_WHALE = 0x65142dEC2969f1a3083Ad31541Ef4B73871C8C9B;
+    uint256 public constant PERFORMANCE_FEE = 2000; // 20%
 
     address public admin;
     address public treasury;
@@ -37,6 +44,10 @@ contract TestBase is Test {
     AaveV3WithdrawModule public withdrawModule;
     AaveV3BorrowModule public borrowModule;
     AaveV3RepayModule public repayModule;
+    UniversalDexModule public dexModule;
+    AccountantAaveV3 public accountantAaveV3;
+    WithdrawManager public withdrawManager;
+
     address public mockModule;
     AaveV3EmodeModule public emodeModule;
     IPoolDataProvider public poolDataProvider;
@@ -86,6 +97,8 @@ contract TestBase is Test {
         moduleRegistry.setModule("AaveV3BorrowModule", address(borrowModule));
         repayModule = new AaveV3RepayModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3RepayModule", address(repayModule));
+        dexModule = new UniversalDexModule();
+        moduleRegistry.setModule("UniversalDexModule", address(dexModule));
 
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");
@@ -94,5 +107,45 @@ contract TestBase is Test {
         vm.label(address(withdrawModule), "withdrawModule");
         vm.label(address(borrowModule), "borrowModule");
         vm.label(address(repayModule), "repayModule");
+        vm.label(address(dexModule), "dexModule");
+    }
+
+    function _deployAccountant(address vault) internal {
+        address[] memory lendAssets = new address[](1);
+        lendAssets[0] = ST_XTZ;
+        address[] memory borrowAssets = new address[](1);
+        borrowAssets[0] = XTZ;
+
+        DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
+            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
+            lendAssets: lendAssets,
+            borrowAssets: borrowAssets,
+            performanceFee: uint16(PERFORMANCE_FEE),
+            vault: vault
+        });
+
+        AccountantAaveV3 accountantAaveV3Implementation = new AccountantAaveV3();
+        ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
+
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(accountantAaveV3Implementation),
+            address(proxyAdmin),
+            abi.encodeWithSelector(AccountantAaveV3.initialize.selector, initData)
+        );
+
+        accountantAaveV3 = AccountantAaveV3(address(proxy));
+    }
+
+    function _deployWithdrawManager(address vault) internal {
+        WithdrawManager withdrawManagerImplementation = new WithdrawManager();
+        ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
+
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(withdrawManagerImplementation),
+            address(proxyAdmin),
+            abi.encodeWithSelector(WithdrawManager.initialize.selector, vault)
+        );
+
+        withdrawManager = WithdrawManager(address(proxy));
     }
 }
