@@ -31,7 +31,13 @@ contract TestBase is Test {
     address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
     address public constant XTZ_WHALE = 0x008ae222661B6A42e3A097bd7AAC15412829106b;
     address public constant STXTZ_WHALE = 0x65142dEC2969f1a3083Ad31541Ef4B73871C8C9B;
+    address public constant USDT_WHALE = 0x998098A1B2E95e2b8f15360676428EdFd976861f;
     uint256 public constant PERFORMANCE_FEE = 2000; // 20%
+    address public constant USDT = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
+    address public constant USDC = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9;
+    address public constant WXTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
+    address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
+    address public constant ROUTER = 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0;
 
     address public admin;
     address public treasury;

@@ -57,7 +57,7 @@ contract AccountantAaveV3Test is TestBase {
 
         // Fund the accountant with XTZ from whale
         vm.startPrank(XTZ_WHALE);
-        asset.transfer(address(accountantAaveV3), INITIAL_WHALE_BALANCE);
+        asset.transfer(address(vault), INITIAL_WHALE_BALANCE);
         vm.stopPrank();
     }
 
@@ -88,7 +88,7 @@ contract AccountantAaveV3Test is TestBase {
         AccountantAaveV3 newAccountant = AccountantAaveV3(address(proxy));
 
         // Test that the contract is properly initialized
-        assertEq(newAccountant.getTotalAssets(), 0); // Should work without reverting
+        assertEq(newAccountant.getTotalAssets(), INITIAL_WHALE_BALANCE); // Should work without reverting
     }
 
     function test_InitializeRevertIfAlreadyInitialized() public {
@@ -154,15 +154,15 @@ contract AccountantAaveV3Test is TestBase {
         uint256 latestAssetAmount = totalShares * exchangeRate;
         uint256 prevAssetAmount = totalShares * lastRealizedFeeExchangeRate;
         uint256 interestGenerated = latestAssetAmount - prevAssetAmount;
-        uint256 expectedPerformanceFee = (interestGenerated * PERFORMANCE_FEE) / 10000;
+        uint256 expectedPerformanceFee = (interestGenerated * PERFORMANCE_FEE) / (10000 * 1e18);
 
         vm.prank(address(vault));
-        uint256 actualPerformanceFee = accountantAaveV3.getPerformanceFee(totalShares, exchangeRate);
-
-        assertEq(actualPerformanceFee, expectedPerformanceFee);
+        uint256 actualPerformanceFee = accountantAaveV3.getPerformanceFee(totalShares, exchangeRate, 18);
 
         console.log("Performance fee:", actualPerformanceFee);
         console.log("Expected fee:", expectedPerformanceFee);
+
+        assertEq(actualPerformanceFee, expectedPerformanceFee);
     }
 
     function test_GetPerformanceFeeNoInterest() public {
@@ -175,7 +175,7 @@ contract AccountantAaveV3Test is TestBase {
         accountantAaveV3.setLastRealizedFeeExchangeRate(lastRealizedFeeExchangeRate);
 
         vm.prank(address(vault));
-        uint256 performanceFee = accountantAaveV3.getPerformanceFee(totalShares, exchangeRate);
+        uint256 performanceFee = accountantAaveV3.getPerformanceFee(totalShares, exchangeRate, 18);
 
         // Should return 0 when there's no interest (exchange rate decreased)
         assertEq(performanceFee, 0);
@@ -186,7 +186,7 @@ contract AccountantAaveV3Test is TestBase {
         uint256 exchangeRate = 1.1e18;
 
         vm.expectRevert();
-        accountantAaveV3.getPerformanceFee(totalShares, exchangeRate);
+        accountantAaveV3.getPerformanceFee(totalShares, exchangeRate, 18);
     }
 
     function test_SetLastRealizedFeeExchangeRate() public {
@@ -197,11 +197,11 @@ contract AccountantAaveV3Test is TestBase {
 
         // Test that the exchange rate was set correctly by calling getPerformanceFee
         vm.prank(address(vault));
-        uint256 performanceFee = accountantAaveV3.getPerformanceFee(1000 ether, 1.3e18);
+        uint256 performanceFee = accountantAaveV3.getPerformanceFee(1000 ether, 1.3e18, 18);
 
         // Should calculate based on the new exchange rate
         uint256 expectedInterest = 1000 ether * 1.3e18 - 1000 ether * newExchangeRate;
-        uint256 expectedFee = (expectedInterest * PERFORMANCE_FEE) / 10000;
+        uint256 expectedFee = (expectedInterest * PERFORMANCE_FEE) / (10000 * 1e18);
 
         assertEq(performanceFee, expectedFee);
     }
@@ -216,7 +216,7 @@ contract AccountantAaveV3Test is TestBase {
     function test_OnlyVaultModifier() public {
         // Test that only vault can call restricted functions
         vm.expectRevert();
-        accountantAaveV3.getPerformanceFee(1000 ether, 1.1e18);
+        accountantAaveV3.getPerformanceFee(1000 ether, 1.1e18, 18);
 
         vm.expectRevert();
         accountantAaveV3.setLastRealizedFeeExchangeRate(1.1e18);
@@ -261,17 +261,17 @@ contract AccountantAaveV3Test is TestBase {
         accountantAaveV3.setLastRealizedFeeExchangeRate(1.0e18);
 
         vm.prank(address(vault));
-        uint256 fee1 = accountantAaveV3.getPerformanceFee(0, 1.1e18);
+        uint256 fee1 = accountantAaveV3.getPerformanceFee(0, 1.1e18, 18);
         assertEq(fee1, 0);
 
         // Case 2: Same exchange rate (no change)
         vm.prank(address(vault));
-        uint256 fee2 = accountantAaveV3.getPerformanceFee(1000 ether, 1.0e18);
+        uint256 fee2 = accountantAaveV3.getPerformanceFee(1000 ether, 1.0e18, 18);
         assertEq(fee2, 0);
 
         // Case 3: Very small interest
         vm.prank(address(vault));
-        uint256 fee3 = accountantAaveV3.getPerformanceFee(1000 ether, 1.0001e18);
+        uint256 fee3 = accountantAaveV3.getPerformanceFee(1000 ether, 1.0001e18, 18);
         assertGt(fee3, 0);
 
         console.log("Small interest fee:", fee3);
@@ -303,19 +303,19 @@ contract AccountantAaveV3Test is TestBase {
 
         // Should work without reverting
         uint256 totalAssets = newAccountant.getTotalAssets();
-        assertEq(totalAssets, 0);
+        assertEq(totalAssets, INITIAL_WHALE_BALANCE);
     }
 
     function _enableMockingPoolDataProvider() internal {
         vm.mockCall(
             AAVE_V3_POOL_DATA_PROVIDER,
-            abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, ST_XTZ, address(accountantAaveV3)),
+            abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, ST_XTZ, address(vault)),
             abi.encode(1000 ether, 0, 0, 0, 0, 0, 0, 0, 0)
         );
 
         vm.mockCall(
             AAVE_V3_POOL_DATA_PROVIDER,
-            abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, XTZ, address(accountantAaveV3)),
+            abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, XTZ, address(vault)),
             abi.encode(0, 0, 800 ether, 0, 0, 0, 0, 0, 0)
         );
     }

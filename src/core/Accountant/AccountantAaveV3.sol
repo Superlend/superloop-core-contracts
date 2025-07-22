@@ -82,7 +82,12 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
         return totalAssetsInBaseAsset;
     }
 
-    function getPerformanceFee(uint256 totalShares, uint256 exchangeRate) public view onlyVault returns (uint256) {
+    function getPerformanceFee(uint256 totalShares, uint256 exchangeRate, uint8 decimals)
+        public
+        view
+        onlyVault
+        returns (uint256)
+    {
         AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
 
         uint256 latestAssetAmount = totalShares * exchangeRate;
@@ -92,8 +97,8 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
 
         uint256 interestGenerated = latestAssetAmount - prevAssetAmount;
 
-        uint256 performanceFee = (interestGenerated * $.performanceFee)
-            / (AccountantAaveV3Storage.BPS_DENOMINATOR * 10 ** _getDecimalsForExchangeRate(exchangeRate));
+        uint256 performanceFee =
+            (interestGenerated * $.performanceFee) / (AccountantAaveV3Storage.BPS_DENOMINATOR * 10 ** decimals);
 
         return performanceFee;
     }
@@ -101,15 +106,6 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, I
     function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_) public onlyVault {
         AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
         $.lastRealizedFeeExchangeRate = lastRealizedFeeExchangeRate_;
-    }
-
-    function _getDecimalsForExchangeRate(uint256 exchangeRate) internal pure returns (uint256) {
-        uint256 decimals = 0;
-        while (exchangeRate > 0) {
-            decimals++;
-            exchangeRate /= 10;
-        }
-        return decimals;
     }
 
     modifier onlyVault() {

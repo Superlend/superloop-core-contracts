@@ -151,9 +151,9 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
 
         // calculate current exchange rate
-        uint256 exchangeRate = _getCurrentExchangeRate();
+        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
 
-        uint256 sharesToMint = _getPerformanceFeeAndShares(exchangeRate, $.accountantModule);
+        uint256 sharesToMint = _getPerformanceFeeAndShares(exchangeRate, $.accountantModule, decimals);
 
         // mint the shares to the treasury
         _mint($.treasury, sharesToMint);
@@ -162,13 +162,13 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         IAccountantModule($.accountantModule).setLastRealizedFeeExchangeRate(exchangeRate);
     }
 
-    function _getPerformanceFeeAndShares(uint256 exchangeRate, address accountantModule)
+    function _getPerformanceFeeAndShares(uint256 exchangeRate, address accountantModule, uint8 decimals)
         internal
         view
         returns (uint256 shares)
     {
         // get performance fee
-        uint256 assets = IAccountantModule(accountantModule).getPerformanceFee(totalAssets(), exchangeRate);
+        uint256 assets = IAccountantModule(accountantModule).getPerformanceFee(totalAssets(), exchangeRate, decimals);
 
         // calculate how much shares to dilute ie. mint for the treasury as performance fee
         uint256 totalAssetsCached = totalAssets();
@@ -183,14 +183,19 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         return shares;
     }
 
-    function _getCurrentExchangeRate() internal view returns (uint256) {
-        uint256 assets = 1 * 10 ** IERC20Metadata(asset()).decimals();
-        return Math.mulDiv(assets, totalAssets() + 1, totalSupply() + 10 ** _decimalsOffset(), Math.Rounding.Floor);
+    function _getCurrentExchangeRate() internal view returns (uint256, uint8) {
+        uint8 decimals = IERC20Metadata(asset()).decimals();
+        uint256 assets = 1 * 10 ** decimals;
+        return (
+            Math.mulDiv(assets, totalAssets() + 1, totalSupply() + 10 ** _decimalsOffset(), Math.Rounding.Floor),
+            decimals
+        );
     }
 
     function _convertToSharesWithPerformanceFee(uint256 assets) internal view returns (uint256) {
+        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
         uint256 treasuryShares = _getPerformanceFeeAndShares(
-            _getCurrentExchangeRate(), SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule
+            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule, decimals
         );
         uint256 _totalSupply = totalSupply() + treasuryShares + 10 ** _decimalsOffset();
         uint256 _totalAssets = totalAssets() + 1;
@@ -201,8 +206,9 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     }
 
     function _convertToAssetsWithPerformanceFee(uint256 shares) internal view returns (uint256) {
+        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
         uint256 treasuryShares = _getPerformanceFeeAndShares(
-            _getCurrentExchangeRate(), SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule
+            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule, decimals
         );
         uint256 _totalSupply = totalSupply() + treasuryShares + 10 ** _decimalsOffset();
         uint256 _totalAssets = totalAssets() + 1;
