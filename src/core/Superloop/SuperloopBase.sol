@@ -27,15 +27,28 @@ abstract contract SuperloopBase {
     }
 
     function setWithdrawManagerModule(address withdrawManagerModule_) external onlyVaultAdmin {
+        address currentWithdrawManagerModule =
+            SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManagerModule;
+
+        SuperloopStorage.setPrivilegedAddress(currentWithdrawManagerModule, false);
         SuperloopStorage.setWithdrawManagerModule(withdrawManagerModule_);
+        SuperloopStorage.setPrivilegedAddress(withdrawManagerModule_, true);
     }
 
     function setVaultAdmin(address vaultAdmin_) external onlyVaultAdmin {
+        address currentVaultAdmin = SuperloopStorage.getSuperloopEssentialRolesStorage().vaultAdmin;
+
+        SuperloopStorage.setPrivilegedAddress(currentVaultAdmin, false);
         SuperloopStorage.setVaultAdmin(vaultAdmin_);
+        SuperloopStorage.setPrivilegedAddress(vaultAdmin_, true);
     }
 
     function setTreasury(address treasury_) external onlyVaultAdmin {
+        address currentTreasury = SuperloopStorage.getSuperloopEssentialRolesStorage().treasury;
+
+        SuperloopStorage.setPrivilegedAddress(currentTreasury, false);
         SuperloopStorage.setTreasury(treasury_);
+        SuperloopStorage.setPrivilegedAddress(treasury_, true);
     }
 
     function setPrivilegedAddress(address privilegedAddress_, bool isPrivileged_) external onlyVaultAdmin {

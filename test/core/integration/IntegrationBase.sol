@@ -11,6 +11,7 @@ import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
+import {IRouter} from "../../../src/mock/MockIRouter.sol";
 
 abstract contract IntegrationBase is TestBase {
     Superloop public superloopImplementation;
@@ -72,6 +73,12 @@ abstract contract IntegrationBase is TestBase {
         bytes32 key = keccak256(abi.encodePacked(POOL, IFlashLoanSimpleReceiver.executeOperation.selector));
         superloop.setCallbackHandler(key, address(callbackHandler));
 
+        moduleRegistry.setModule("withdrawManager", address(withdrawManager));
+        moduleRegistry.setModule("accountantAaveV3", address(accountantAaveV3));
+
+        superloop.setRegisteredModule(address(withdrawManager), true);
+        superloop.setRegisteredModule(address(accountantAaveV3), true);
+
         superloop.setAccountantModule(address(accountantAaveV3));
         superloop.setWithdrawManagerModule(address(withdrawManager));
 
@@ -95,5 +102,153 @@ abstract contract IntegrationBase is TestBase {
         vm.startPrank(POOL_ADMIN);
         IPoolConfigurator(POOL_CONFIGURATOR).setReserveFlashLoaning(ST_XTZ, true);
         vm.stopPrank();
+    }
+
+    function _flashloanCall(address asset, uint256 amount, bytes memory data)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        DataTypes.AaveV3FlashloanParams memory flashloanParams = DataTypes.AaveV3FlashloanParams({
+            asset: asset,
+            amount: amount,
+            referralCode: 0,
+            callbackExecutionData: data
+        });
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(flashloanModule),
+            data: abi.encodeWithSelector(flashloanModule.execute.selector, flashloanParams)
+        });
+    }
+
+    function _supplyCall(address asset, uint256 amount) internal view returns (DataTypes.ModuleExecutionData memory) {
+        DataTypes.AaveV3ActionParams memory supplyParams = DataTypes.AaveV3ActionParams({asset: asset, amount: amount});
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(supplyModule),
+            data: abi.encodeWithSelector(supplyModule.execute.selector, supplyParams)
+        });
+    }
+
+    function _borrowCall(address asset, uint256 amount) internal view returns (DataTypes.ModuleExecutionData memory) {
+        DataTypes.AaveV3ActionParams memory borrowParams = DataTypes.AaveV3ActionParams({asset: asset, amount: amount});
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(borrowModule),
+            data: abi.encodeWithSelector(borrowModule.execute.selector, borrowParams)
+        });
+    }
+
+    function _swapCallExactOut(
+        address tokenIn,
+        address tokenOut,
+        uint256 swapAmount,
+        uint256 amountOut,
+        address router,
+        uint24 fee
+    ) internal view returns (DataTypes.ModuleExecutionData memory) {
+        DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
+        swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
+            target: tokenIn,
+            data: abi.encodeWithSelector(IERC20.approve.selector, router, swapAmount)
+        });
+        swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
+            target: router,
+            data: abi.encodeWithSelector(
+                IRouter.exactOutputSingle.selector,
+                IRouter.ExactOutputSingleParams({
+                    tokenIn: tokenIn,
+                    tokenOut: tokenOut,
+                    fee: fee,
+                    recipient: address(superloop),
+                    amountOut: amountOut,
+                    amountInMaximum: swapAmount,
+                    sqrtPriceLimitX96: 0
+                })
+            )
+        });
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
+            amountIn: swapAmount,
+            maxAmountIn: swapAmount,
+            minAmountOut: amountOut,
+            data: swapParamsData
+        });
+
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(dexModule),
+            data: abi.encodeWithSelector(dexModule.execute.selector, swapParams)
+        });
+    }
+
+    function _swapCallExactIn(
+        address tokenIn,
+        address tokenOut,
+        uint256 swapAmount,
+        uint256 amountIn,
+        address router,
+        uint24 fee
+    ) internal view returns (DataTypes.ModuleExecutionData memory) {
+        DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
+        swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
+            target: tokenIn,
+            data: abi.encodeWithSelector(IERC20.approve.selector, router, swapAmount)
+        });
+        swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
+            target: ROUTER,
+            data: abi.encodeWithSelector(
+                IRouter.exactInputSingle.selector,
+                IRouter.ExactInputSingleParams({
+                    tokenIn: tokenIn,
+                    tokenOut: tokenOut,
+                    fee: fee,
+                    recipient: address(superloop),
+                    amountIn: amountIn,
+                    amountOutMinimum: swapAmount,
+                    sqrtPriceLimitX96: 0
+                })
+            )
+        });
+
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
+            minAmountOut: swapAmount,
+            data: swapParamsData
+        });
+
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(dexModule),
+            data: abi.encodeWithSelector(dexModule.execute.selector, swapParams)
+        });
+    }
+
+    function _repayCall(address asset, uint256 amount) internal view returns (DataTypes.ModuleExecutionData memory) {
+        DataTypes.AaveV3ActionParams memory repayParams = DataTypes.AaveV3ActionParams({asset: asset, amount: amount});
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(repayModule),
+            data: abi.encodeWithSelector(repayModule.execute.selector, repayParams)
+        });
+    }
+
+    function _withdrawCall(address asset, uint256 amount)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        DataTypes.AaveV3ActionParams memory withdrawParams =
+            DataTypes.AaveV3ActionParams({asset: asset, amount: amount});
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(withdrawModule),
+            data: abi.encodeWithSelector(withdrawModule.execute.selector, withdrawParams)
+        });
     }
 }

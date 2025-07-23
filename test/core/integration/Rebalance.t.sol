@@ -78,80 +78,23 @@ contract RebalanceTest is IntegrationBase {
         uint256 newSupplyAmount = 5 * STXTZ_SCALE;
         uint256 newBorrowAmount = (45 * XTZ_SCALE) / 10;
         uint256 swapAmount = newBorrowAmount + 1 * XTZ_SCALE;
+        uint256 supplyAmountWithPremium = newSupplyAmount + (newSupplyAmount * 5) / 10000; // 5 bps premium
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
 
         // 1. Deposit amount a in stxtz via aave supply module
-        DataTypes.AaveV3ActionParams memory supplyParams =
-            DataTypes.AaveV3ActionParams({asset: ST_XTZ, amount: newSupplyAmount});
-        moduleExecutionData[0] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(supplyModule),
-            data: abi.encodeWithSelector(supplyModule.execute.selector, supplyParams)
-        });
+        moduleExecutionData[0] = _supplyCall(ST_XTZ, newSupplyAmount);
 
         // // 2. Borrow amount b in xtz via aave borrow module
-        DataTypes.AaveV3ActionParams memory borrowParams =
-            DataTypes.AaveV3ActionParams({asset: XTZ, amount: newBorrowAmount});
-        moduleExecutionData[1] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(borrowModule),
-            data: abi.encodeWithSelector(borrowModule.execute.selector, borrowParams)
-        });
+        moduleExecutionData[1] = _borrowCall(XTZ, newBorrowAmount);
 
         // 3. Swap amount b + 1 in xtz for stxtz via the universal dex module
-        uint256 supplyAmountWithPremium = newSupplyAmount + (newSupplyAmount * 5) / 10000; // 5 bps premium
-        DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
-        swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: XTZ,
-            data: abi.encodeWithSelector(IERC20.approve.selector, ROUTER, swapAmount)
-        });
-        swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
-            target: ROUTER,
-            data: abi.encodeWithSelector(
-                IRouter.exactOutputSingle.selector,
-                IRouter.ExactOutputSingleParams({
-                    tokenIn: XTZ,
-                    tokenOut: ST_XTZ,
-                    fee: XTZ_STXTZ_POOL_FEE,
-                    recipient: address(superloop),
-                    amountOut: supplyAmountWithPremium,
-                    amountInMaximum: swapAmount,
-                    sqrtPriceLimitX96: 0
-                })
-            )
-        });
-        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: XTZ,
-            tokenOut: ST_XTZ,
-            amountIn: swapAmount,
-            maxAmountIn: swapAmount,
-            minAmountOut: supplyAmountWithPremium,
-            data: swapParamsData
-        });
-
-        moduleExecutionData[2] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(dexModule),
-            data: abi.encodeWithSelector(dexModule.execute.selector, swapParams)
-        });
+        moduleExecutionData[2] =
+            _swapCallExactOut(XTZ, ST_XTZ, swapAmount, supplyAmountWithPremium, ROUTER, XTZ_STXTZ_POOL_FEE);
 
         // 1. pass data in flashloan
-        bytes memory dataForFlashloan = abi.encode(moduleExecutionData);
-        DataTypes.AaveV3FlashloanParams memory flashloanParams = DataTypes.AaveV3FlashloanParams({
-            asset: ST_XTZ,
-            amount: newSupplyAmount,
-            referralCode: 0,
-            callbackExecutionData: dataForFlashloan
-        });
-
-        // Create module execution data
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
-        finalExecutionData[0] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(flashloanModule),
-            data: abi.encodeWithSelector(flashloanModule.execute.selector, flashloanParams)
-        });
+        finalExecutionData[0] = _flashloanCall(ST_XTZ, newSupplyAmount, abi.encode(moduleExecutionData));
 
         vm.prank(admin);
         superloop.operate(finalExecutionData);
@@ -183,78 +126,16 @@ contract RebalanceTest is IntegrationBase {
 
         uint256 repayAmount = (19 * XTZ_SCALE) / 10; // ideally this should be more than 2, set to 1.9 becuase iguana dex has incorrect price
         uint256 withdrawAmount = 2 * STXTZ_SCALE;
-
-        DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
-        DataTypes.AaveV3ActionParams memory repayParams =
-            DataTypes.AaveV3ActionParams({asset: XTZ, amount: repayAmount});
-        moduleExecutionData[0] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(repayModule),
-            data: abi.encodeWithSelector(repayModule.execute.selector, repayParams)
-        });
-
-        DataTypes.AaveV3ActionParams memory withdrawParams =
-            DataTypes.AaveV3ActionParams({asset: ST_XTZ, amount: withdrawAmount});
-        moduleExecutionData[1] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(withdrawModule),
-            data: abi.encodeWithSelector(withdrawModule.execute.selector, withdrawParams)
-        });
-        // ----
-
         uint256 repayAmountWithPremium = repayAmount + (repayAmount * 5) / 10000; // 5 bps premium
 
-        DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
-        swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: ST_XTZ,
-            data: abi.encodeWithSelector(IERC20.approve.selector, ROUTER, withdrawAmount)
-        });
-        swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
-            target: ROUTER,
-            data: abi.encodeWithSelector(
-                IRouter.exactInputSingle.selector,
-                IRouter.ExactInputSingleParams({
-                    tokenIn: ST_XTZ,
-                    tokenOut: XTZ,
-                    fee: XTZ_STXTZ_POOL_FEE,
-                    recipient: address(superloop),
-                    amountIn: withdrawAmount,
-                    amountOutMinimum: repayAmountWithPremium,
-                    sqrtPriceLimitX96: 0
-                })
-            )
-        });
+        DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
 
-        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: ST_XTZ,
-            tokenOut: XTZ,
-            amountIn: withdrawAmount,
-            maxAmountIn: withdrawAmount,
-            minAmountOut: repayAmountWithPremium,
-            data: swapParamsData
-        });
-
-        moduleExecutionData[2] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(dexModule),
-            data: abi.encodeWithSelector(dexModule.execute.selector, swapParams)
-        });
-
-        bytes memory dataForFlashloan = abi.encode(moduleExecutionData);
-        DataTypes.AaveV3FlashloanParams memory flashloanParams = DataTypes.AaveV3FlashloanParams({
-            asset: XTZ,
-            amount: repayAmount,
-            referralCode: 0,
-            callbackExecutionData: dataForFlashloan
-        });
-
-        // Create module execution data
+        moduleExecutionData[0] = _repayCall(XTZ, repayAmount);
+        moduleExecutionData[1] = _withdrawCall(ST_XTZ, withdrawAmount);
+        moduleExecutionData[2] =
+            _swapCallExactIn(ST_XTZ, XTZ, withdrawAmount, repayAmountWithPremium, ROUTER, XTZ_STXTZ_POOL_FEE);
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
-        finalExecutionData[0] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(flashloanModule),
-            data: abi.encodeWithSelector(flashloanModule.execute.selector, flashloanParams)
-        });
+        finalExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
 
         vm.prank(admin);
         superloop.operate(finalExecutionData);
@@ -292,80 +173,24 @@ contract RebalanceTest is IntegrationBase {
         uint256 supplyAmount = 7 * STXTZ_SCALE;
         uint256 borrowAmount = 6 * XTZ_SCALE;
         uint256 swapAmount = borrowAmount + 1 * XTZ_SCALE;
+        uint256 supplyAmountWithPremium = supplyAmount + (supplyAmount * 5) / 10000; // 5 bps premium
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
 
         // 1. Deposit amount a in stxtz via aave supply module
-        DataTypes.AaveV3ActionParams memory supplyParams =
-            DataTypes.AaveV3ActionParams({asset: ST_XTZ, amount: supplyAmount});
-        moduleExecutionData[0] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(supplyModule),
-            data: abi.encodeWithSelector(supplyModule.execute.selector, supplyParams)
-        });
+        moduleExecutionData[0] = _supplyCall(ST_XTZ, supplyAmount);
 
         // 2. Borrow amount b in xtz via aave borrow module
-        DataTypes.AaveV3ActionParams memory borrowParams =
-            DataTypes.AaveV3ActionParams({asset: XTZ, amount: borrowAmount});
-        moduleExecutionData[1] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(borrowModule),
-            data: abi.encodeWithSelector(borrowModule.execute.selector, borrowParams)
-        });
+        moduleExecutionData[1] = _borrowCall(XTZ, borrowAmount);
 
         // 3. Swap amount b + 1 in xtz for stxtz via the universal dex module
-        uint256 supplyAmountWithPremium = supplyAmount + (supplyAmount * 5) / 10000; // 5 bps premium
-        DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
-        swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: XTZ,
-            data: abi.encodeWithSelector(IERC20.approve.selector, ROUTER, swapAmount)
-        });
-        swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
-            target: ROUTER,
-            data: abi.encodeWithSelector(
-                IRouter.exactOutputSingle.selector,
-                IRouter.ExactOutputSingleParams({
-                    tokenIn: XTZ,
-                    tokenOut: ST_XTZ,
-                    fee: XTZ_STXTZ_POOL_FEE,
-                    recipient: address(superloop),
-                    amountOut: supplyAmountWithPremium,
-                    amountInMaximum: swapAmount,
-                    sqrtPriceLimitX96: 0
-                })
-            )
-        });
-        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: XTZ,
-            tokenOut: ST_XTZ,
-            amountIn: swapAmount,
-            maxAmountIn: swapAmount,
-            minAmountOut: supplyAmountWithPremium,
-            data: swapParamsData
-        });
-
-        moduleExecutionData[2] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(dexModule),
-            data: abi.encodeWithSelector(dexModule.execute.selector, swapParams)
-        });
+        moduleExecutionData[2] =
+            _swapCallExactOut(XTZ, ST_XTZ, swapAmount, supplyAmountWithPremium, ROUTER, XTZ_STXTZ_POOL_FEE);
 
         // 1. pass data in flashloan
-        bytes memory dataForFlashloan = abi.encode(moduleExecutionData);
-        DataTypes.AaveV3FlashloanParams memory flashloanParams = DataTypes.AaveV3FlashloanParams({
-            asset: ST_XTZ,
-            amount: supplyAmount,
-            referralCode: 0,
-            callbackExecutionData: dataForFlashloan
-        });
-
         // Create module execution data
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
-        finalExecutionData[0] = DataTypes.ModuleExecutionData({
-            executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(flashloanModule),
-            data: abi.encodeWithSelector(flashloanModule.execute.selector, flashloanParams)
-        });
+        finalExecutionData[0] = _flashloanCall(ST_XTZ, supplyAmount, abi.encode(moduleExecutionData));
 
         vm.prank(admin);
         superloop.operate(finalExecutionData);
