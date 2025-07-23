@@ -18,6 +18,8 @@ import {Errors} from "../../common/Errors.sol";
 import {console} from "forge-std/console.sol";
 
 abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeable {
+    event PerformanceFeeRealized(uint256 sharesMinted, address indexed treasury);
+
     function __SuperloopVault_init(address asset, string memory name, string memory symbol) internal onlyInitializing {
         __ReentrancyGuard_init();
         __ERC4626_init(IERC20(asset));
@@ -160,6 +162,10 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
 
         // update the last realized fee exchange rate on the accountant module via delegate call
         IAccountantModule($.accountantModule).setLastRealizedFeeExchangeRate(exchangeRate);
+
+        if (sharesToMint > 0) {
+            emit PerformanceFeeRealized(sharesToMint, $.treasury);
+        }
     }
 
     function _getPerformanceFeeAndShares(uint256 exchangeRate, address accountantModule, uint8 decimals)

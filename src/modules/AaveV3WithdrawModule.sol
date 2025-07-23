@@ -6,6 +6,8 @@ import {DataTypes} from "../common/DataTypes.sol";
 import {AaveV3ActionModule} from "./AaveV3ActionModule.sol";
 
 contract AaveV3WithdrawModule is AaveV3ActionModule {
+    event AssetWithdrawn(address indexed asset, uint256 amount, address indexed withdrawer);
+
     constructor(address poolAddressesProvider_) AaveV3ActionModule(poolAddressesProvider_) {}
 
     function execute(DataTypes.AaveV3ActionParams memory params) external override onlyExecutionContext {
@@ -14,5 +16,7 @@ contract AaveV3WithdrawModule is AaveV3ActionModule {
 
         // withdraw the asset
         pool.withdraw(params.asset, params.amount, address(this));
+
+        emit AssetWithdrawn(params.asset, params.amount, address(this));
     }
 }

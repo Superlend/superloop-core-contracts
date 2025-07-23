@@ -8,6 +8,8 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract AaveV3SupplyModule is AaveV3ActionModule {
+    event AssetSupplied(address indexed asset, uint256 amount, address indexed supplier);
+
     constructor(address poolAddressesProvider_) AaveV3ActionModule(poolAddressesProvider_) {}
 
     function execute(DataTypes.AaveV3ActionParams memory params) external override onlyExecutionContext {
@@ -19,5 +21,7 @@ contract AaveV3SupplyModule is AaveV3ActionModule {
 
         // supply the asset
         pool.supply(params.asset, params.amount, address(this), 0);
+
+        emit AssetSupplied(params.asset, params.amount, address(this));
     }
 }

@@ -10,8 +10,12 @@ import {Errors} from "../../common/Errors.sol";
 import {IWithdrawManager} from "../../interfaces/IWithdrawManager.sol";
 
 abstract contract WithdrawManagerBase is Context, IWithdrawManager {
+    event InstantWithdrawModuleUpdated(address indexed oldModule, address indexed newModule);
+
     function setInstantWithdrawModule(address instantWithdrawModule_) external onlyVaultAdmin {
+        address oldModule = WithdrawManagerStorage.getWithdrawManagerStorage().instantWithdrawModule;
         WithdrawManagerStorage.setInstantWithdrawModule(instantWithdrawModule_);
+        emit InstantWithdrawModuleUpdated(oldModule, instantWithdrawModule_);
     }
 
     function vault() public view override returns (address) {

@@ -22,6 +22,8 @@ import {SuperloopVault} from "./SuperloopVault.sol";
 import {SuperloopBase} from "./SuperloopBase.sol";
 
 contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
+    event AssetSkimmed(address indexed asset, uint256 amount, address indexed treasury);
+
     constructor() {
         _disableInitializers();
     }
@@ -59,6 +61,8 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         require(asset_ != asset(), Errors.INVALID_SKIM_ASSET);
         uint256 balance = IERC20(asset_).balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(asset_), SuperloopStorage.getSuperloopEssentialRolesStorage().treasury, balance);
+
+        emit AssetSkimmed(asset_, balance, SuperloopStorage.getSuperloopEssentialRolesStorage().treasury);
     }
 
     fallback(bytes calldata) external returns (bytes memory) {

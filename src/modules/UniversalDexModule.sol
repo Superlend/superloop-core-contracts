@@ -12,6 +12,8 @@ import {Errors} from "../common/Errors.sol";
 import {DataTypes} from "../common/DataTypes.sol";
 
 contract UniversalDexModule is ReentrancyGuard, Context {
+    event SwapExecuted(address indexed tokenIn, address indexed tokenOut, uint256 amountIn, uint256 amountOut);
+
     function execute(DataTypes.ExecuteSwapParams memory params) external onlyExecutionContext returns (uint256) {
         address self = address(this);
 
@@ -33,6 +35,7 @@ contract UniversalDexModule is ReentrancyGuard, Context {
         uint256 diffInTokenOutBalance = balances.tokenOutBalanceAfter - balances.tokenOutBalanceBefore;
         require(diffInTokenOutBalance >= params.minAmountOut, Errors.INVALID_AMOUNT_OUT);
 
+        emit SwapExecuted(params.tokenIn, params.tokenOut, diffInTokenInBalance, diffInTokenOutBalance);
         return diffInTokenOutBalance;
     }
 
@@ -72,6 +75,7 @@ contract UniversalDexModule is ReentrancyGuard, Context {
             SafeERC20.safeTransfer(IERC20(params.tokenIn), to, diffInTokenInBalance);
         }
 
+        emit SwapExecuted(params.tokenIn, params.tokenOut, diffInTokenInBalance, diffInTokenOutBalance);
         return diffInTokenOutBalance;
     }
 

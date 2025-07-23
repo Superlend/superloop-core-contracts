@@ -16,6 +16,8 @@ import {Errors} from "../../common/Errors.sol";
 import {AccountantAaveV3Base} from "./AccountantAaveV3Base.sol";
 
 contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
+    event LastRealizedFeeExchangeRateUpdated(uint256 oldRate, uint256 newRate);
+
     constructor() {
         _disableInitializers();
     }
@@ -113,7 +115,10 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
 
     function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_) public onlyVault {
         AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
+
+        uint256 oldRate = $.lastRealizedFeeExchangeRate;
         $.lastRealizedFeeExchangeRate = lastRealizedFeeExchangeRate_;
+        emit LastRealizedFeeExchangeRateUpdated(oldRate, lastRealizedFeeExchangeRate_);
     }
 
     modifier onlyVault() {

@@ -9,6 +9,8 @@ import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAdd
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 
 contract AaveV3EmodeModule is Context {
+    event EModeCategorySet(address indexed user, uint8 emodeCategory);
+
     IPoolAddressesProvider public immutable poolAddressesProvider;
 
     constructor(address poolAddressesProvider_) {
@@ -21,6 +23,8 @@ contract AaveV3EmodeModule is Context {
 
         // call set emode category
         pool.setUserEMode(params.emodeCategory);
+
+        emit EModeCategorySet(_msgSender(), params.emodeCategory);
     }
 
     modifier onlyExecutionContext() {

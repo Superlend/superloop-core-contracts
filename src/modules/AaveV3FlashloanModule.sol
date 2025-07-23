@@ -11,6 +11,8 @@ import {DataTypes} from "../common/DataTypes.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AaveV3FlashloanModule is Context {
+    event FlashloanExecuted(address indexed asset, uint256 amount, address indexed borrower, uint16 referralCode);
+
     IPoolAddressesProvider public immutable poolAddressesProvider;
 
     constructor(address poolAddressesProvider_) {
@@ -36,6 +38,8 @@ contract AaveV3FlashloanModule is Context {
 
         // remove approval from pool after flashloan is done
         SafeERC20.forceApprove(IERC20(params.asset), address(pool), 0);
+
+        emit FlashloanExecuted(params.asset, params.amount, address(this), params.referralCode);
     }
 
     modifier onlyExecutionContext() {

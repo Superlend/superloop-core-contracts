@@ -16,6 +16,12 @@ import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
 
 contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, WithdrawManagerBase {
+    event WithdrawRequested(address indexed user, uint256 shares, uint256 requestId);
+    event WithdrawRequestCancelled(uint256 indexed requestId, address indexed user);
+    event WithdrawRequestsResolved(uint256 resolvedIdLimit);
+    event WithdrawRequestResolved(uint256 indexed requestId, address indexed user, uint256 amount);
+    event InstantWithdrawExecuted(address indexed user, uint256 shares, uint256 amount);
+
     constructor() {
         _disableInitializers();
     }
@@ -35,24 +41,32 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         _validateWithdrawRequest($, _msgSender(), shares);
         _registerWithdrawRequest($, _msgSender(), shares);
+
+        emit WithdrawRequested(_msgSender(), shares, $.nextWithdrawRequestId - 1);
     }
 
     function cancelWithdrawRequest(uint256 id) external override nonReentrant {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         _validateCancelWithdrawRequest($, id);
         _handleCancelWithdrawRequest($, id);
+
+        emit WithdrawRequestCancelled(id, _msgSender());
     }
 
     function resolveWithdrawRequests(uint256 resolvedIdLimit) external override onlyVault {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         _validateResolveWithdrawRequests($, resolvedIdLimit);
         _handleResolveWithdrawRequests($, resolvedIdLimit);
+
+        emit WithdrawRequestsResolved(resolvedIdLimit);
     }
 
     function withdraw() external override nonReentrant {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         uint256 id = _validateWithdraw($);
         _handleWithdraw($, id);
+
+        emit WithdrawRequestResolved(id, _msgSender(), $.withdrawRequest[id].amount);
     }
 
     function withdrawInstant(uint256 shares, bytes memory instantWithdrawData)
@@ -73,6 +87,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
 
         SafeERC20.safeTransferFrom(IERC20($.vault), _msgSender(), address(this), shares);
         uint256 amount = IERC4626($.vault).redeem(shares, _msgSender(), address(this));
+
+        emit InstantWithdrawExecuted(_msgSender(), shares, amount);
         return amount;
     }
 
