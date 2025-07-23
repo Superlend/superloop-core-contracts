@@ -187,18 +187,18 @@ abstract contract IntegrationBase is TestBase {
     function _swapCallExactIn(
         address tokenIn,
         address tokenOut,
-        uint256 swapAmount,
-        uint256 amountIn,
+        uint256 withdrawAmount,
+        uint256 amountOut,
         address router,
         uint24 fee
     ) internal view returns (DataTypes.ModuleExecutionData memory) {
         DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
         swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
             target: tokenIn,
-            data: abi.encodeWithSelector(IERC20.approve.selector, router, swapAmount)
+            data: abi.encodeWithSelector(IERC20.approve.selector, router, withdrawAmount)
         });
         swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
-            target: ROUTER,
+            target: router,
             data: abi.encodeWithSelector(
                 IRouter.exactInputSingle.selector,
                 IRouter.ExactInputSingleParams({
@@ -206,8 +206,8 @@ abstract contract IntegrationBase is TestBase {
                     tokenOut: tokenOut,
                     fee: fee,
                     recipient: address(superloop),
-                    amountIn: amountIn,
-                    amountOutMinimum: swapAmount,
+                    amountIn: withdrawAmount,
+                    amountOutMinimum: amountOut,
                     sqrtPriceLimitX96: 0
                 })
             )
@@ -216,9 +216,9 @@ abstract contract IntegrationBase is TestBase {
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
             tokenIn: tokenIn,
             tokenOut: tokenOut,
-            amountIn: amountIn,
-            maxAmountIn: amountIn,
-            minAmountOut: swapAmount,
+            amountIn: withdrawAmount,
+            maxAmountIn: withdrawAmount,
+            minAmountOut: amountOut,
             data: swapParamsData
         });
 

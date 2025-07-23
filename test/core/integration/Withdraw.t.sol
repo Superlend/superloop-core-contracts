@@ -90,8 +90,9 @@ contract WithdrawTest is IntegrationBase {
         moduleExecutionData[2] =
             _swapCallExactIn(ST_XTZ, XTZ, withdrawAmount, repayAmountWithPremium, ROUTER, XTZ_STXTZ_POOL_FEE);
 
+        // Create module execution data
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](2);
-        finalExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
+        finalExecutionData[0] = _flashloanCall(ST_XTZ, repayAmount, abi.encode(moduleExecutionData));
 
         uint256 withdrawRequestId = withdrawManager.nextWithdrawRequestId() - 1;
         finalExecutionData[1] = DataTypes.ModuleExecutionData({

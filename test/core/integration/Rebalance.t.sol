@@ -135,6 +135,7 @@ contract RebalanceTest is IntegrationBase {
         moduleExecutionData[2] =
             _swapCallExactIn(ST_XTZ, XTZ, withdrawAmount, repayAmountWithPremium, ROUTER, XTZ_STXTZ_POOL_FEE);
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
+
         finalExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
 
         vm.prank(admin);
