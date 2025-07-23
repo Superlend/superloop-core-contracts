@@ -57,7 +57,7 @@ contract WithdrawTest is IntegrationBase {
         _initialRebalance();
 
         vm.startPrank(user1);
-        // lets say user want to redeem 0.8 shares
+        // lets say user want to redeem 0.5 shares
         // make a withdraw request for this
         uint256 shares = 5 * XTZ_SCALE * 10;
         superloop.approve(address(withdrawManager), shares);
@@ -92,7 +92,7 @@ contract WithdrawTest is IntegrationBase {
 
         // Create module execution data
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](2);
-        finalExecutionData[0] = _flashloanCall(ST_XTZ, repayAmount, abi.encode(moduleExecutionData));
+        finalExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
 
         uint256 withdrawRequestId = withdrawManager.nextWithdrawRequestId() - 1;
         finalExecutionData[1] = DataTypes.ModuleExecutionData({

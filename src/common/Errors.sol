@@ -12,7 +12,6 @@ library Errors {
     string public constant INVALID_ADDRESS = "1"; // address must not be 0
     string public constant INVALID_MODULE_NAME = "2"; // module name empty
     string public constant INVALID_AMOUNT = "3"; // amount cannot be 0
-    string public constant INSUFFICIENT_SHARE_AMOUNT = "4"; // share amount requested for withdraw exceeds balance
     string public constant WITHDRAW_REQUEST_ACTIVE = "5"; // one acitve withdraw request already exist
     string public constant INVALID_WITHDRAW_RESOLVED_START_ID_LIMIT = "6"; // new start id should be = old end id + 1
     string public constant INVALID_WITHDRAW_RESOLVED_END_ID_LIMIT = "7"; // new end id should be < current id
@@ -28,7 +27,6 @@ library Errors {
     string public constant INVALID_SWAP_DATA = "17"; // invalid swap data
     string public constant INVALID_AMOUNT_IN = "18"; // amount in is greater than max amount in
     string public constant INVALID_AMOUNT_OUT = "19"; // amount out is less than min amount out
-    string public constant TRANSFER_NOT_SUPPORTED = "20"; // transfer is not supported
     string public constant SUPPLY_CAP_EXCEEDED = "21"; // supply cap exceeded
     string public constant INVALID_SHARES_AMOUNT = "22"; // shares amount cannot be 0
     string public constant INSUFFICIENT_BALANCE = "23"; // insufficient balance
