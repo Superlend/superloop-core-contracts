@@ -3,7 +3,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {WithdrawManager} from "../../src/core/WithdrawManager.sol";
+import {WithdrawManager} from "../../src/core/WithdrawManager/WithdrawManager.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {Errors} from "../../src/common/Errors.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";

@@ -17,7 +17,7 @@ import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProv
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {UniversalDexModule} from "../../src/modules/UniversalDexModule.sol";
 import {AccountantAaveV3} from "../../src/core/Accountant/AccountantAaveV3.sol";
-import {WithdrawManager} from "../../src/core/WithdrawManager.sol";
+import {WithdrawManager} from "../../src/core/WithdrawManager/WithdrawManager.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";

@@ -10,6 +10,7 @@ library WithdrawManagerStorage {
         address asset;
         uint256 nextWithdrawRequestId;
         uint256 resolvedWithdrawRequestId;
+        address instantWithdrawModule;
         mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
         mapping(address => uint256) userWithdrawRequestId;
     }
@@ -58,5 +59,10 @@ library WithdrawManagerStorage {
     function setAsset(address __asset) internal {
         WithdrawManagerState storage $ = getWithdrawManagerStorage();
         $.asset = __asset;
+    }
+
+    function setInstantWithdrawModule(address __instantWithdrawModule) internal {
+        WithdrawManagerState storage $ = getWithdrawManagerStorage();
+        $.instantWithdrawModule = __instantWithdrawModule;
     }
 }

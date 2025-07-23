@@ -8,13 +8,21 @@ import {ReentrancyGuardUpgradeable} from
 import {IERC20} from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Errors} from "../common/Errors.sol";
-import {DataTypes} from "../common/DataTypes.sol";
-import {WithdrawManagerStorage} from "./lib/WithdrawManagerStorage.sol";
-import {IWithdrawManager} from "../interfaces/IWithdrawManager.sol";
+import {Errors} from "../../common/Errors.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
+import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
+import {IWithdrawManager} from "../../interfaces/IWithdrawManager.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
+import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
+import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
-contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, IWithdrawManager {
+contract WithdrawManager is
+    Initializable,
+    ReentrancyGuardUpgradeable,
+    Context,
+    WithdrawManagerBase,
+    IWithdrawManager
+{
     constructor() {
         _disableInitializers();
     }
@@ -54,8 +62,25 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         _handleWithdraw($, id);
     }
 
-    function withdrawInstant() external nonReentrant {
-        // TODO: implement this
+    function withdrawInstant(uint256 shares, bytes memory instantWithdrawData)
+        external
+        nonReentrant
+        returns (uint256)
+    {
+        require(shares > 0, Errors.INVALID_AMOUNT);
+
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        address instantWithdrawModule = $.instantWithdrawModule;
+
+        if (instantWithdrawModule == address(0)) {
+            revert(Errors.INSTANT_WITHDRAW_NOT_ENABLED);
+        }
+
+        Address.functionCall(instantWithdrawModule, instantWithdrawData);
+
+        SafeERC20.safeTransferFrom(IERC20($.vault), _msgSender(), address(this), shares);
+        uint256 amount = IERC4626($.vault).redeem(shares, _msgSender(), address(this));
+        return amount;
     }
 
     function getWithdrawRequestState(uint256 id) public view override returns (DataTypes.WithdrawRequestState) {

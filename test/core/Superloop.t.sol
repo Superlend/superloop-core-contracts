@@ -158,7 +158,7 @@ contract SuperloopTest is TestBase {
 
     function test_FallbackNotInExecutionContext() public {
         // Test that fallback reverts when not in execution context
-        vm.expectRevert(bytes(Errors.NOT_IN_EXECUTION_CONTEXT));
+        vm.expectRevert(bytes(Errors.CALLER_NOT_PRIVILEGED));
         (bool success,) = address(superloop).call(abi.encodeWithSignature("nonExistentFunction()"));
         assertTrue(success);
     }

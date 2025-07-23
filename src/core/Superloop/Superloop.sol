@@ -61,7 +61,8 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         if (SuperloopStorage.isInExecutionContext()) {
             return _handleCallback();
         } else {
-            revert(Errors.NOT_IN_EXECUTION_CONTEXT);
+            _onlyPrivileged();
+            return _handleCallback();
         }
     }
 
