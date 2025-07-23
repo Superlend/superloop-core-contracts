@@ -67,6 +67,7 @@ contract AaveV3EmodeModuleTest is TestBase {
             data: abi.encodeWithSelector(emodeModule.execute.selector, params)
         });
 
+        vm.prank(admin);
         superloop.operate(moduleExecutionData);
 
         uint256 newEmodeCategory = pool.getUserEMode(address(superloop));

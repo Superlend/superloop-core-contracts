@@ -10,13 +10,12 @@ import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 import {AccountantAaveV3Storage} from "../lib/AccountantAaveV3Storage.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 import {Errors} from "../../common/Errors.sol";
 import {AccountantAaveV3Base} from "./AccountantAaveV3Base.sol";
 
-contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base, IAccountantModule {
+contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
     constructor() {
         _disableInitializers();
     }

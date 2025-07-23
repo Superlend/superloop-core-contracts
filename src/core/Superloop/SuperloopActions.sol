@@ -8,8 +8,7 @@ import {Errors} from "../../common/Errors.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
 abstract contract SuperloopActions {
-    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external {
-        // TODO : add restriction
+    function _operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) internal {
         SuperloopStorage.beginExecutionContext();
 
         uint256 len = moduleExecutionData.length;

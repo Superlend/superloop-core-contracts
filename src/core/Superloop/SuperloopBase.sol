@@ -55,6 +55,42 @@ abstract contract SuperloopBase {
         SuperloopStorage.setPrivilegedAddress(privilegedAddress_, isPrivileged_);
     }
 
+    function supplyCap() external view returns (uint256) {
+        return SuperloopStorage.getSuperloopStorage().supplyCap;
+    }
+
+    function superloopModuleRegistry() external view returns (address) {
+        return SuperloopStorage.getSuperloopStorage().superloopModuleRegistry;
+    }
+
+    function registeredModule(address module_) external view returns (bool) {
+        return SuperloopStorage.getSuperloopStorage().registeredModules[module_];
+    }
+
+    function callbackHandler(bytes32 key) external view returns (address) {
+        return SuperloopStorage.getSuperloopStorage().callbackHandlers[key];
+    }
+
+    function accountantModule() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule;
+    }
+
+    function withdrawManagerModule() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManagerModule;
+    }
+
+    function vaultAdmin() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().vaultAdmin;
+    }
+
+    function treasury() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().treasury;
+    }
+
+    function privilegedAddress(address address_) external view returns (bool) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[address_];
+    }
+
     modifier onlyVaultAdmin() {
         _onlyVaultAdmin();
         _;

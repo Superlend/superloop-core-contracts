@@ -51,6 +51,10 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
     }
 
+    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyVaultAdmin {
+        _operate(moduleExecutionData);
+    }
+
     function skim(address asset_) public onlyVaultAdmin {
         require(asset_ != asset(), Errors.INVALID_SKIM_ASSET);
         uint256 balance = IERC20(asset_).balanceOf(address(this));

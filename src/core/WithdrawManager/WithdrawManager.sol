@@ -11,18 +11,11 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {Errors} from "../../common/Errors.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
-import {IWithdrawManager} from "../../interfaces/IWithdrawManager.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
-import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
+import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
 
-contract WithdrawManager is
-    Initializable,
-    ReentrancyGuardUpgradeable,
-    Context,
-    WithdrawManagerBase,
-    IWithdrawManager
-{
+contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, WithdrawManagerBase {
     constructor() {
         _disableInitializers();
     }
@@ -103,57 +96,6 @@ contract WithdrawManager is
         if (id > resolvedId) return DataTypes.WithdrawRequestState.UNPROCESSED;
 
         return DataTypes.WithdrawRequestState.CLAIMABLE;
-    }
-
-    function vault() public view override returns (address) {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.vault;
-    }
-
-    function asset() public view override returns (address) {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.asset;
-    }
-
-    function nextWithdrawRequestId() public view override returns (uint256) {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.nextWithdrawRequestId;
-    }
-
-    function resolvedWithdrawRequestId() public view override returns (uint256) {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.resolvedWithdrawRequestId;
-    }
-
-    function withdrawRequest(uint256 id) public view override returns (DataTypes.WithdrawRequestData memory) {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.withdrawRequest[id];
-    }
-
-    function withdrawRequests(uint256[] memory ids)
-        public
-        view
-        override
-        returns (DataTypes.WithdrawRequestData[] memory)
-    {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        DataTypes.WithdrawRequestData[] memory _withdrawRequests = new DataTypes.WithdrawRequestData[](ids.length);
-        uint256 length = ids.length;
-        for (uint256 i; i < length;) {
-            _withdrawRequests[i] = $.withdrawRequest[ids[i]];
-            unchecked {
-                ++i;
-            }
-        }
-
-        return _withdrawRequests;
-    }
-
-    function userWithdrawRequestId(address user) public view override returns (uint256) {
-        user = user == address(0) ? msg.sender : user;
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-
-        return $.userWithdrawRequestId[user];
     }
 
     function _validateWithdrawRequest(
