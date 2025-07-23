@@ -7,11 +7,31 @@ import {AaveV3ActionModule} from "./AaveV3ActionModule.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/**
+ * @title AaveV3SupplyModule
+ * @author Superlend
+ * @notice Module for executing Aave V3 supply operations
+ * @dev Extends AaveV3ActionModule to provide asset supply functionality
+ */
 contract AaveV3SupplyModule is AaveV3ActionModule {
+    /**
+     * @notice Emitted when an asset is supplied to Aave V3
+     * @param asset The address of the supplied asset
+     * @param amount The amount of the asset supplied
+     * @param supplier The address of the supplier
+     */
     event AssetSupplied(address indexed asset, uint256 amount, address indexed supplier);
 
+    /**
+     * @notice Constructor to initialize the Aave V3 supply module
+     * @param poolAddressesProvider_ The address of the Aave V3 pool addresses provider
+     */
     constructor(address poolAddressesProvider_) AaveV3ActionModule(poolAddressesProvider_) {}
 
+    /**
+     * @notice Executes a supply operation on Aave V3
+     * @param params The parameters for the supply operation
+     */
     function execute(DataTypes.AaveV3ActionParams memory params) external override onlyExecutionContext {
         // get the pool
         IPool pool = IPool(poolAddressesProvider.getPool());

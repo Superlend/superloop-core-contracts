@@ -21,18 +21,41 @@ import {SuperloopActions} from "./SuperloopActions.sol";
 import {SuperloopVault} from "./SuperloopVault.sol";
 import {SuperloopBase} from "./SuperloopBase.sol";
 
+/**
+ * @title Superloop
+ * @author Superlend
+ * @notice Main Superloop vault contract combining vault, actions, and base functionality
+ * @dev Extends ERC4626 with module execution, callback handling, and asset management capabilities
+ */
 contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
+    /**
+     * @notice Emitted when excess assets are skimmed from the vault
+     * @param asset The address of the skimmed asset
+     * @param amount The amount of assets skimmed
+     * @param treasury The address of the treasury that received the assets
+     */
     event AssetSkimmed(address indexed asset, uint256 amount, address indexed treasury);
 
+    /**
+     * @notice Constructor to disable initializers for implementation contract
+     */
     constructor() {
         _disableInitializers();
     }
 
+    /**
+     * @notice Initializes the Superloop vault with the provided configuration
+     * @param data The vault initialization data containing all necessary parameters
+     */
     function initialize(DataTypes.VaultInitData memory data) public initializer {
         __SuperloopVault_init(data.asset, data.name, data.symbol);
         __Superloop_init(data);
     }
 
+    /**
+     * @notice Internal initialization function for Superloop-specific configuration
+     * @param data The vault initialization data
+     */
     function __Superloop_init(DataTypes.VaultInitData memory data) internal onlyInitializing {
         SuperloopStorage.setSupplyCap(data.supplyCap);
         SuperloopStorage.setSuperloopModuleRegistry(data.superloopModuleRegistry);
@@ -53,10 +76,18 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
     }
 
+    /**
+     * @notice Executes module operations (restricted to vault admin)
+     * @param moduleExecutionData Array of module execution data
+     */
     function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyVaultAdmin {
         _operate(moduleExecutionData);
     }
 
+    /**
+     * @notice Skims excess tokens from the vault (restricted to vault admin)
+     * @param asset_ The address of the asset to skim (cannot be the vault's primary asset)
+     */
     function skim(address asset_) public onlyVaultAdmin {
         require(asset_ != asset(), Errors.INVALID_SKIM_ASSET);
         uint256 balance = IERC20(asset_).balanceOf(address(this));
@@ -65,6 +96,10 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         emit AssetSkimmed(asset_, balance, SuperloopStorage.getSuperloopEssentialRolesStorage().treasury);
     }
 
+    /**
+     * @notice Fallback function to handle callback operations
+     * @return The result of the callback execution
+     */
     fallback(bytes calldata) external returns (bytes memory) {
         if (SuperloopStorage.isInExecutionContext()) {
             return _handleCallback();
@@ -74,6 +109,10 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         }
     }
 
+    /**
+     * @notice Internal function to handle callback execution
+     * @return The result of the callback execution
+     */
     function _handleCallback() internal returns (bytes memory) {
         address handler =
             SuperloopStorage.getSuperloopStorage().callbackHandlers[keccak256(abi.encodePacked(msg.sender, msg.sig))];

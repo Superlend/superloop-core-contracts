@@ -9,11 +9,34 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {Errors} from "../common/Errors.sol";
 import {DataTypes} from "../common/DataTypes.sol";
 
+/**
+ * @title VaultRouter
+ * @author Superlend
+ * @notice Router contract for vault deposits with optional token swapping
+ * @dev Handles deposits into vaults with automatic token conversion when needed
+ */
 contract VaultRouter is Ownable {
+    /**
+     * @notice Mapping of supported vault addresses to their whitelist status
+     */
     mapping(address => bool) public supportedVaults;
+
+    /**
+     * @notice Mapping of supported token addresses to their whitelist status
+     */
     mapping(address => bool) public supportedTokens;
+
+    /**
+     * @notice The universal DEX module for token swaps
+     */
     IUniversalDexModule public universalDexModule;
 
+    /**
+     * @notice Constructor to initialize the vault router
+     * @param _supportedVaults Array of initially supported vault addresses
+     * @param _supportedTokens Array of initially supported token addresses
+     * @param _universalDexModule The address of the universal DEX module
+     */
     constructor(address[] memory _supportedVaults, address[] memory _supportedTokens, address _universalDexModule)
         Ownable(_msgSender())
     {
@@ -28,6 +51,14 @@ contract VaultRouter is Ownable {
         universalDexModule = IUniversalDexModule(_universalDexModule);
     }
 
+    /**
+     * @notice Deposits tokens into a vault with optional swap functionality
+     * @param vault The address of the target vault
+     * @param tokenIn The address of the input token
+     * @param amountIn The amount of input tokens to deposit
+     * @param swapParams Parameters for executing a swap if needed
+     * @return The number of shares received from the deposit
+     */
     function depositWithToken(
         address vault,
         address tokenIn,
@@ -54,14 +85,28 @@ contract VaultRouter is Ownable {
         return shares;
     }
 
+    /**
+     * @notice Adds or removes a vault from the whitelist (restricted to owner)
+     * @param vault The address of the vault to whitelist/unwhitelist
+     * @param isWhitelisted True to whitelist, false to remove from whitelist
+     */
     function whitelistVault(address vault, bool isWhitelisted) external onlyOwner {
         supportedVaults[vault] = isWhitelisted;
     }
 
+    /**
+     * @notice Adds or removes a token from the whitelist (restricted to owner)
+     * @param token The address of the token to whitelist/unwhitelist
+     * @param isWhitelisted True to whitelist, false to remove from whitelist
+     */
     function whitelistToken(address token, bool isWhitelisted) external onlyOwner {
         supportedTokens[token] = isWhitelisted;
     }
 
+    /**
+     * @notice Sets the universal DEX module address (restricted to owner)
+     * @param _universalDexModule The address of the universal DEX module
+     */
     function setUniversalDexModule(address _universalDexModule) external onlyOwner {
         universalDexModule = IUniversalDexModule(_universalDexModule);
     }

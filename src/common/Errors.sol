@@ -2,6 +2,12 @@
 
 pragma solidity ^0.8.13;
 
+/**
+ * @title Errors
+ * @author Superlend
+ * @notice Library containing all error constants used throughout the Superloop protocol
+ * @dev Centralized error definitions for consistent error handling across contracts
+ */
 library Errors {
     string public constant INVALID_ADDRESS = "1"; // address must not be 0
     string public constant INVALID_MODULE_NAME = "2"; // module name empty
