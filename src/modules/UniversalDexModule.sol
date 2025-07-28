@@ -71,14 +71,14 @@ contract UniversalDexModule is ReentrancyGuard, Context {
         address self = address(this);
         to = to == address(0) ? _msgSender() : to;
 
+        SafeERC20.safeTransferFrom(IERC20(params.tokenIn), _msgSender(), address(this), params.amountIn);
+
         DataTypes.BalancesDifference memory balances = DataTypes.BalancesDifference({
             tokenInBalanceBefore: IERC20(params.tokenIn).balanceOf(self),
             tokenOutBalanceBefore: IERC20(params.tokenOut).balanceOf(self),
             tokenInBalanceAfter: 0,
             tokenOutBalanceAfter: 0
         });
-
-        SafeERC20.safeTransferFrom(IERC20(params.tokenIn), _msgSender(), address(this), params.amountIn);
 
         _executeSwap(params);
 
