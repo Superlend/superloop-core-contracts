@@ -95,8 +95,9 @@ contract UniversalDexModule is ReentrancyGuard, Context {
             SafeERC20.safeTransfer(IERC20(params.tokenOut), to, diffInTokenOutBalance);
         }
 
-        if (diffInTokenInBalance > 0) {
-            SafeERC20.safeTransfer(IERC20(params.tokenIn), to, diffInTokenInBalance);
+        uint256 tokenInAmountLeft = params.amountIn - diffInTokenInBalance;
+        if (tokenInAmountLeft > 0) {
+            SafeERC20.safeTransfer(IERC20(params.tokenIn), to, tokenInAmountLeft);
         }
 
         emit SwapExecuted(params.tokenIn, params.tokenOut, diffInTokenInBalance, diffInTokenOutBalance);

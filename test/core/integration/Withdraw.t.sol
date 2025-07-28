@@ -150,7 +150,7 @@ contract WithdrawTest is IntegrationBase {
 
     function _initialRebalance() internal {
         uint256 supplyAmount = 7 * STXTZ_SCALE;
-        uint256 borrowAmount = 6 * XTZ_SCALE;
+        uint256 borrowAmount = (63 * XTZ_SCALE) / 10;
         uint256 swapAmount = borrowAmount + 1 * XTZ_SCALE;
         uint256 supplyAmountWithPremium = supplyAmount + (supplyAmount * 5) / 10000; // 5 bps premium
 
