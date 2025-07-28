@@ -17,6 +17,20 @@ import {DataTypes} from "../common/DataTypes.sol";
  */
 contract VaultRouter is Ownable {
     /**
+     * @notice Emitted when a vault is whitelisted or unwhitelisted
+     * @param vault The address of the vault
+     * @param isWhitelisted True if the vault is whitelisted, false if it is unwhitelisted
+     */
+    event VaultWhitelisted(address indexed vault, bool isWhitelisted);
+
+    /**
+     * @notice Emitted when a token is whitelisted or unwhitelisted
+     * @param token The address of the token
+     * @param isWhitelisted True if the token is whitelisted, false if it is unwhitelisted
+     */
+    event TokenWhitelisted(address indexed token, bool isWhitelisted);
+
+    /**
      * @notice Mapping of supported vault addresses to their whitelist status
      */
     mapping(address => bool) public supportedVaults;
@@ -42,10 +56,14 @@ contract VaultRouter is Ownable {
     {
         for (uint256 i = 0; i < _supportedVaults.length; i++) {
             supportedVaults[_supportedVaults[i]] = true;
+
+            emit VaultWhitelisted(_supportedVaults[i], true);
         }
 
         for (uint256 i = 0; i < _supportedTokens.length; i++) {
             supportedTokens[_supportedTokens[i]] = true;
+
+            emit TokenWhitelisted(_supportedTokens[i], true);
         }
 
         universalDexModule = IUniversalDexModule(_universalDexModule);
@@ -92,6 +110,8 @@ contract VaultRouter is Ownable {
      */
     function whitelistVault(address vault, bool isWhitelisted) external onlyOwner {
         supportedVaults[vault] = isWhitelisted;
+
+        emit VaultWhitelisted(vault, isWhitelisted);
     }
 
     /**
@@ -101,6 +121,8 @@ contract VaultRouter is Ownable {
      */
     function whitelistToken(address token, bool isWhitelisted) external onlyOwner {
         supportedTokens[token] = isWhitelisted;
+
+        emit TokenWhitelisted(token, isWhitelisted);
     }
 
     /**

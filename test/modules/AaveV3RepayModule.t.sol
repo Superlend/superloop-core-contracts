@@ -57,12 +57,12 @@ contract AaveV3RepayModuleTest is TestBase {
         vm.label(address(superloop), "superloop");
     }
 
-    function test_BorrowBasicFlow() public {
+    function test_RepayBasicFlow() public {
         _supply();
         _borrow();
 
         // Arrange
-        uint256 repayAmount = 500 * 10 ** 18; // 1000 XTZ
+        uint256 repayAmount = 5 * 10 ** 18; // 1000 XTZ
 
         // Create repay params
         DataTypes.AaveV3ActionParams memory repayParams =
@@ -92,7 +92,7 @@ contract AaveV3RepayModuleTest is TestBase {
         vm.startPrank(STXTZ_WHALE);
         IERC20(ST_XTZ).transfer(address(superloop), 1000 * 10 ** 6);
         vm.stopPrank();
-        uint256 supplyAmount = 1000 * 10 ** 6; // 1000 ST_XTZ
+        uint256 supplyAmount = 10 * 10 ** 6; // 10 ST_XTZ
 
         DataTypes.AaveV3ActionParams memory supplyParams =
             DataTypes.AaveV3ActionParams({asset: ST_XTZ, amount: supplyAmount});
@@ -109,7 +109,7 @@ contract AaveV3RepayModuleTest is TestBase {
 
     function _borrow() internal {
         // Arrange
-        uint256 borrowAmount = 500 * 10 ** 18; // 1000 XTZ
+        uint256 borrowAmount = 5 * 10 ** 18; // 5 XTZ
 
         // Create withdraw params
         DataTypes.AaveV3ActionParams memory borrowParams =

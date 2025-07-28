@@ -38,6 +38,7 @@ contract TestBase is Test {
     address public constant WXTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
     address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
     address public constant ROUTER = 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0;
+    address public constant USDC_WHALE = 0xd03bfdF9B26DB1e6764724d914d7c3d18106a9Fb;
 
     address public admin;
     address public treasury;

@@ -60,7 +60,7 @@ contract AaveV3BorrowModuleTest is TestBase {
         _supply();
 
         // Arrange
-        uint256 borrowAmount = 500 * 10 ** 18; // 1000 XTZ
+        uint256 borrowAmount = 5 * 10 ** 18; // 5 XTZ
 
         // Create withdraw params
         DataTypes.AaveV3ActionParams memory borrowParams =
@@ -90,7 +90,7 @@ contract AaveV3BorrowModuleTest is TestBase {
         vm.startPrank(STXTZ_WHALE);
         IERC20(ST_XTZ).transfer(address(superloop), 1000 * 10 ** 6);
         vm.stopPrank();
-        uint256 supplyAmount = 1000 * 10 ** 6; // 1000 ST_XTZ
+        uint256 supplyAmount = 10 * 10 ** 6; // 10 ST_XTZ
 
         DataTypes.AaveV3ActionParams memory supplyParams =
             DataTypes.AaveV3ActionParams({asset: ST_XTZ, amount: supplyAmount});
