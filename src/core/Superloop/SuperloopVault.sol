@@ -49,19 +49,19 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     }
 
     function previewDeposit(uint256 assets) public view override returns (uint256) {
-        return _convertToSharesWithPerformanceFee(assets);
+        return _convertToSharesWithPerformanceFee(assets, Math.Rounding.Floor);
     }
 
     function previewMint(uint256 shares) public view override returns (uint256) {
-        return _convertToAssetsWithPerformanceFee(shares);
+        return _convertToAssetsWithPerformanceFee(shares, Math.Rounding.Ceil);
     }
 
     function previewWithdraw(uint256 assets) public view override returns (uint256) {
-        return _convertToSharesWithPerformanceFee(assets);
+        return _convertToSharesWithPerformanceFee(assets, Math.Rounding.Ceil);
     }
 
     function previewRedeem(uint256 shares) public view override returns (uint256) {
-        return _convertToAssetsWithPerformanceFee(shares);
+        return _convertToAssetsWithPerformanceFee(shares, Math.Rounding.Floor);
     }
 
     function maxMint(address) public view override returns (uint256) {
@@ -201,7 +201,11 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         );
     }
 
-    function _convertToSharesWithPerformanceFee(uint256 assets) internal view returns (uint256) {
+    function _convertToSharesWithPerformanceFee(uint256 assets, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256)
+    {
         (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
         uint256 treasuryShares = _getPerformanceFeeAndShares(
             exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule, decimals
@@ -209,12 +213,16 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         uint256 _totalSupply = totalSupply() + treasuryShares + 10 ** _decimalsOffset();
         uint256 _totalAssets = totalAssets() + 1;
 
-        uint256 shares = Math.mulDiv(assets, _totalSupply, _totalAssets, Math.Rounding.Floor);
+        uint256 shares = Math.mulDiv(assets, _totalSupply, _totalAssets, rounding);
 
         return shares;
     }
 
-    function _convertToAssetsWithPerformanceFee(uint256 shares) internal view returns (uint256) {
+    function _convertToAssetsWithPerformanceFee(uint256 shares, Math.Rounding rounding)
+        internal
+        view
+        returns (uint256)
+    {
         (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
         uint256 treasuryShares = _getPerformanceFeeAndShares(
             exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule, decimals
@@ -222,7 +230,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         uint256 _totalSupply = totalSupply() + treasuryShares + 10 ** _decimalsOffset();
         uint256 _totalAssets = totalAssets() + 1;
 
-        uint256 assets = Math.mulDiv(shares, _totalAssets, _totalSupply, Math.Rounding.Ceil);
+        uint256 assets = Math.mulDiv(shares, _totalAssets, _totalSupply, rounding);
 
         return assets;
     }
