@@ -117,6 +117,8 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
         AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
 
         uint256 oldRate = $.lastRealizedFeeExchangeRate;
+        if (lastRealizedFeeExchangeRate_ <= oldRate) return;
+
         $.lastRealizedFeeExchangeRate = lastRealizedFeeExchangeRate_;
         emit LastRealizedFeeExchangeRateUpdated(oldRate, lastRealizedFeeExchangeRate_);
     }

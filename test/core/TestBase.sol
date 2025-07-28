@@ -39,6 +39,8 @@ contract TestBase is Test {
     address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
     address public constant ROUTER = 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0;
     address public constant USDC_WHALE = 0xd03bfdF9B26DB1e6764724d914d7c3d18106a9Fb;
+    address public constant POOL_CONFIGURATOR = 0x30F6880Bb1cF780a49eB4Ef64E64585780AAe060;
+    address public constant POOL_ADMIN = 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
 
     address public admin;
     address public treasury;

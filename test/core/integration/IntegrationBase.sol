@@ -17,9 +17,6 @@ abstract contract IntegrationBase is TestBase {
     Superloop public superloopImplementation;
     ProxyAdmin public proxyAdmin;
 
-    address public constant POOL_CONFIGURATOR = 0x30F6880Bb1cF780a49eB4Ef64E64585780AAe060;
-    address public constant POOL_ADMIN = 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
-
     address public user1;
     address public user2;
     address public user3;
@@ -101,6 +98,7 @@ abstract contract IntegrationBase is TestBase {
 
         vm.startPrank(POOL_ADMIN);
         IPoolConfigurator(POOL_CONFIGURATOR).setReserveFlashLoaning(ST_XTZ, true);
+        IPoolConfigurator(POOL_CONFIGURATOR).setSupplyCap(ST_XTZ, 10000000);
         vm.stopPrank();
     }
 

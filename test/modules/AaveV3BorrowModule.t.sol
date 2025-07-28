@@ -10,6 +10,7 @@ import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/Pro
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
 import {console} from "forge-std/console.sol";
 
 contract AaveV3BorrowModuleTest is TestBase {
@@ -54,6 +55,11 @@ contract AaveV3BorrowModuleTest is TestBase {
         user = makeAddr("user");
         vm.label(user, "user");
         vm.label(address(superloop), "superloop");
+
+        vm.startPrank(POOL_ADMIN);
+        IPoolConfigurator(POOL_CONFIGURATOR).setReserveFlashLoaning(ST_XTZ, true);
+        IPoolConfigurator(POOL_CONFIGURATOR).setSupplyCap(ST_XTZ, 10000000);
+        vm.stopPrank();
     }
 
     function test_BorrowBasicFlow() public {
