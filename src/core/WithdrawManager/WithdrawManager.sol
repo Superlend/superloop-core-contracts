@@ -201,7 +201,12 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         // call the redeem function on the vault
         uint256 totalAssetsRedeemed = IERC4626($.vault).redeem(totalShares, address(this), address(this));
 
-        require(totalAssetsRedeemed == totalAssetsDistributed, Errors.INVALID_ASSETS_DISTRIBUTED);
+        require(totalAssetsRedeemed >= totalAssetsDistributed, Errors.INVALID_ASSETS_DISTRIBUTED);
+
+        // if redeemed more than distributed, return the difference to the vault
+        if (totalAssetsRedeemed > totalAssetsDistributed) {
+            SafeERC20.safeTransfer(IERC20($.asset), _msgSender(), totalAssetsRedeemed - totalAssetsDistributed);
+        }
 
         WithdrawManagerStorage.setResolvedWithdrawRequestId(resolvedIdLimit);
     }
