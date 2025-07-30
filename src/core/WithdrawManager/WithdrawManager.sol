@@ -123,8 +123,15 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         uint256 id = $.userWithdrawRequestId[user];
         DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
 
-        if (_withdrawRequest.user == user && id <= $.resolvedWithdrawRequestId && !_withdrawRequest.claimed) {
-            revert(Errors.WITHDRAW_REQUEST_ACTIVE);
+        // if id != 0, means user has a withdraw request because when cancelled or claimed, the id is set to 0
+        if (id != 0) {
+            // if user has an active withdraw request, ie. it's not yet resolved or cancelled, revert
+            bool isActive = id > $.resolvedWithdrawRequestId && !_withdrawRequest.cancelled;
+            if (isActive) revert(Errors.WITHDRAW_REQUEST_ACTIVE);
+
+            // if user has an unclaimed withdraw request, ie. it's resolved but not claimed, revert
+            bool isUnclaimed = id >= $.resolvedWithdrawRequestId && !_withdrawRequest.claimed;
+            if (isUnclaimed) revert(Errors.WITHDRAW_REQUEST_UNCLAIMED);
         }
     }
 
