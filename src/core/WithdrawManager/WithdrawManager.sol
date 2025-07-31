@@ -130,7 +130,7 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
             if (isActive) revert(Errors.WITHDRAW_REQUEST_ACTIVE);
 
             // if user has an unclaimed withdraw request, ie. it's resolved but not claimed, revert
-            bool isUnclaimed = id >= $.resolvedWithdrawRequestId && !_withdrawRequest.claimed;
+            bool isUnclaimed = id <= $.resolvedWithdrawRequestId && !_withdrawRequest.claimed;
             if (isUnclaimed) revert(Errors.WITHDRAW_REQUEST_UNCLAIMED);
         }
     }
