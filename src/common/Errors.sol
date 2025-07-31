@@ -40,4 +40,5 @@ library Errors {
     string public constant VAULT_NOT_WHITELISTED = "31"; // vault is not whitelisted
     string public constant TOKEN_NOT_WHITELISTED = "32"; // token is not whitelisted
     string public constant INSTANT_WITHDRAW_NOT_ENABLED = "33"; // instant withdraw is not enabled
+    string public constant WITHDRAW_REQUEST_UNCLAIMED = "34"; // withdraw request is unclaimed
 }

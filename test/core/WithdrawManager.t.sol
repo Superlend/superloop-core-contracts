@@ -157,6 +157,20 @@ contract WithdrawManagerTest is Test {
         // First request
         withdrawManager.requestWithdraw(SHARES_AMOUNT);
 
+        // Try to request again before claiming
+        vm.startPrank(user1);
+        vm.expectRevert(bytes(Errors.WITHDRAW_REQUEST_ACTIVE));
+        withdrawManager.requestWithdraw(SHARES_AMOUNT);
+        vm.stopPrank();
+    }
+
+    function test_requestWithdraw_revert_unclaimedRequest() public {
+        vm.startPrank(user1);
+        vault.approve(address(withdrawManager), SHARES_AMOUNT * 2);
+
+        // First request
+        withdrawManager.requestWithdraw(SHARES_AMOUNT);
+
         // Resolve the request
         vm.stopPrank();
         vm.prank(address(vault));
@@ -164,7 +178,7 @@ contract WithdrawManagerTest is Test {
 
         // Try to request again before claiming
         vm.startPrank(user1);
-        vm.expectRevert(bytes(Errors.WITHDRAW_REQUEST_ACTIVE));
+        vm.expectRevert(bytes(Errors.WITHDRAW_REQUEST_UNCLAIMED));
         withdrawManager.requestWithdraw(SHARES_AMOUNT);
         vm.stopPrank();
     }
