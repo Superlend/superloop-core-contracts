@@ -30,8 +30,9 @@ interface IAccountantModule {
     /**
      * @notice Sets the last realized fee exchange rate
      * @param lastRealizedFeeExchangeRate_ The new last realized fee exchange rate
+     * @param totalSupply The total supply of the vault
      */
-    function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_) external;
+    function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_, uint256 totalSupply) external;
 
     /**
      * @notice Sets the pool addresses provider

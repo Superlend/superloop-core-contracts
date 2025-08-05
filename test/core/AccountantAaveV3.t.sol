@@ -145,10 +145,11 @@ contract AccountantAaveV3Test is TestBase {
         uint256 totalShares = 1000 ether;
         uint256 exchangeRate = 1.1e18; // 10% increase
         uint256 lastRealizedFeeExchangeRate = 1.0e18;
+        uint256 totalSupply = 1000 ether;
 
         // Set the last realized fee exchange rate
         vm.prank(address(vault));
-        accountantAaveV3.setLastRealizedFeeExchangeRate(lastRealizedFeeExchangeRate);
+        accountantAaveV3.setLastRealizedFeeExchangeRate(lastRealizedFeeExchangeRate, totalSupply);
 
         // Calculate expected performance fee
         uint256 latestAssetAmount = totalShares * exchangeRate;
@@ -169,10 +170,10 @@ contract AccountantAaveV3Test is TestBase {
         uint256 totalShares = 1000 ether;
         uint256 exchangeRate = 0.9e18; // 10% decrease
         uint256 lastRealizedFeeExchangeRate = 1.0e18;
-
+        uint256 totalSupply = 1000 ether;
         // Set the last realized fee exchange rate
         vm.prank(address(vault));
-        accountantAaveV3.setLastRealizedFeeExchangeRate(lastRealizedFeeExchangeRate);
+        accountantAaveV3.setLastRealizedFeeExchangeRate(lastRealizedFeeExchangeRate, totalSupply);
 
         vm.prank(address(vault));
         uint256 performanceFee = accountantAaveV3.getPerformanceFee(totalShares, exchangeRate, 18);
@@ -191,9 +192,10 @@ contract AccountantAaveV3Test is TestBase {
 
     function test_SetLastRealizedFeeExchangeRate() public {
         uint256 newExchangeRate = 1.2e18;
+        uint256 totalSupply = 1000 ether;
 
         vm.prank(address(vault));
-        accountantAaveV3.setLastRealizedFeeExchangeRate(newExchangeRate);
+        accountantAaveV3.setLastRealizedFeeExchangeRate(newExchangeRate, totalSupply);
 
         // Test that the exchange rate was set correctly by calling getPerformanceFee
         vm.prank(address(vault));
@@ -208,9 +210,10 @@ contract AccountantAaveV3Test is TestBase {
 
     function test_SetLastRealizedFeeExchangeRateRevertIfNotVault() public {
         uint256 newExchangeRate = 1.2e18;
+        uint256 totalSupply = 1000 ether;
 
         vm.expectRevert();
-        accountantAaveV3.setLastRealizedFeeExchangeRate(newExchangeRate);
+        accountantAaveV3.setLastRealizedFeeExchangeRate(newExchangeRate, totalSupply);
     }
 
     function test_OnlyVaultModifier() public {
@@ -219,7 +222,7 @@ contract AccountantAaveV3Test is TestBase {
         accountantAaveV3.getPerformanceFee(1000 ether, 1.1e18, 18);
 
         vm.expectRevert();
-        accountantAaveV3.setLastRealizedFeeExchangeRate(1.1e18);
+        accountantAaveV3.setLastRealizedFeeExchangeRate(1.1e18, 1000 ether);
     }
 
     function test_ConstructorDisablesInitializers() public {
@@ -258,7 +261,7 @@ contract AccountantAaveV3Test is TestBase {
 
         // Case 1: Zero shares
         vm.prank(address(vault));
-        accountantAaveV3.setLastRealizedFeeExchangeRate(1.0e18);
+        accountantAaveV3.setLastRealizedFeeExchangeRate(1.0e18, 1000 ether);
 
         vm.prank(address(vault));
         uint256 fee1 = accountantAaveV3.getPerformanceFee(0, 1.1e18, 18);

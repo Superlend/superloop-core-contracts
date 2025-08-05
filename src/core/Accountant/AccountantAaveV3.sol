@@ -113,11 +113,15 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
         return performanceFee;
     }
 
-    function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_) public onlyVault {
+    function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_, uint256 totalSupply)
+        public
+        onlyVault
+    {
         AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
 
         uint256 oldRate = $.lastRealizedFeeExchangeRate;
-        if (lastRealizedFeeExchangeRate_ <= oldRate) return;
+        // if totalSupply is 0, allow setting the last realized fee exchange rate to default
+        if (totalSupply != 0 && lastRealizedFeeExchangeRate_ <= oldRate) return;
 
         $.lastRealizedFeeExchangeRate = lastRealizedFeeExchangeRate_;
         emit LastRealizedFeeExchangeRateUpdated(oldRate, lastRealizedFeeExchangeRate_);
