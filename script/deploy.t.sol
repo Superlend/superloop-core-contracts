@@ -22,6 +22,7 @@ import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/Pro
 import {DataTypes} from "../src/common/DataTypes.sol";
 import {Superloop} from "../src/core/Superloop/Superloop.sol";
 import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
+import {VaultRouter} from "../src/helpers/VaultRouter.sol";
 
 contract Deploy is Script {
     address public admin;
@@ -56,6 +57,8 @@ contract Deploy is Script {
 
     Superloop public superloop;
 
+    VaultRouter public vaultRouter;
+
     function setUp() public {
         vm.createSelectFork("etherlink");
 
@@ -87,8 +90,8 @@ contract Deploy is Script {
         // deploy vault
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
             asset: XTZ,
-            name: "TEST Superloop XTZ Vault",
-            symbol: "TEST_SUPERLOOP_XTZ",
+            name: "TEST Superloop XTZ Vault V2",
+            symbol: "TEST_SUPERLOOP_XTZ_V2",
             supplyCap: 100000 * 10 ** 18,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
@@ -121,6 +124,9 @@ contract Deploy is Script {
         _setupCallbackHandler();
         // call emode module and setup emode 3
         _setupEmode();
+
+        // setup vault router
+        _setupVaultRouter();
 
         _logAddresses();
 
@@ -260,5 +266,28 @@ contract Deploy is Script {
         console.log("--------------------------------");
         console.log("Superloop Proxy Admin: %s", address(vaultProxyAdmin));
         console.log("--------------------------------");
+
+        // log vault router addresses along with its implementation and proxy admin
+        console.log("--------------------------------");
+        console.log("Vault Router: %s", address(vaultRouter));
+        console.log("--------------------------------");
+    }
+
+    function _setupVaultRouter() internal {
+        address[] memory supportedVaults = new address[](1);
+        supportedVaults[0] = address(superloop);
+
+        address[] memory supportedTokens = new address[](9);
+        supportedTokens[0] = XTZ;
+        supportedTokens[1] = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9; // USDC
+        supportedTokens[2] = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854; // ST_XTZ
+        supportedTokens[3] = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A; // USDT
+        supportedTokens[4] = 0xDD629E5241CbC5919847783e6C96B2De4754e438; // mtbill
+        supportedTokens[5] = 0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4; // mbasis
+        supportedTokens[6] = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F; // wbtc
+        supportedTokens[7] = 0xfc24f770F94edBca6D6f885E12d4317320BcB401; // weth
+        supportedTokens[8] = 0xecAc9C5F704e954931349Da37F60E39f515c11c1; // lbtc
+
+        vaultRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule));
     }
 }

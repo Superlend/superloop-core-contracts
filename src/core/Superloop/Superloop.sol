@@ -77,10 +77,10 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
     }
 
     /**
-     * @notice Executes module operations (restricted to vault admin)
+     * @notice Executes module operations (restricted to privileged addresses)
      * @param moduleExecutionData Array of module execution data
      */
-    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyVaultAdmin {
+    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyPrivileged {
         _operate(moduleExecutionData);
     }
 
