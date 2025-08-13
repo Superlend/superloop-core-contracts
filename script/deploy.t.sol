@@ -35,6 +35,9 @@ contract Deploy is Script {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
     address public constant XTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
     address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
+    address public constant VAULT_ADMIN = 0x81b833Df09A7ce39C00ecE916EC54166d2a6B193;
+    address public constant TREASURY = 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
+
     uint256 public constant PERFORMANCE_FEE = 1000; // 10%
 
     SuperloopModuleRegistry public moduleRegistry;
@@ -68,11 +71,14 @@ contract Deploy is Script {
         deployerPvtKey = vm.envUint("PRIVATE_KEY");
         deployer = vm.addr(deployerPvtKey);
 
-        vaultAdmin = vm.addr(0xabc); // TODO: change to env variable
-        rebalanceAdmin = vm.addr(0xdef); // TODO: change to env variable
-        treasury = vm.addr(0x123); // TODO: change to env variable
+        vaultAdmin = VAULT_ADMIN;
+        rebalanceAdmin = deployer;
+        treasury = TREASURY;
 
         console.log("deployer", deployer);
+        console.log("vaultAdmin", vaultAdmin);
+        console.log("rebalanceAdmin", rebalanceAdmin);
+        console.log("treasury", treasury);
     }
 
     function run() public {
@@ -97,9 +103,9 @@ contract Deploy is Script {
         // deploy vault
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
             asset: XTZ,
-            name: "TEST Superloop XTZ Vault V2",
-            symbol: "TEST_SUPERLOOP_XTZ_V2",
-            supplyCap: 100000 * 10 ** 18,
+            name: "Superloop XTZ",
+            symbol: "sloopXTZ",
+            supplyCap: 10000 * 10 ** 18,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountantModule: address(accountantAaveV3),
@@ -305,5 +311,7 @@ contract Deploy is Script {
         supportedTokens[8] = 0xecAc9C5F704e954931349Da37F60E39f515c11c1; // lbtc
 
         vaultRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule));
+
+        vaultRouter.transferOwnership(vaultAdmin);
     }
 }
