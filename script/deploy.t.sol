@@ -25,8 +25,11 @@ import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfa
 import {VaultRouter} from "../src/helpers/VaultRouter.sol";
 
 contract Deploy is Script {
-    address public admin;
+    address public deployer;
     uint256 public deployerPvtKey;
+    address public vaultAdmin;
+    address public rebalanceAdmin;
+    address public treasury;
 
     address public AAVE_V3_POOL_ADDRESSES_PROVIDER = 0x5ccF60c7E10547c5389E9cBFf543E5D0Db9F4feC;
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -63,9 +66,13 @@ contract Deploy is Script {
         vm.createSelectFork("etherlink");
 
         deployerPvtKey = vm.envUint("PRIVATE_KEY");
-        admin = vm.addr(deployerPvtKey);
+        deployer = vm.addr(deployerPvtKey);
 
-        console.log("admin", admin);
+        vaultAdmin = vm.addr(0xabc); // TODO: change to env variable
+        rebalanceAdmin = vm.addr(0xdef); // TODO: change to env variable
+        treasury = vm.addr(0x123); // TODO: change to env variable
+
+        console.log("deployer", deployer);
     }
 
     function run() public {
@@ -97,17 +104,18 @@ contract Deploy is Script {
             modules: modules,
             accountantModule: address(accountantAaveV3),
             withdrawManagerModule: address(withdrawManager),
-            vaultAdmin: admin,
-            treasury: admin
+            vaultAdmin: deployer,
+            treasury: treasury
         });
         vaultImplementation = address(new Superloop());
-        vaultProxyAdmin = address(new ProxyAdmin(address(this)));
+        vaultProxyAdmin = address(new ProxyAdmin(deployer));
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(vaultImplementation),
             address(vaultProxyAdmin),
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
+        ProxyAdmin(vaultProxyAdmin).transferOwnership(vaultAdmin);
         superloop = Superloop(address(proxy));
 
         // deploy accountant
@@ -127,6 +135,12 @@ contract Deploy is Script {
 
         // setup vault router
         _setupVaultRouter();
+
+        // set rebalance admin as priveledged account
+        superloop.setPrivilegedAddress(rebalanceAdmin, true);
+
+        // transfer vault admin role from deployer to vault admin after all the setup is done
+        superloop.setVaultAdmin(vaultAdmin);
 
         _logAddresses();
 
@@ -174,26 +188,28 @@ contract Deploy is Script {
         });
 
         accountantImplementation = address(new AccountantAaveV3());
-        accountantProxyAdmin = address(new ProxyAdmin(address(this)));
+        accountantProxyAdmin = address(new ProxyAdmin(deployer));
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(accountantImplementation),
             address(accountantProxyAdmin),
             abi.encodeWithSelector(AccountantAaveV3.initialize.selector, initData)
         );
+        ProxyAdmin(accountantProxyAdmin).transferOwnership(vaultAdmin);
 
         accountantAaveV3 = AccountantAaveV3(address(proxy));
     }
 
     function _deployWithdrawManager(address vault) internal {
         withdrawManagerImplementation = address(new WithdrawManager());
-        withdrawManagerProxyAdmin = address(new ProxyAdmin(address(this)));
+        withdrawManagerProxyAdmin = address(new ProxyAdmin(deployer));
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(withdrawManagerImplementation),
             address(withdrawManagerProxyAdmin),
             abi.encodeWithSelector(WithdrawManager.initialize.selector, vault)
         );
+        ProxyAdmin(withdrawManagerProxyAdmin).transferOwnership(vaultAdmin);
 
         withdrawManager = WithdrawManager(address(proxy));
     }
