@@ -200,4 +200,28 @@ library DataTypes {
         address asset;
         uint256 amount;
     }
+
+    /**
+     * @notice Structure for Aave V3 accountant module initialization
+     * @param registeredAccountants Array of registered accountant addresses
+     * @param performanceFee The performance fee percentage
+     * @param vault The address of the associated vault
+     */
+    struct UniversalAccountantModuleInitData {
+        address[] registeredAccountants;
+        uint16 performanceFee;
+        address vault;
+    }
+
+    /**
+     * @notice Structure for Aave V3 accountant plugin module initialization
+     * @param poolAddressesProvider The Aave pool addresses provider
+     * @param lendAssets Array of assets available for lending
+     * @param borrowAssets Array of assets available for borrowing
+     */
+    struct AaveV3AccountantPluginModuleInitData {
+        address poolAddressesProvider;
+        address[] lendAssets;
+        address[] borrowAssets;
+    }
 }

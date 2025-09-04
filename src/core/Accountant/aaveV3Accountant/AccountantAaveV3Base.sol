@@ -3,10 +3,10 @@
 pragma solidity ^0.8.13;
 
 import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
-import {AccountantAaveV3Storage} from "../lib/AccountantAaveV3Storage.sol";
-import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
+import {AccountantAaveV3Storage} from "../../lib/AccountantAaveV3Storage.sol";
+import {IAccountantAaveV3Module} from "../../../interfaces/IAccountantAaveV3Module.sol";
 
-abstract contract AccountantAaveV3Base is OwnableUpgradeable, IAccountantModule {
+abstract contract AccountantAaveV3Base is OwnableUpgradeable, IAccountantAaveV3Module {
     event PoolAddressesProviderUpdated(address indexed oldProvider, address indexed newProvider);
     event LendAssetsUpdated(address[] oldAssets, address[] newAssets);
     event BorrowAssetsUpdated(address[] oldAssets, address[] newAssets);

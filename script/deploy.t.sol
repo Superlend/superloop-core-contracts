@@ -14,7 +14,7 @@ import {AaveV3WithdrawModule} from "../src/modules/AaveV3WithdrawModule.sol";
 import {AaveV3BorrowModule} from "../src/modules/AaveV3BorrowModule.sol";
 import {AaveV3RepayModule} from "../src/modules/AaveV3RepayModule.sol";
 import {SuperloopModuleRegistry} from "../src/core/ModuleRegistry/ModuleRegistry.sol";
-import {AccountantAaveV3} from "../src/core/Accountant/AccountantAaveV3.sol";
+import {AccountantAaveV3} from "../src/core/Accountant/aaveV3Accountant/AccountantAaveV3.sol";
 import {WithdrawManager} from "../src/core/WithdrawManager/WithdrawManager.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";

@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: MIT
+
+pragma solidity ^0.8.13;
+
+import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import {IAaveV3AccountantPlugin} from "../../interfaces/IAaveV3AccountantPlugin.sol";
+import {AaveV3AccountantPluginStorage} from "../../core/lib/AaveV3AccountantPluginStorage.sol";
+
+abstract contract AaveV3AccountantPluginBase is OwnableUpgradeable, IAaveV3AccountantPlugin {
+    event PoolAddressesProviderUpdated(address indexed oldProvider, address indexed newProvider);
+    event LendAssetsUpdated(address[] oldAssets, address[] newAssets);
+    event BorrowAssetsUpdated(address[] oldAssets, address[] newAssets);
+
+    function __AaveV3AccountantPluginBase_init(address owner) internal onlyInitializing {
+        __Ownable_init(owner);
+    }
+
+    function setPoolAddressesProvider(address poolAddressesProvider_) external onlyOwner {
+        address oldProvider = AaveV3AccountantPluginStorage.getAaveV3AccountantPluginStorage().poolAddressesProvider;
+        AaveV3AccountantPluginStorage.setPoolAddressesProvider(poolAddressesProvider_);
+        emit PoolAddressesProviderUpdated(oldProvider, poolAddressesProvider_);
+    }
+
+    function setLendAssets(address[] memory lendAssets_) external onlyOwner {
+        address[] memory oldAssets = AaveV3AccountantPluginStorage.getAaveV3AccountantPluginStorage().lendAssets;
+        AaveV3AccountantPluginStorage.setLendAssets(lendAssets_);
+        emit LendAssetsUpdated(oldAssets, lendAssets_);
+    }
+
+    function setBorrowAssets(address[] memory borrowAssets_) external onlyOwner {
+        address[] memory oldAssets = AaveV3AccountantPluginStorage.getAaveV3AccountantPluginStorage().borrowAssets;
+        AaveV3AccountantPluginStorage.setBorrowAssets(borrowAssets_);
+        emit BorrowAssetsUpdated(oldAssets, borrowAssets_);
+    }
+
+    function poolAddressesProvider() external view returns (address) {
+        return AaveV3AccountantPluginStorage.getAaveV3AccountantPluginStorage().poolAddressesProvider;
+    }
+
+    function lendAssets() external view returns (address[] memory) {
+        return AaveV3AccountantPluginStorage.getAaveV3AccountantPluginStorage().lendAssets;
+    }
+
+    function borrowAssets() external view returns (address[] memory) {
+        return AaveV3AccountantPluginStorage.getAaveV3AccountantPluginStorage().borrowAssets;
+    }
+}
