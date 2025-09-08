@@ -55,6 +55,7 @@ library DataTypes {
      * @param supplyCap The maximum supply cap for the vault
      * @param superloopModuleRegistry The address of the module registry
      * @param modules Array of module addresses to register
+     * @param cashReserve The amount of cash reserve for the vault. Represented in BPS
      * @param accountantModule The address of the accountant module
      * @param withdrawManagerModule The address of the withdraw manager module
      * @param vaultAdmin The address of the vault admin
@@ -69,6 +70,7 @@ library DataTypes {
         uint256 supplyCap;
         address superloopModuleRegistry;
         address[] modules;
+        uint256 cashReserve;
         // essential roles
         address accountantModule;
         address withdrawManagerModule;

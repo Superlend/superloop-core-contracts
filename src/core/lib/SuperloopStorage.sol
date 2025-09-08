@@ -15,15 +15,22 @@ library SuperloopStorage {
     uint8 public constant DECIMALS_OFFSET = 2;
 
     /**
+     * @notice Maximum BPS value
+     */
+    uint256 public constant MAX_BPS_VALUE = 10000; // 100%
+
+    /**
      * @notice Structure for storing Superloop vault state
      * @param supplyCap The maximum supply cap for the vault
      * @param superloopModuleRegistry The address of the module registry
      * @param registeredModules Mapping from module address to registration status
      * @param callbackHandlers Mapping from callback key to handler address
+     * @param cashReserve The amount of cash reserve for the vault. Represented in BPS
      */
     struct SuperloopState {
         uint256 supplyCap;
         address superloopModuleRegistry;
+        uint256 cashReserve;
         mapping(address => bool) registeredModules;
         mapping(bytes32 => address) callbackHandlers;
     }
@@ -72,6 +79,15 @@ library SuperloopStorage {
     function setSuperloopModuleRegistry(address superloopModuleRegistry_) internal {
         SuperloopState storage $ = getSuperloopStorage();
         $.superloopModuleRegistry = superloopModuleRegistry_;
+    }
+
+    /**
+     * @notice Sets the cash reserve for the vault
+     * @param cashReserve_ The new cash reserve value
+     */
+    function setCashReserve(uint256 cashReserve_) internal {
+        SuperloopState storage $ = getSuperloopStorage();
+        $.cashReserve = cashReserve_;
     }
 
     /**

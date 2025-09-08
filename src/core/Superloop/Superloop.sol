@@ -71,6 +71,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setWithdrawManagerModule(data.withdrawManagerModule);
         SuperloopStorage.setVaultAdmin(data.vaultAdmin);
         SuperloopStorage.setTreasury(data.treasury);
+        SuperloopStorage.setCashReserve(data.cashReserve);
         SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
         SuperloopStorage.setPrivilegedAddress(data.treasury, true);
         SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);

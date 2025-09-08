@@ -83,6 +83,10 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         // check supply cap
         require(assets <= maxDeposit(address(0)), Errors.SUPPLY_CAP_EXCEEDED);
 
+        // calculate the cash reserve at curren total assets
+        uint256 cashReserveShortfall = _getCashReserveShortfall();
+        require(assets <= cashReserveShortfall, Errors.INSUFFICIENT_CASH_SHORTFALL);
+
         // preview deposit
         uint256 shares = previewDeposit(assets);
         require(shares > 0, Errors.INVALID_SHARES_AMOUNT);
@@ -99,6 +103,10 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         require(shares <= maxMint(address(0)), Errors.SUPPLY_CAP_EXCEEDED);
 
         uint256 assets = previewMint(shares);
+        
+        uint256 cashReserveShortfall = _getCashReserveShortfall();
+        require(assets <= cashReserveShortfall, Errors.INSUFFICIENT_CASH_SHORTFALL);
+
         require(assets > 0, Errors.INVALID_AMOUNT);
         _deposit(_msgSender(), receiver, assets, shares);
 
@@ -238,6 +246,17 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
 
     function _decimalsOffset() internal pure override returns (uint8) {
         return SuperloopStorage.DECIMALS_OFFSET;
+    }
+
+    function _getCashReserveShortfall() internal view returns (uint256) {
+        uint256 cashReserveExpected = Math.mulDiv(
+            totalAssets(),
+            SuperloopStorage.getSuperloopStorage().cashReserve,
+            SuperloopStorage.MAX_BPS_VALUE,
+            Math.Rounding.Floor
+        );
+        uint256 cashReserveActual = IERC20(asset()).balanceOf(address(this));
+        return cashReserveExpected > cashReserveActual ? cashReserveExpected - cashReserveActual : 0;
     }
 
     modifier onlyPrivileged() {

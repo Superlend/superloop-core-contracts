@@ -110,6 +110,7 @@ contract Deploy is Script {
             modules: modules,
             accountantModule: address(accountantAaveV3),
             withdrawManagerModule: address(withdrawManager),
+            cashReserve: 1000,
             vaultAdmin: deployer,
             treasury: treasury
         });

@@ -42,6 +42,7 @@ contract SuperloopTest is TestBase {
             modules: modules,
             accountantModule: mockModule,
             withdrawManagerModule: mockModule,
+            cashReserve: 1000,
             vaultAdmin: admin,
             treasury: treasury
         });
@@ -84,6 +85,7 @@ contract SuperloopTest is TestBase {
             modules: modules,
             accountantModule: mockModule,
             withdrawManagerModule: mockModule,
+            cashReserve: 1000,
             vaultAdmin: admin,
             treasury: treasury
         });
@@ -119,6 +121,7 @@ contract SuperloopTest is TestBase {
             modules: modules,
             accountantModule: mockModule,
             withdrawManagerModule: mockModule,
+            cashReserve: 1000,
             vaultAdmin: admin,
             treasury: treasury
         });
@@ -141,6 +144,7 @@ contract SuperloopTest is TestBase {
             modules: modules,
             accountantModule: mockModule,
             withdrawManagerModule: mockModule,
+            cashReserve: 1000,
             vaultAdmin: admin,
             treasury: treasury
         });
@@ -180,6 +184,7 @@ contract SuperloopTest is TestBase {
             modules: modules,
             accountantModule: mockModule,
             withdrawManagerModule: mockModule,
+            cashReserve: 1000,
             vaultAdmin: admin,
             treasury: treasury
         });

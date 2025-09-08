@@ -34,6 +34,7 @@ contract AaveV3EmodeModuleTest is TestBase {
             modules: modules,
             accountantModule: mockModule,
             withdrawManagerModule: mockModule,
+            cashReserve: 1000,
             vaultAdmin: admin,
             treasury: treasury
         });

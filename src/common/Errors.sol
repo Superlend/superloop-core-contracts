@@ -41,4 +41,6 @@ library Errors {
     string public constant TOKEN_NOT_WHITELISTED = "32"; // token is not whitelisted
     string public constant INSTANT_WITHDRAW_NOT_ENABLED = "33"; // instant withdraw is not enabled
     string public constant WITHDRAW_REQUEST_UNCLAIMED = "34"; // withdraw request is unclaimed
+    string public constant INVALID_CASH_RESERVE = "35"; // invalid cash reserve
+    string public constant INSUFFICIENT_CASH_SHORTFALL = "36"; // insufficient cash shortfall
 }
