@@ -43,4 +43,10 @@ library Errors {
     string public constant WITHDRAW_REQUEST_UNCLAIMED = "34"; // withdraw request is unclaimed
     string public constant INVALID_CASH_RESERVE = "35"; // invalid cash reserve
     string public constant INSUFFICIENT_CASH_SHORTFALL = "36"; // insufficient cash shortfall
+    string public constant DEPOSIT_REQUEST_ACTIVE = "37"; // deposit request is active
+    string public constant DEPOSIT_REQUEST_ALREADY_CANCELLED = "38"; // deposit request already cancelled
+    string public constant CALLER_NOT_DEPOSIT_REQUEST_OWNER = "39"; // the caller of function is not the owner of the deposit request
+    string public constant DEPOSIT_REQUEST_ALREADY_PROCESSED = "40"; // deposit request already processed
+    string public constant INVALID_ASSET = "41"; // invalid asset
+    string public constant CALLER_NOT_DEPOSIT_MANAGER = "42"; // the caller of function is not deposit manager
 }

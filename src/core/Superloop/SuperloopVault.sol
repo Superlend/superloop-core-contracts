@@ -15,7 +15,6 @@ import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Errors} from "../../common/Errors.sol";
-import {console} from "forge-std/console.sol";
 
 abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeable {
     event PerformanceFeeRealized(uint256 sharesMinted, address indexed treasury);
@@ -103,7 +102,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         require(shares <= maxMint(address(0)), Errors.SUPPLY_CAP_EXCEEDED);
 
         uint256 assets = previewMint(shares);
-        
+
         uint256 cashReserveShortfall = _getCashReserveShortfall();
         require(assets <= cashReserveShortfall, Errors.INSUFFICIENT_CASH_SHORTFALL);
 
@@ -155,6 +154,10 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         returns (bool)
     {
         return super.transferFrom(from, to, amount);
+    }
+
+    function mintShares(address to, uint256 amount) public onlyDepositManager {
+        _mint(to, amount);
     }
 
     function _realizePerformanceFee() internal {
@@ -267,5 +270,15 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     function _onlyPrivileged() internal view {
         SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
         require($.privilegedAddresses[_msgSender()], Errors.CALLER_NOT_PRIVILEGED);
+    }
+
+    modifier onlyDepositManager() {
+        _onlyDepositManager();
+        _;
+    }
+
+    function _onlyDepositManager() internal view {
+        SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
+        require($.depositManager == _msgSender(), Errors.CALLER_NOT_DEPOSIT_MANAGER);
     }
 }

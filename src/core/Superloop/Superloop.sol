@@ -97,6 +97,10 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         emit AssetSkimmed(asset_, balance, SuperloopStorage.getSuperloopEssentialRolesStorage().treasury);
     }
 
+    function realizePerformanceFee() external {
+        _realizePerformanceFee();
+    }
+
     /**
      * @notice Fallback function to handle callback operations
      * @return The result of the callback execution

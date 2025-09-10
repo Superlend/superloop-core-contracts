@@ -31,6 +31,18 @@ interface ISuperloop is IERC4626 {
     function skim(address asset_) external;
 
     /**
+     * @notice Realizes the performance fee
+     */
+    function realizePerformanceFee() external;
+
+    /**
+     * @notice Mints shares for an address
+     * @param to The address to mint shares for
+     * @param amount The amount of shares to mint
+     */
+    function mintShares(address to, uint256 amount) external;
+
+    /**
      * @notice Sets the supply cap for the vault
      * @param supplyCap_ The new supply cap value
      */

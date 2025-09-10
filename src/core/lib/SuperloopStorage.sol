@@ -111,6 +111,8 @@ library SuperloopStorage {
     struct SuperloopEssentialRoles {
         address accountantModule;
         address withdrawManagerModule;
+        address depositManager;
+        address vaultOperator;
         address vaultAdmin;
         address treasury;
         mapping(address => bool) privilegedAddresses;

@@ -19,6 +19,36 @@ library DataTypes {
         address moduleAddress;
     }
 
+    enum DepositRequestProcessingState {
+        NOT_EXIST,
+        UNPROCESSED,
+        PARTIALLY_PROCESSED, // partially processed means that the deposit request has been partially processed
+        PARTIALLY_CANCELLED, // partially cancelled means that the deposit request has been partially cancelled
+        FULLY_PROCESSED,
+        CANCELLED
+    }
+
+    struct DepositRequestData {
+        uint256 amount;
+        uint256 amountProcessed; // amoutn remaining => amount - amountProcessed
+        uint256 shares; // amount of shares minted for the amountProcessed
+        address user;
+        DepositRequestProcessingState state;
+    }
+
+    struct ResolveDepositRequestsData {
+        address asset;
+        uint256 amount;
+        bytes callbackExecutionData;
+    }
+
+    struct ExchangeRateSnapshot {
+        uint256 totalSupplyBefore;
+        uint256 totalSupplyAfter;
+        uint256 totalAssetsBefore;
+        uint256 totalAssetsAfter;
+    }
+
     /**
      * @notice Structure for storing withdrawal request information
      * @param shares The number of shares requested for withdrawal
