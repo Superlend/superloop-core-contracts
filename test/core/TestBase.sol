@@ -18,6 +18,8 @@ import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {UniversalDexModule} from "../../src/modules/UniversalDexModule.sol";
 import {AccountantAaveV3} from "../../src/core/Accountant/aaveV3Accountant/AccountantAaveV3.sol";
 import {WithdrawManager} from "../../src/core/WithdrawManager/WithdrawManager.sol";
+import {DepositManager} from "../../src/core/DepositManager/DepositManager.sol";
+import {DepositManagerCallbackHandler} from "../../src/modules/DepositManagerCallbackHandler.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
@@ -48,6 +50,7 @@ contract TestBase is Test {
     SuperloopModuleRegistry public moduleRegistry;
     Superloop public superloop;
     AaveV3FlashloanModule public flashloanModule;
+    DepositManagerCallbackHandler public depositManagerCallbackHandler;
     AaveV3CallbackHandler public callbackHandler;
     AaveV3SupplyModule public supplyModule;
     AaveV3WithdrawModule public withdrawModule;
@@ -56,6 +59,7 @@ contract TestBase is Test {
     UniversalDexModule public dexModule;
     AccountantAaveV3 public accountantAaveV3;
     WithdrawManager public withdrawManager;
+    DepositManager public depositManager;
 
     address public mockModule;
     AaveV3EmodeModule public emodeModule;
@@ -108,6 +112,8 @@ contract TestBase is Test {
         moduleRegistry.setModule("AaveV3RepayModule", address(repayModule));
         dexModule = new UniversalDexModule();
         moduleRegistry.setModule("UniversalDexModule", address(dexModule));
+        depositManagerCallbackHandler = new DepositManagerCallbackHandler();
+        moduleRegistry.setModule("DepositManagerCallbackHandler", address(depositManagerCallbackHandler));
 
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");
@@ -117,6 +123,7 @@ contract TestBase is Test {
         vm.label(address(borrowModule), "borrowModule");
         vm.label(address(repayModule), "repayModule");
         vm.label(address(dexModule), "dexModule");
+        vm.label(address(depositManagerCallbackHandler), "depositManagerCallbackHandler");
     }
 
     function _deployAccountant(address vault) internal {
@@ -156,5 +163,18 @@ contract TestBase is Test {
         );
 
         withdrawManager = WithdrawManager(address(proxy));
+    }
+
+    function _deployDepositManager(address vault) internal {
+        DepositManager depositManagerImplementation = new DepositManager();
+        ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
+
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(depositManagerImplementation),
+            address(proxyAdmin),
+            abi.encodeWithSelector(DepositManager.initialize.selector, vault)
+        );
+
+        depositManager = DepositManager(address(proxy));
     }
 }

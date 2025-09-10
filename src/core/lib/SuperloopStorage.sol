@@ -154,6 +154,15 @@ library SuperloopStorage {
     }
 
     /**
+     * @notice Sets the deposit manager module address
+     * @param depositManagerModule_ The address of the deposit manager module
+     */
+    function setDepositManager(address depositManagerModule_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.depositManager = depositManagerModule_;
+    }
+
+    /**
      * @notice Sets the vault admin address
      * @param vaultAdmin_ The address of the vault admin
      */

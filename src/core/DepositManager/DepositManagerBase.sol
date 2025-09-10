@@ -47,4 +47,14 @@ abstract contract DepositManagerBase is Context {
         uint256 id = $.userDepositRequestId[user];
         return ($.depositRequest[id], id);
     }
+
+    function totalPendingDeposits() public view returns (uint256) {
+        DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
+        return $.totalPendingDeposits;
+    }
+
+    function resolutionIdPointer() public view returns (uint256) {
+        DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
+        return $.resolutionIdPointer;
+    }
 }

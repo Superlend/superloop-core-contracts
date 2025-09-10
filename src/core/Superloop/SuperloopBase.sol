@@ -12,6 +12,7 @@ abstract contract SuperloopBase {
     event CallbackHandlerUpdated(bytes32 indexed key, address indexed oldHandler, address indexed newHandler);
     event AccountantModuleUpdated(address indexed oldModule, address indexed newModule);
     event WithdrawManagerModuleUpdated(address indexed oldModule, address indexed newModule);
+    event DepositManagerModuleUpdated(address indexed oldModule, address indexed newModule);
     event VaultAdminUpdated(address indexed oldAdmin, address indexed newAdmin);
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
     event PrivilegedAddressUpdated(address indexed privilegedAddress, bool oldStatus, bool newStatus);
@@ -65,6 +66,12 @@ abstract contract SuperloopBase {
         SuperloopStorage.setWithdrawManagerModule(withdrawManagerModule_);
         SuperloopStorage.setPrivilegedAddress(withdrawManagerModule_, true);
         emit WithdrawManagerModuleUpdated(currentWithdrawManagerModule, withdrawManagerModule_);
+    }
+
+    function setDepositManagerModule(address depositManagerModule_) external onlyVaultAdmin {
+        address currentDepositManagerModule = SuperloopStorage.getSuperloopEssentialRolesStorage().depositManager;
+        SuperloopStorage.setDepositManager(depositManagerModule_);
+        emit DepositManagerModuleUpdated(currentDepositManagerModule, depositManagerModule_);
     }
 
     function setVaultAdmin(address vaultAdmin_) external onlyVaultAdmin {

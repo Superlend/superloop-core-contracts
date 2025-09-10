@@ -111,6 +111,7 @@ contract Deploy is Script {
             accountantModule: address(accountantAaveV3),
             withdrawManagerModule: address(withdrawManager),
             cashReserve: 1000,
+            depositManager: address(0),
             vaultAdmin: deployer,
             treasury: treasury
         });

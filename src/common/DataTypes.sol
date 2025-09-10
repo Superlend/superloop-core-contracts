@@ -104,6 +104,7 @@ library DataTypes {
         // essential roles
         address accountantModule;
         address withdrawManagerModule;
+        address depositManager;
         address vaultAdmin;
         address treasury;
     }

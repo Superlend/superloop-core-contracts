@@ -51,6 +51,7 @@ abstract contract IntegrationBase is TestBase {
             modules: modules,
             accountantModule: address(accountantAaveV3),
             withdrawManagerModule: address(withdrawManager),
+            depositManager: address(0),
             cashReserve: 1000,
             vaultAdmin: admin,
             treasury: treasury

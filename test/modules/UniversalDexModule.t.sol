@@ -36,6 +36,7 @@ contract UniversalDexModuleTest is TestBase {
             modules: modules,
             accountantModule: mockModule,
             withdrawManagerModule: mockModule,
+            depositManager: mockModule,
             cashReserve: 1000,
             vaultAdmin: admin,
             treasury: treasury
