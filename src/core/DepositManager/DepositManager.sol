@@ -40,7 +40,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
         address userCached = onBehalfOf == address(0) ? _msgSender() : onBehalfOf;
         _validateWithdrawRequest($, amount, userCached);
-        _registerDepositRequest($, amount, userCached);
+        _registerDepositRequest($, amount, userCached, _msgSender());
 
         emit DepositRequested(userCached, amount, $.nextDepositRequestId - 1);
     }
@@ -156,10 +156,13 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         }
     }
 
-    function _registerDepositRequest(DepositManagerStorage.DepositManagerState storage $, uint256 amount, address user)
-        internal
-    {
-        SafeERC20.safeTransferFrom(IERC20($.asset), user, address(this), amount);
+    function _registerDepositRequest(
+        DepositManagerStorage.DepositManagerState storage $,
+        uint256 amount,
+        address user,
+        address sender
+    ) internal {
+        SafeERC20.safeTransferFrom(IERC20($.asset), sender, address(this), amount);
 
         uint256 id = $.nextDepositRequestId;
 
@@ -181,6 +184,9 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         // 3. request can be partially cancelled
         DataTypes.DepositRequestData memory _depositRequest = $.depositRequest[id];
         uint256 resolutionPointer = $.resolutionIdPointer;
+
+        bool doesExist = _depositRequest.amount > 0;
+        if (!doesExist) revert(Errors.DEPOSIT_REQUEST_NOT_FOUND);
 
         bool isCancelled = _depositRequest.state == DataTypes.DepositRequestProcessingState.CANCELLED
             || _depositRequest.state == DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED;
@@ -206,6 +212,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
             ? DataTypes.DepositRequestProcessingState.CANCELLED
             : DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED;
         DepositManagerStorage.setUserDepositRequest($.depositRequest[id].user, 0);
+        $.totalPendingDeposits -= amountToRefund;
 
         SafeERC20.safeTransfer(IERC20($.asset), $.depositRequest[id].user, amountToRefund);
 

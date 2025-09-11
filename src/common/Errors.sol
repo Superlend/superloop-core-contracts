@@ -49,4 +49,5 @@ library Errors {
     string public constant DEPOSIT_REQUEST_ALREADY_PROCESSED = "40"; // deposit request already processed
     string public constant INVALID_ASSET = "41"; // invalid asset
     string public constant CALLER_NOT_DEPOSIT_MANAGER = "42"; // the caller of function is not deposit manager
+    string public constant DEPOSIT_REQUEST_NOT_FOUND = "43"; // deposit request not found
 }

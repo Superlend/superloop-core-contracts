@@ -9,7 +9,8 @@ import {Superloop} from "../../src/core/Superloop/Superloop.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
-import {ITransparentUpgradeableProxy} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ITransparentUpgradeableProxy} from
+    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 
 contract SuperloopStorageUpgradeTest is TestBase {
     address testUser1;
@@ -27,9 +28,7 @@ contract SuperloopStorageUpgradeTest is TestBase {
         testUser3 = 0x703EE58AC2bbC219De04014F3210202C5d82070A;
         testUser4 = 0xa77E705d7166750F53F60ca7e246BAFBE40f5c42;
 
-        superloopProxyAdmin = ProxyAdmin(
-            0x10c351d6087c714e8ddf528B91964c6b846ABc84
-        );
+        superloopProxyAdmin = ProxyAdmin(0x10c351d6087c714e8ddf528B91964c6b846ABc84);
 
         vm.label(address(superloopProxyAdmin), "superloopProxyAdmin");
         vm.label(address(superloop), "superloopOld");
@@ -90,24 +89,15 @@ contract SuperloopStorageUpgradeTest is TestBase {
 
         vm.startPrank(admin);
         superloopProxyAdmin.upgradeAndCall(
-            ITransparentUpgradeableProxy(address(superloop)),
-            address(newSuperloopImplementation),
-            ""
+            ITransparentUpgradeableProxy(address(superloop)), address(newSuperloopImplementation), ""
         );
 
         // perform the above queries again
         // compare the results
     }
 
-    function _performQueries(
-        bool isUpgraded
-    ) internal view returns (TestQueryResults memory) {
-        bytes32 key = keccak256(
-            abi.encodePacked(
-                POOL,
-                IFlashLoanSimpleReceiver.executeOperation.selector
-            )
-        );
+    function _performQueries(bool isUpgraded) internal view returns (TestQueryResults memory) {
+        bytes32 key = keccak256(abi.encodePacked(POOL, IFlashLoanSimpleReceiver.executeOperation.selector));
 
         TestQueryResults memory results = TestQueryResults({
             name: superloop.name(),
@@ -126,9 +116,7 @@ contract SuperloopStorageUpgradeTest is TestBase {
             vaultAdmin: superloop.vaultAdmin(),
             treasury: superloop.treasury(),
             privilegedAddresses: new bool[](3),
-            depositManagerModule: isUpgraded
-                ? superloop.depositManagerModule()
-                : address(0),
+            depositManagerModule: isUpgraded ? superloop.depositManagerModule() : address(0),
             vaultOperator: isUpgraded ? superloop.vaultOperator() : address(0)
         });
 
@@ -137,27 +125,15 @@ contract SuperloopStorageUpgradeTest is TestBase {
         results.balances[2] = superloop.balanceOf(testUser3);
         results.balances[3] = superloop.balanceOf(testUser4);
 
-        results.registeredModules[0] = superloop.registeredModule(
-            address(supplyModule)
-        );
-        results.registeredModules[1] = superloop.registeredModule(
-            address(withdrawModule)
-        );
-        results.registeredModules[2] = superloop.registeredModule(
-            address(borrowModule)
-        );
-        results.registeredModules[3] = superloop.registeredModule(
-            address(repayModule)
-        );
-        results.registeredModules[4] = superloop.registeredModule(
-            address(flashloanModule)
-        );
+        results.registeredModules[0] = superloop.registeredModule(address(supplyModule));
+        results.registeredModules[1] = superloop.registeredModule(address(withdrawModule));
+        results.registeredModules[2] = superloop.registeredModule(address(borrowModule));
+        results.registeredModules[3] = superloop.registeredModule(address(repayModule));
+        results.registeredModules[4] = superloop.registeredModule(address(flashloanModule));
 
         results.privilegedAddresses[0] = superloop.privilegedAddress(admin);
         results.privilegedAddresses[1] = superloop.privilegedAddress(treasury);
-        results.privilegedAddresses[2] = superloop.privilegedAddress(
-            address(withdrawManager)
-        );
+        results.privilegedAddresses[2] = superloop.privilegedAddress(address(withdrawManager));
 
         results.callbackHandlers[0] = superloop.callbackHandler(key);
 
@@ -165,9 +141,7 @@ contract SuperloopStorageUpgradeTest is TestBase {
     }
 
     function logQueryResults(TestQueryResults memory results) internal pure {
-        console.log(
-            "ERC20/ERC4626 specific data--------------------------------"
-        );
+        console.log("ERC20/ERC4626 specific data--------------------------------");
         console.log("Name: %s", results.name);
         console.log("Symbol: %s", results.symbol);
         console.log("Decimals: %s", results.decimals);
@@ -180,10 +154,7 @@ contract SuperloopStorageUpgradeTest is TestBase {
 
         console.log("SuperloopState data--------------------------------");
         console.log("Supply Cap: %s", results.supplyCap);
-        console.log(
-            "Superloop Module Registry: %s",
-            results.superloopModuleRegistry
-        );
+        console.log("Superloop Module Registry: %s", results.superloopModuleRegistry);
         console.log("Cash Reserve: %s", results.cashReserve);
         // log the array of registered modules
         console.log("Registered Modules: ");
@@ -196,14 +167,9 @@ contract SuperloopStorageUpgradeTest is TestBase {
             console.log(results.callbackHandlers[i]);
         }
 
-        console.log(
-            "SuperloopEssentialRoles data--------------------------------"
-        );
+        console.log("SuperloopEssentialRoles data--------------------------------");
         console.log("Accountant Module: %s", results.accountantModule);
-        console.log(
-            "Withdraw Manager Module: %s",
-            results.withdrawManagerModule
-        );
+        console.log("Withdraw Manager Module: %s", results.withdrawManagerModule);
         console.log("Vault Admin: %s", results.vaultAdmin);
         console.log("Treasury: %s", results.treasury);
         console.log("Deposit Manager Module: %s", results.depositManagerModule);

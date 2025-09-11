@@ -3,6 +3,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {Superloop} from "../../src/core/Superloop/Superloop.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegistry.sol";
@@ -167,13 +168,14 @@ contract TestBase is Test {
 
     function _deployDepositManager(address vault) internal {
         DepositManager depositManagerImplementation = new DepositManager();
-        ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
-
+        // ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
+        vm.recordLogs();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(depositManagerImplementation),
-            address(proxyAdmin),
+            address(this),
             abi.encodeWithSelector(DepositManager.initialize.selector, vault)
         );
+        // Vm.Log[] memory entries = vm.getRecordedLogs();
 
         depositManager = DepositManager(address(proxy));
     }
