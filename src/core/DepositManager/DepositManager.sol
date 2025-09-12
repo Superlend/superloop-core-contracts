@@ -5,7 +5,8 @@ pragma solidity ^0.8.13;
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import {ReentrancyGuardUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
-import {SafeERC20, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 import {DepositManagerBase} from "./DepositManagerBase.sol";
@@ -13,7 +14,7 @@ import {DepositManagerStorage} from "../lib/DepositManagerStorage.sol";
 import {ISuperloop} from "../../interfaces/ISuperloop.sol";
 import {Errors} from "../../common/Errors.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
-import {DepositManagerCallbackHandler} from "../../modules/DepositManagerCallbackHandler.sol";
+import {IDepositManagerCallbackHandler} from "../../interfaces/IDepositManagerCallbackHandler.sol";
 
 contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, DepositManagerBase {
     event DepositRequested(address indexed user, uint256 amount, uint256 requestId);
@@ -29,8 +30,12 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
     }
 
     function __SuperloopDepositManager_init(address _vault) internal onlyInitializing {
+        address asset = ISuperloop(_vault).asset();
+        uint8 decimalOffset = ISuperloop(_vault).decimals() - IERC20Metadata(asset).decimals();
+
         DepositManagerStorage.setVault(_vault);
-        DepositManagerStorage.setAsset(ISuperloop(_vault).asset());
+        DepositManagerStorage.setAsset(asset);
+        DepositManagerStorage.setDecimalOffset(decimalOffset);
         DepositManagerStorage.setNextDepositRequestId();
     }
 
@@ -64,12 +69,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
 
         address vaultCached = $.vault;
         // take a snapshot of the current exchange rate
-        DataTypes.ExchangeRateSnapshot memory snapshot = DataTypes.ExchangeRateSnapshot({
-            totalSupplyBefore: ISuperloop(vaultCached).totalSupply(),
-            totalSupplyAfter: 0,
-            totalAssetsBefore: ISuperloop(vaultCached).totalAssets(),
-            totalAssetsAfter: 0
-        });
+        DataTypes.ExchangeRateSnapshot memory snapshot = _createExchangeRateSnapshot(vaultCached, $.vaultDecimalOffset);
 
         // encode the data to be used in the callback
         bytes memory callbackExecutionData = abi.encode(
@@ -85,13 +85,13 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         SafeERC20.safeTransfer(IERC20(data.asset), vaultCached, data.amount);
 
         // call 'executeDeposit' function on the vault
-        DepositManagerCallbackHandler(vaultCached).executeDeposit(data.amount, callbackExecutionData);
+        IDepositManagerCallbackHandler(vaultCached).executeDeposit(data.amount, callbackExecutionData);
 
         // update the snapshot
-        snapshot.totalAssetsAfter = ISuperloop(vaultCached).totalAssets();
+        snapshot.totalAssetsAfter = ISuperloop(vaultCached).totalAssets() + 1;
 
         // calculate shares such that the exchange rate is not updated
-        uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot);
+        uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot, $.vaultDecimalOffset);
 
         // calculate the share value of each of the deposit request that is getting resolved
         // go from current resolutionIdPointer => until assets are over
@@ -105,12 +105,15 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
 
             uint256 sharesToMint =
                 Math.mulDiv(amountToIngestInCurrentRequest, totalNewSharesToMint, data.amount, Math.Rounding.Floor);
-            address user = currentRequest.user;
-            ISuperloop(vaultCached).mintShares(user, sharesToMint);
+
+            if (sharesToMint != 0) {
+                ISuperloop(vaultCached).mintShares(currentRequest.user, sharesToMint);
+            }
 
             amountToIngest -= amountToIngestInCurrentRequest;
             if (currentRequest.amountProcessed + amountToIngestInCurrentRequest != currentRequest.amount) {
                 $.depositRequest[currentId].state = DataTypes.DepositRequestProcessingState.PARTIALLY_PROCESSED;
+                $.depositRequest[currentId].amountProcessed += amountToIngestInCurrentRequest;
             } else {
                 unchecked {
                     ++currentId;
@@ -167,7 +170,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         uint256 id = $.nextDepositRequestId;
 
         DepositManagerStorage.setDepositRequest(
-            id, amount, 0, 0, user, DataTypes.DepositRequestProcessingState.UNPROCESSED
+            id, amount, 0, user, DataTypes.DepositRequestProcessingState.UNPROCESSED
         );
         DepositManagerStorage.setUserDepositRequest(user, id);
         DepositManagerStorage.setNextDepositRequestId();
@@ -227,11 +230,30 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         require(data.asset == $.asset, Errors.INVALID_ASSET);
     }
 
-    function _calculateSharesToMint(DataTypes.ExchangeRateSnapshot memory snapshot) internal pure returns (uint256) {
+    function _createExchangeRateSnapshot(address vault, uint8 decimalOffset)
+        internal
+        view
+        returns (DataTypes.ExchangeRateSnapshot memory)
+    {
+        uint256 totalSupplyBefore = ISuperloop(vault).totalSupply() + 10 ** decimalOffset;
+        uint256 totalAssetsBefore = ISuperloop(vault).totalAssets() + 1;
+        return DataTypes.ExchangeRateSnapshot({
+            totalSupplyBefore: totalSupplyBefore,
+            totalSupplyAfter: 0,
+            totalAssetsBefore: totalAssetsBefore,
+            totalAssetsAfter: 0
+        });
+    }
+
+    function _calculateSharesToMint(DataTypes.ExchangeRateSnapshot memory snapshot, uint8 decimalOffset)
+        internal
+        pure
+        returns (uint256)
+    {
         uint256 totalSupplyAfter = Math.mulDiv(
             snapshot.totalSupplyBefore, snapshot.totalAssetsAfter, snapshot.totalAssetsBefore, Math.Rounding.Floor
         );
-        uint256 totalNewSharesToMint = totalSupplyAfter - snapshot.totalSupplyBefore;
+        uint256 totalNewSharesToMint = (totalSupplyAfter + 10 ** decimalOffset) - snapshot.totalSupplyBefore;
 
         return totalNewSharesToMint;
     }

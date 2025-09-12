@@ -140,7 +140,9 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
             Superloop(payable(address(this))).operateSelf(moduleExecutionData);
         }
 
-        SafeERC20.forceApprove(IERC20(calls.asset), calls.addressToApprove, calls.amountToApprove);
+        if (calls.amountToApprove > 0) {
+            SafeERC20.forceApprove(IERC20(calls.asset), calls.addressToApprove, calls.amountToApprove);
+        }
 
         return abi.encode(success);
     }

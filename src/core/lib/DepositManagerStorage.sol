@@ -8,6 +8,7 @@ library DepositManagerStorage {
     struct DepositManagerState {
         address vault;
         address asset;
+        uint8 vaultDecimalOffset;
         uint256 nextDepositRequestId;
         uint256 resolutionIdPointer;
         uint256 totalPendingDeposits;
@@ -32,13 +33,12 @@ library DepositManagerStorage {
         uint256 id,
         uint256 amount,
         uint256 amountProcessed,
-        uint256 shares,
         address user,
         DataTypes.DepositRequestProcessingState state
     ) internal {
         DepositManagerState storage $ = getDepositManagerStorage();
 
-        $.depositRequest[id] = DataTypes.DepositRequestData(amount, amountProcessed, shares, user, state);
+        $.depositRequest[id] = DataTypes.DepositRequestData(amount, amountProcessed, user, state);
     }
 
     function setNextDepositRequestId() internal {
@@ -59,6 +59,11 @@ library DepositManagerStorage {
     function setAsset(address __asset) internal {
         DepositManagerState storage $ = getDepositManagerStorage();
         $.asset = __asset;
+    }
+
+    function setDecimalOffset(uint8 __decimalOffset) internal {
+        DepositManagerState storage $ = getDepositManagerStorage();
+        $.vaultDecimalOffset = __decimalOffset;
     }
 
     function setTotalPendingDeposits(uint256 __totalPendingDeposits) internal {

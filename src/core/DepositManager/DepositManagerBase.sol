@@ -57,4 +57,9 @@ abstract contract DepositManagerBase is Context {
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
         return $.resolutionIdPointer;
     }
+
+    function vaultDecimalOffset() public view returns (uint8) {
+        DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
+        return $.vaultDecimalOffset;
+    }
 }

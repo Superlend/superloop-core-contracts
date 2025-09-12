@@ -12,8 +12,14 @@ import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfa
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
 import {IRouter} from "../../../src/mock/MockIRouter.sol";
+import {ICurvePool} from "../../../src/mock/ICurvePool.sol";
 
 abstract contract IntegrationBase is TestBase {
+    struct CURVE_IJ {
+        int128 i;
+        int128 j;
+    }
+
     Superloop public superloopImplementation;
     ProxyAdmin public proxyAdmin;
 
@@ -22,17 +28,24 @@ abstract contract IntegrationBase is TestBase {
     address public user3;
 
     uint24 public constant XTZ_STXTZ_POOL_FEE = 100; // 0.01%
+    address public constant XTZ_STXTZ_POOL = 0x74d80eE400D3026FDd2520265cC98300710b25D4;
 
     uint256 public constant XTZ_SCALE = 10 ** 18;
     uint256 public constant STXTZ_SCALE = 10 ** 6;
 
+    CURVE_IJ public XTZ_STXTZ_SWAP;
+    CURVE_IJ public STXTZ_XTZ_SWAP;
+
     function setUp() public virtual override {
         super.setUp();
+
+        XTZ_STXTZ_SWAP = CURVE_IJ({i: 1, j: 0});
+        STXTZ_XTZ_SWAP = CURVE_IJ({i: 0, j: 1});
 
         vm.startPrank(admin);
         _deployModules();
 
-        address[] memory modules = new address[](8);
+        address[] memory modules = new address[](9);
         modules[0] = address(dexModule);
         modules[1] = address(flashloanModule);
         modules[2] = address(callbackHandler);
@@ -41,6 +54,7 @@ abstract contract IntegrationBase is TestBase {
         modules[5] = address(withdrawModule);
         modules[6] = address(borrowModule);
         modules[7] = address(repayModule);
+        modules[8] = address(depositManagerCallbackHandler);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
             asset: XTZ,
@@ -68,18 +82,25 @@ abstract contract IntegrationBase is TestBase {
 
         _deployAccountant(address(superloop));
         _deployWithdrawManager(address(superloop));
+        _deployDepositManager(address(superloop));
 
         bytes32 key = keccak256(abi.encodePacked(POOL, IFlashLoanSimpleReceiver.executeOperation.selector));
+        bytes32 depositKey =
+            keccak256(abi.encodePacked(address(depositManager), depositManagerCallbackHandler.executeDeposit.selector));
         superloop.setCallbackHandler(key, address(callbackHandler));
+        superloop.setCallbackHandler(depositKey, address(depositManagerCallbackHandler));
 
         moduleRegistry.setModule("withdrawManager", address(withdrawManager));
         moduleRegistry.setModule("accountantAaveV3", address(accountantAaveV3));
+        moduleRegistry.setModule("depositManager", address(depositManager));
 
         superloop.setRegisteredModule(address(withdrawManager), true);
         superloop.setRegisteredModule(address(accountantAaveV3), true);
+        superloop.setRegisteredModule(address(depositManager), true);
 
         superloop.setAccountantModule(address(accountantAaveV3));
         superloop.setWithdrawManagerModule(address(withdrawManager));
+        superloop.setDepositManagerModule(address(depositManager));
 
         vm.stopPrank();
         vm.label(address(superloop), "superloop");
@@ -102,6 +123,20 @@ abstract contract IntegrationBase is TestBase {
         IPoolConfigurator(POOL_CONFIGURATOR).setReserveFlashLoaning(ST_XTZ, true);
         IPoolConfigurator(POOL_CONFIGURATOR).setSupplyCap(ST_XTZ, 10000000);
         vm.stopPrank();
+    }
+
+    function _resolveDepositRequestsCall(address asset, uint256 amount, bytes memory data)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        DataTypes.ResolveDepositRequestsData memory resolveDepositRequestsData =
+            DataTypes.ResolveDepositRequestsData({asset: asset, amount: amount, callbackExecutionData: data});
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.CALL,
+            module: address(depositManager),
+            data: abi.encodeWithSelector(depositManager.resolveDepositRequests.selector, resolveDepositRequestsData)
+        });
     }
 
     function _flashloanCall(address asset, uint256 amount, bytes memory data)
@@ -218,6 +253,40 @@ abstract contract IntegrationBase is TestBase {
             tokenOut: tokenOut,
             amountIn: withdrawAmount,
             maxAmountIn: withdrawAmount,
+            minAmountOut: amountOut,
+            data: swapParamsData
+        });
+
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(dexModule),
+            data: abi.encodeWithSelector(dexModule.execute.selector, swapParams)
+        });
+    }
+
+    function _swapCallExactOutCurve(
+        address tokenIn,
+        address tokenOut,
+        address pool,
+        uint256 amountIn,
+        uint256 amountOut,
+        CURVE_IJ memory swap
+    ) internal view returns (DataTypes.ModuleExecutionData memory) {
+        DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
+        swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
+            target: tokenIn,
+            data: abi.encodeWithSelector(IERC20.approve.selector, pool, amountIn)
+        });
+        swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
+            target: pool,
+            data: abi.encodeWithSelector(ICurvePool.exchange.selector, swap.i, swap.j, amountIn, amountOut)
+        });
+
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: tokenIn,
+            tokenOut: tokenOut,
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
             minAmountOut: amountOut,
             data: swapParamsData
         });

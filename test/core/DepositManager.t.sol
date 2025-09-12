@@ -107,7 +107,6 @@ contract DepositManagerTest is TestBase {
 
         assertEq(request.amount, depositAmount);
         assertEq(request.amountProcessed, 0);
-        assertEq(request.shares, 0);
         assertEq(request.user, user1);
         assertEq(uint256(request.state), uint256(DataTypes.DepositRequestProcessingState.UNPROCESSED));
 
