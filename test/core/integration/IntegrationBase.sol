@@ -30,6 +30,8 @@ abstract contract IntegrationBase is TestBase {
     uint24 public constant XTZ_STXTZ_POOL_FEE = 100; // 0.01%
     address public constant XTZ_STXTZ_POOL = 0x74d80eE400D3026FDd2520265cC98300710b25D4;
 
+    uint256 public constant ONE_SHARE = 10 ** 20;
+
     uint256 public constant XTZ_SCALE = 10 ** 18;
     uint256 public constant STXTZ_SCALE = 10 ** 6;
 
