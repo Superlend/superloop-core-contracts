@@ -32,10 +32,13 @@ contract Deploy is Script {
     address public treasury;
 
     address public AAVE_V3_POOL_ADDRESSES_PROVIDER = 0x5ccF60c7E10547c5389E9cBFf543E5D0Db9F4feC;
-    address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
-    address public constant XTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
+    // address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
+    // address public constant XTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
+    address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
+    address public constant LBTC = 0xecAc9C5F704e954931349Da37F60E39f515c11c1;
+
     address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
-    address public constant VAULT_ADMIN = 0x81b833Df09A7ce39C00ecE916EC54166d2a6B193;
+    address public constant VAULT_ADMIN = 0x6a58EBB35664A171A1B070DE48ee93278A63c168;
     address public constant TREASURY = 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
 
     uint256 public constant PERFORMANCE_FEE = 1000; // 10%
@@ -79,16 +82,28 @@ contract Deploy is Script {
         console.log("vaultAdmin", vaultAdmin);
         console.log("rebalanceAdmin", rebalanceAdmin);
         console.log("treasury", treasury);
+
+        // init all modules
+        dexModule = UniversalDexModule(0x38F5efC1267F6103c9b0FE802E1731E245f09Cd0);
+        flashloanModule = AaveV3FlashloanModule(0x653BDa572ca9D64B9f9De3Ade96Ed2Dd17fD55fB);
+        callbackHandler = AaveV3CallbackHandler(0xbe775b5848D84283098e74a90F259A46f9342573);
+        emodeModule = AaveV3EmodeModule(0x365916932cDCb4C6dcef136A065C4e3F81416BF6);
+        supplyModule = AaveV3SupplyModule(0x66e82124412C61D7fF90ACFBa82936DD037D737E);
+        withdrawModule = AaveV3WithdrawModule(0x1f5Ba080B9E5705DA47212167cA44611F78DB130);
+        borrowModule = AaveV3BorrowModule(0x3de57294989d12066a94a8A16E977992F3cF8433);
+        repayModule = AaveV3RepayModule(0x9AF8cCabC21ff594dA237f9694C4A9C6123480c6);
+
+        vaultRouter = VaultRouter(0x8E57ea48F5eA57a0F03702b1452da16dEA4174E6);
     }
 
     function run() public {
         vm.startBroadcast(deployerPvtKey);
 
         // deploy module registry
-        moduleRegistry = new SuperloopModuleRegistry();
+        moduleRegistry = SuperloopModuleRegistry(0x1480147Dd62d6Ea12630a617fb6743AB106CAFeA);
 
         // deploy all the modules
-        deployModules();
+        // deployModules();
 
         address[] memory modules = new address[](8);
         modules[0] = address(dexModule);
@@ -102,10 +117,10 @@ contract Deploy is Script {
 
         // deploy vault
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "Superloop XTZ",
-            symbol: "sloopXTZ",
-            supplyCap: 10000 * 10 ** 18,
+            asset: WBTC,
+            name: "Test Superloop WBTC",
+            symbol: "testsloopWBTC",
+            supplyCap: 1 * 10 ** 8, // 1 WBTC
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountantModule: address(accountantAaveV3),
@@ -140,13 +155,15 @@ contract Deploy is Script {
         _setupEmode();
 
         // setup vault router
-        _setupVaultRouter();
+        // @note: not needed for new vault old one can be used
+        // _setupVaultRouter();
 
         // set rebalance admin as priveledged account
-        superloop.setPrivilegedAddress(rebalanceAdmin, true);
+        superloop.setPrivilegedAddress(deployer, true);
 
         // transfer vault admin role from deployer to vault admin after all the setup is done
-        superloop.setVaultAdmin(vaultAdmin);
+        // superloop.setVaultAdmin(vaultAdmin);
+        superloop.setVaultAdmin(deployer);
 
         _logAddresses();
 
@@ -181,9 +198,9 @@ contract Deploy is Script {
 
     function _deployAccountant(address vault) internal {
         address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
+        lendAssets[0] = LBTC;
         address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
+        borrowAssets[0] = WBTC;
 
         DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
             poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
@@ -221,7 +238,7 @@ contract Deploy is Script {
     }
 
     function _setupEmode() internal {
-        DataTypes.AaveV3EmodeParams memory params = DataTypes.AaveV3EmodeParams({emodeCategory: 3});
+        DataTypes.AaveV3EmodeParams memory params = DataTypes.AaveV3EmodeParams({emodeCategory: 2});
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
         moduleExecutionData[0] = DataTypes.ModuleExecutionData({
@@ -300,7 +317,7 @@ contract Deploy is Script {
         supportedVaults[0] = address(superloop);
 
         address[] memory supportedTokens = new address[](9);
-        supportedTokens[0] = XTZ;
+        supportedTokens[0] = WBTC;
         supportedTokens[1] = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9; // USDC
         supportedTokens[2] = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854; // ST_XTZ
         supportedTokens[3] = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A; // USDT
