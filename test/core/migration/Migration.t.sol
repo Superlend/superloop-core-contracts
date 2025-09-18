@@ -174,10 +174,8 @@ contract MigrationTest is IntegrationBase {
     }
 
     function test_migration() public {
-        bool DEV = false;
         // deploy migration helper
         MigrationHelper migrationHelper = new MigrationHelper(
-            DEV,
             AAVE_V3_POOL_ADDRESSES_PROVIDER,
             REPAY_MODULE,
             WITHDRAW_MODULE,
