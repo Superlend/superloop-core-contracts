@@ -86,7 +86,7 @@ contract DepositManagerTest is IntegrationBase {
 
     //     assertTrue(user1SharesBalanceAfter > user1SharesBalanceBefore);
 
-    //     // i should not be able to do an instant deposit of 100 xtz due to cash reserve 
+    //     // i should not be able to do an instant deposit of 100 xtz due to cash reserve
     //     deal(XTZ, user1, 100 * XTZ_SCALE);
     //     vm.startPrank(user1);
     //     IERC20(XTZ).approve(address(superloop), 100 * XTZ_SCALE);
@@ -98,7 +98,7 @@ contract DepositManagerTest is IntegrationBase {
     function test_resolveDepositRequestWithPartials() public {
         _createPartialDepositWithResolution();
 
-        // try to operate again 
+        // try to operate again
 
         uint256 depositAmount_firstBatch = 100 * XTZ_SCALE;
         uint256 supplyAmount = 200 * STXTZ_SCALE;
