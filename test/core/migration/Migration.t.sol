@@ -214,7 +214,8 @@ contract MigrationTest is IntegrationBase {
 
         // start recording gas
         uint256 startGas = gasleft();
-        migrationHelper.migrate(oldVault, address(superloop), users, ST_XTZ, XTZ);
+        uint256 batches = 2;
+        migrationHelper.migrate(oldVault, address(superloop), users, ST_XTZ, XTZ, batches);
 
         uint256 endGas = gasleft();
         uint256 gasUsed = startGas - endGas;
@@ -238,5 +239,18 @@ contract MigrationTest is IntegrationBase {
         }
 
         console.log("gas used", gasUsed);
+
+        oldVaultXTZBalance = IERC20(XTZ).balanceOf(oldVault);
+        oldVaultSTXTZBalance = IERC20(ST_XTZ).balanceOf(oldVault);
+        (oldVaultLendBalance,,,,,,,,) = poolDataProvider.getUserReserveData(ST_XTZ, oldVault);
+        (,, oldVaultBorrowBalance,,,,,,) = poolDataProvider.getUserReserveData(XTZ, oldVault);
+
+        console.log("State after migration");
+        console.log("oldVaultXTZBalance", oldVaultXTZBalance);
+        console.log("oldVaultSTXTZBalance", oldVaultSTXTZBalance);
+        console.log("oldVaultLendBalance", oldVaultLendBalance);
+        console.log("oldVaultBorrowBalance", oldVaultBorrowBalance);
+        console.log("old vault total supply", ISuperloop(oldVault).totalSupply());
+        console.log("old vault total assets", ISuperloop(oldVault).totalAssets());
     }
 }

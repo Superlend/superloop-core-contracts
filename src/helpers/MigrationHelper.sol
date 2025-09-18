@@ -18,7 +18,7 @@ import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/Reentrancy
  * @author Superlend
  * @notice Helper contract for migrating vault positions from old vault to new vault
  * @dev Uses Aave flash loans to atomically migrate user positions while maintaining exchange rates
- * 
+ *
  * Migration Process:
  * 1. Validates old vault state and user balances
  * 2. Takes flash loan of borrowed asset amount
@@ -111,6 +111,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param users Array of user addresses to migrate
      * @param lendAsset Address of the asset being lent to Aave
      * @param borrowAsset Address of the asset being borrowed from Aave
+     * @param batches Number of batches to perform the migration in
      * @return success True if migration completed successfully
      */
     function migrate(
@@ -118,7 +119,8 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         address newVault,
         address[] calldata users,
         address lendAsset,
-        address borrowAsset
+        address borrowAsset,
+        uint256 batches
     ) external onlyOwner nonReentrant returns (bool) {
         // Ensure withdraw manager has no balance to prevent conflicts
         address blackListedUser = ISuperloop(oldVault).withdrawManagerModule();
@@ -132,13 +134,13 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         _validateUserBalancesWithTotalSupply(oldVaultState);
 
         // Execute the migration using flash loan
-        _initiateMigration(oldVault, lendAsset, borrowAsset, oldVaultState, newVault);
+        _performMigration(oldVault, lendAsset, borrowAsset, oldVaultState, newVault, batches);
 
         // Mint shares to users in the new vault
         for (uint256 i = 0; i < users.length; i++) {
             ISuperloop(newVault).mintShares(users[i], oldVaultState.balances[i]);
         }
-        
+
         // Capture new vault state after migration
         VaultStateData memory newVaultState = _getVaultState(newVault, users, lendAsset, borrowAsset);
         _validateUserBalancesWithTotalSupply(newVaultState);
@@ -209,7 +211,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         uint256 totalSupply = vault.totalSupply();
         uint256 totalAssets = vault.totalAssets();
         uint256[] memory balances = new uint256[](users.length);
-        
+
         // Get individual user balances
         for (uint256 i = 0; i < users.length; i++) {
             balances[i] = vault.balanceOf(users[i]);
@@ -249,21 +251,37 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param borrowAsset Address of the asset being borrowed from Aave
      * @param oldVaultState Current state of the old vault
      * @param newVault Address of the vault to migrate to
+     * @param batches Number of batches to perform the migration in
      */
-    function _initiateMigration(
+    function _performMigration(
         address oldVault,
         address lendAsset,
         address borrowAsset,
         VaultStateData memory oldVaultState,
-        address newVault
+        address newVault,
+        uint256 batches // count of batches
     ) internal {
-        // Encode migration parameters for the flash loan callback
-        bytes memory callbackData = abi.encode(
-            oldVault, oldVaultState.lendBalance, oldVaultState.borrowBalance, lendAsset, borrowAsset, newVault
-        );
+        uint256 borrowBalance = oldVaultState.borrowBalance;
+        uint256 lendBalance = oldVaultState.lendBalance;
 
-        // Take flash loan of the borrowed asset amount
-        POOL.flashLoanSimple(address(this), borrowAsset, oldVaultState.borrowBalance, callbackData, 0);
+        uint256 borrowBalanceBatch = borrowBalance / batches;
+        uint256 lendBalanceBatch = lendBalance / batches;
+        for (uint256 i = 0; i < batches; i++) {
+            if (i == batches - 1) {
+                borrowBalanceBatch = borrowBalance;
+                lendBalanceBatch = lendBalance;
+            }
+
+            // Encode migration parameters for the flash loan callback
+            bytes memory callbackData =
+                abi.encode(oldVault, lendBalanceBatch, borrowBalanceBatch, lendAsset, borrowAsset, newVault);
+
+            // Take flash loan of the borrowed asset amount
+            POOL.flashLoanSimple(address(this), borrowAsset, borrowBalanceBatch, callbackData, 0);
+
+            borrowBalance -= borrowBalanceBatch;
+            lendBalance -= lendBalanceBatch;
+        }
     }
 
     /**
@@ -319,7 +337,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         uint256 lendBalance
     ) internal returns (DataTypes.ModuleExecutionData[] memory) {
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
-        
+
         // Step 1: Repay the borrowed asset using flash loan funds
         DataTypes.AaveV3ActionParams memory repayParams =
             DataTypes.AaveV3ActionParams({asset: borrowAsset, amount: borrowBalance});
