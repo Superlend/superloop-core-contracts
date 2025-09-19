@@ -34,7 +34,7 @@ library DepositManagerStorage {
         uint256 amount,
         uint256 amountProcessed,
         address user,
-        DataTypes.DepositRequestProcessingState state
+        DataTypes.RequestProcessingState state
     ) internal {
         DepositManagerState storage $ = getDepositManagerStorage();
 

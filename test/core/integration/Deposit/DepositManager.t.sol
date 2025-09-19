@@ -144,7 +144,7 @@ contract DepositManagerTest is IntegrationBase {
 
         // deposit request 2 should be partially processed
         DataTypes.DepositRequestData memory depositRequest3 = depositManager.depositRequest(3);
-        assertEq(uint256(depositRequest3.state), uint256(DataTypes.DepositRequestProcessingState.PARTIALLY_PROCESSED));
+        assertEq(uint256(depositRequest3.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_PROCESSED));
         assertEq(depositRequest3.amountProcessed, 40 * XTZ_SCALE);
 
         // deposit another batch, with 60 xtz resolving a request partially
@@ -188,7 +188,7 @@ contract DepositManagerTest is IntegrationBase {
         assertEq(depositManager.resolutionIdPointer(), 4);
 
         depositRequest3 = depositManager.depositRequest(3);
-        assertEq(uint256(depositRequest3.state), uint256(DataTypes.DepositRequestProcessingState.FULLY_PROCESSED));
+        assertEq(uint256(depositRequest3.state), uint256(DataTypes.RequestProcessingState.FULLY_PROCESSED));
     }
 
     function test_resolveDepositRequestWithCancellation() public {
@@ -210,7 +210,7 @@ contract DepositManagerTest is IntegrationBase {
         assertEq(user2BalanceAfter - user2BalanceBefore, 50 * XTZ_SCALE);
         // deposit request 2 should be partially cancelled
         DataTypes.DepositRequestData memory depositRequest = depositManager.depositRequest(2);
-        assertEq(uint256(depositRequest.state), uint256(DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED));
+        assertEq(uint256(depositRequest.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_CANCELLED));
         assertEq(depositRequest.amountProcessed, 50 * XTZ_SCALE);
 
         // pending deposits should be 100 xtz
@@ -253,7 +253,7 @@ contract DepositManagerTest is IntegrationBase {
 
         // deposit request 3 should be partially processed
         DataTypes.DepositRequestData memory depositRequest3 = depositManager.depositRequest(3);
-        assertEq(uint256(depositRequest3.state), uint256(DataTypes.DepositRequestProcessingState.PARTIALLY_PROCESSED));
+        assertEq(uint256(depositRequest3.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_PROCESSED));
         assertEq(depositRequest3.amountProcessed, 75 * XTZ_SCALE);
 
         // user3 should get shares
@@ -331,17 +331,17 @@ contract DepositManagerTest is IntegrationBase {
 
         // deposit request 1 should be fully processed
         DataTypes.DepositRequestData memory depositRequest1 = depositManager.depositRequest(1);
-        assertEq(uint256(depositRequest1.state), uint256(DataTypes.DepositRequestProcessingState.FULLY_PROCESSED));
+        assertEq(uint256(depositRequest1.state), uint256(DataTypes.RequestProcessingState.FULLY_PROCESSED));
         assertEq(depositRequest1.amountProcessed, 100 * XTZ_SCALE);
 
         // deposit request 2 should be partially processed
         DataTypes.DepositRequestData memory depositRequest2 = depositManager.depositRequest(2);
-        assertEq(uint256(depositRequest2.state), uint256(DataTypes.DepositRequestProcessingState.PARTIALLY_PROCESSED));
+        assertEq(uint256(depositRequest2.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_PROCESSED));
         assertEq(depositRequest2.amountProcessed, 50 * XTZ_SCALE);
 
         // deposit request 3 should be unprocessed
         DataTypes.DepositRequestData memory depositRequest3 = depositManager.depositRequest(3);
-        assertEq(uint256(depositRequest3.state), uint256(DataTypes.DepositRequestProcessingState.UNPROCESSED));
+        assertEq(uint256(depositRequest3.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
 
         // exchange rate before should equal to exchange rate after
         uint256 exchangeRateAfter = superloop.convertToAssets(ONE_SHARE);

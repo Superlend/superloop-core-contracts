@@ -58,27 +58,27 @@ contract MockWithdrawManager {
     //     _handleWithdraw($, id);
     // }
 
-    // function getWithdrawRequestState(uint256 id) public view override returns (DataTypes.WithdrawRequestState) {
-    //     DataTypes.WithdrawRequestData memory withdrawRequest = withdrawRequest(id);
+    // function getWithdrawRequestState(uint256 id) public view override returns (DataTypes.WithdrawRequestStateLegacy) {
+    //     DataTypes.WithdrawRequestDataLegacy memory withdrawRequest = withdrawRequest(id);
 
     //     if (withdrawRequest.user == address(0)) {
-    //         return DataTypes.WithdrawRequestState.NOT_EXIST;
+    //         return DataTypes.WithdrawRequestStateLegacy.NOT_EXIST;
     //     }
 
     //     if (withdrawRequest.claimed) {
-    //         return DataTypes.WithdrawRequestState.CLAIMED;
+    //         return DataTypes.WithdrawRequestStateLegacy.CLAIMED;
     //     }
 
     //     if (withdrawRequest.cancelled) {
-    //         return DataTypes.WithdrawRequestState.CANCELLED;
+    //         return DataTypes.WithdrawRequestStateLegacy.CANCELLED;
     //     }
 
     //     // Check if 30 minutes have passed since the request was made
     //     if (block.timestamp >= withdrawRequestTimestamps[id] + WITHDRAW_DELAY) {
-    //         return DataTypes.WithdrawRequestState.CLAIMABLE;
+    //         return DataTypes.WithdrawRequestStateLegacy.CLAIMABLE;
     //     }
 
-    //     return DataTypes.WithdrawRequestState.UNPROCESSED;
+    //     return DataTypes.WithdrawRequestStateLegacy.UNPROCESSED;
     // }
 
     // function _registerWithdrawRequest(Storages.WithdrawManagerState storage $, address user, uint256 shares) internal {
@@ -105,7 +105,7 @@ contract MockWithdrawManager {
     // }
 
     // function _handleWithdraw(Storages.WithdrawManagerState storage $, uint256 id) internal {
-    //     DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
+    //     DataTypes.WithdrawRequestDataLegacy memory withdrawRequest = $.withdrawRequest[id];
 
     //     // Validate that 30 minutes have passed
     //     require(block.timestamp >= withdrawRequestTimestamps[id] + WITHDRAW_DELAY, "Withdraw request not yet claimable");
@@ -118,7 +118,7 @@ contract MockWithdrawManager {
     // }
 
     // function _handleCancelWithdrawRequest(Storages.WithdrawManagerState storage $, uint256 id) internal {
-    //     DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
+    //     DataTypes.WithdrawRequestDataLegacy memory withdrawRequest = $.withdrawRequest[id];
 
     //     $.withdrawRequest[id].cancelled = true;
     //     _setUserWithdrawRequest(withdrawRequest.user, 0);
@@ -131,7 +131,7 @@ contract MockWithdrawManager {
     // function _validateWithdraw(Storages.WithdrawManagerState storage $) internal view override returns (uint256) {
     //     uint256 id = $.userWithdrawRequestId[_msgSender()];
     //     require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
-    //     DataTypes.WithdrawRequestData memory withdrawRequest = $.withdrawRequest[id];
+    //     DataTypes.WithdrawRequestDataLegacy memory withdrawRequest = $.withdrawRequest[id];
 
     //     require(
     //         withdrawRequest.user == _msgSender() && withdrawRequest.claimed == false,

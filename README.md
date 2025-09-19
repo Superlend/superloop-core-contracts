@@ -161,7 +161,7 @@ Manages withdrawal requests with queuing system for large withdrawals.
 #### Withdrawal States
 
 ```solidity
-enum WithdrawRequestState {
+enum WithdrawRequestStateLegacy {
     NOT_EXIST,      // Request does not exist
     CLAIMED,        // Request has been claimed
     UNPROCESSED,    // Request is pending processing
@@ -291,7 +291,7 @@ uint256 assets = vault.mint(shares, receiver);
 vault.requestWithdraw(shares);
 
 // Check status
-WithdrawRequestState state = withdrawManager.getWithdrawRequestState(requestId);
+WithdrawRequestStateLegacy state = withdrawManager.getWithdrawRequestState(requestId);
 
 // Claim when ready
 withdrawManager.withdraw();

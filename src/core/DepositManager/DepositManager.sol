@@ -101,8 +101,8 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         while (amountToIngest > 0) {
             DataTypes.DepositRequestData memory currentRequest = $.depositRequest[currentId];
             if (
-                currentRequest.state == DataTypes.DepositRequestProcessingState.CANCELLED
-                    || currentRequest.state == DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED
+                currentRequest.state == DataTypes.RequestProcessingState.CANCELLED
+                    || currentRequest.state == DataTypes.RequestProcessingState.PARTIALLY_CANCELLED
             ) {
                 unchecked {
                     ++currentId;
@@ -123,7 +123,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
 
             amountToIngest -= amountToIngestInCurrentRequest;
             if (currentRequest.amountProcessed + amountToIngestInCurrentRequest != currentRequest.amount) {
-                $.depositRequest[currentId].state = DataTypes.DepositRequestProcessingState.PARTIALLY_PROCESSED;
+                $.depositRequest[currentId].state = DataTypes.RequestProcessingState.PARTIALLY_PROCESSED;
                 $.depositRequest[currentId].amountProcessed += amountToIngestInCurrentRequest;
             } else {
                 unchecked {
@@ -159,8 +159,8 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         uint256 id = $.userDepositRequestId[user];
         DataTypes.DepositRequestData memory _depositRequest = _depositRequest(id);
         if (id != 0) {
-            bool isPending = _depositRequest.state == DataTypes.DepositRequestProcessingState.UNPROCESSED;
-            bool isUnderProcess = _depositRequest.state == DataTypes.DepositRequestProcessingState.PARTIALLY_PROCESSED;
+            bool isPending = _depositRequest.state == DataTypes.RequestProcessingState.UNPROCESSED;
+            bool isUnderProcess = _depositRequest.state == DataTypes.RequestProcessingState.PARTIALLY_PROCESSED;
 
             if (isPending || isUnderProcess) {
                 revert(Errors.DEPOSIT_REQUEST_ACTIVE);
@@ -179,7 +179,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         uint256 id = $.nextDepositRequestId;
 
         DepositManagerStorage.setDepositRequest(
-            id, amount, 0, user, DataTypes.DepositRequestProcessingState.UNPROCESSED
+            id, amount, 0, user, DataTypes.RequestProcessingState.UNPROCESSED
         );
         DepositManagerStorage.setUserDepositRequest(user, id);
         DepositManagerStorage.setNextDepositRequestId();
@@ -190,11 +190,11 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         bool doesExist = _depositRequest.amount > 0;
         if (!doesExist) revert(Errors.DEPOSIT_REQUEST_NOT_FOUND);
 
-        bool isCancelled = _depositRequest.state == DataTypes.DepositRequestProcessingState.CANCELLED
-            || _depositRequest.state == DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED;
+        bool isCancelled = _depositRequest.state == DataTypes.RequestProcessingState.CANCELLED
+            || _depositRequest.state == DataTypes.RequestProcessingState.PARTIALLY_CANCELLED;
         if (isCancelled) revert(Errors.DEPOSIT_REQUEST_ALREADY_CANCELLED);
 
-        bool isProcessed = _depositRequest.state == DataTypes.DepositRequestProcessingState.FULLY_PROCESSED;
+        bool isProcessed = _depositRequest.state == DataTypes.RequestProcessingState.FULLY_PROCESSED;
         if (isProcessed) revert(Errors.DEPOSIT_REQUEST_ALREADY_PROCESSED);
 
         require(_depositRequest.user == _msgSender(), Errors.CALLER_NOT_DEPOSIT_REQUEST_OWNER);
@@ -211,8 +211,8 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
 
         DepositManagerStorage.setUserDepositRequest(_depositRequest.user, 0);
         $.depositRequest[id].state = amountToRefund == amount
-            ? DataTypes.DepositRequestProcessingState.CANCELLED
-            : DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED;
+            ? DataTypes.RequestProcessingState.CANCELLED
+            : DataTypes.RequestProcessingState.PARTIALLY_CANCELLED;
         $.totalPendingDeposits -= amountToRefund;
 
         SafeERC20.safeTransfer(IERC20($.asset), _depositRequest.user, amountToRefund);

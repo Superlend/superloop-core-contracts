@@ -108,7 +108,7 @@ contract DepositManagerTest is TestBase {
         assertEq(request.amount, depositAmount);
         assertEq(request.amountProcessed, 0);
         assertEq(request.user, user1);
-        assertEq(uint256(request.state), uint256(DataTypes.DepositRequestProcessingState.UNPROCESSED));
+        assertEq(uint256(request.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
 
         // Verify user's deposit request ID was set
         (, uint256 userRequestId) = depositManager.userDepositRequest(user1);
@@ -222,7 +222,7 @@ contract DepositManagerTest is TestBase {
         // Verify the deposit request was cancelled
         DataTypes.DepositRequestData memory request = depositManager.depositRequest(1);
 
-        assertEq(uint256(request.state), uint256(DataTypes.DepositRequestProcessingState.CANCELLED));
+        assertEq(uint256(request.state), uint256(DataTypes.RequestProcessingState.CANCELLED));
 
         // Verify user's deposit request ID was cleared
         (, uint256 userRequestId) = depositManager.userDepositRequest(user1);

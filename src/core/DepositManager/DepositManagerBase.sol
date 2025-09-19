@@ -68,12 +68,12 @@ abstract contract DepositManagerBase is Context {
             return __depositRequest;
         } else {
             if (
-                __depositRequest.state == DataTypes.DepositRequestProcessingState.CANCELLED
-                    || __depositRequest.state == DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED
+                __depositRequest.state == DataTypes.RequestProcessingState.CANCELLED
+                    || __depositRequest.state == DataTypes.RequestProcessingState.PARTIALLY_CANCELLED
             ) {
                 return __depositRequest;
             } else {
-                __depositRequest.state = DataTypes.DepositRequestProcessingState.FULLY_PROCESSED;
+                __depositRequest.state = DataTypes.RequestProcessingState.FULLY_PROCESSED;
                 __depositRequest.amountProcessed = __depositRequest.amount;
                 return __depositRequest;
             }

@@ -65,7 +65,7 @@ contract WithdrawTest is IntegrationBase {
         vm.stopPrank();
 
         // check if the withdraw request is marked on the withdraw manager
-        DataTypes.WithdrawRequestData memory withdrawRequest =
+        DataTypes.WithdrawRequestDataLegacy memory withdrawRequest =
             withdrawManager.withdrawRequest(withdrawManager.nextWithdrawRequestId() - 1);
 
         assertEq(withdrawRequest.shares, shares);
@@ -107,13 +107,13 @@ contract WithdrawTest is IntegrationBase {
         uint256 xtzBalanceOfWithdrawManager = IERC20(XTZ).balanceOf(address(withdrawManager));
         uint256 shareBalanceOfWithdrawManager = superloop.balanceOf(address(withdrawManager));
 
-        DataTypes.WithdrawRequestData memory _withdrawRequest = withdrawManager.withdrawRequest(withdrawRequestId);
+        DataTypes.WithdrawRequestDataLegacy memory _withdrawRequest = withdrawManager.withdrawRequest(withdrawRequestId);
 
-        DataTypes.WithdrawRequestState state = withdrawManager.getWithdrawRequestState(withdrawRequestId);
+        DataTypes.WithdrawRequestStateLegacy state = withdrawManager.getWithdrawRequestState(withdrawRequestId);
 
         assertTrue(xtzBalanceOfWithdrawManager > 0);
         assertTrue(shareBalanceOfWithdrawManager == 0);
-        assertTrue(state == DataTypes.WithdrawRequestState.CLAIMABLE);
+        assertTrue(state == DataTypes.WithdrawRequestStateLegacy.CLAIMABLE);
         assertTrue(_withdrawRequest.claimed == false);
         assertTrue(_withdrawRequest.amount > 0);
 
@@ -127,7 +127,7 @@ contract WithdrawTest is IntegrationBase {
 
         assertTrue(user1BalanceAfter - user1BalanceBefore == _withdrawRequest.amount);
         assertTrue(_withdrawRequest.claimed == true);
-        assertTrue(state == DataTypes.WithdrawRequestState.CLAIMED);
+        assertTrue(state == DataTypes.WithdrawRequestStateLegacy.CLAIMED);
     }
 
     function _initialDeposit() internal {

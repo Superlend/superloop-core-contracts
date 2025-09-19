@@ -5,14 +5,21 @@ pragma solidity ^0.8.13;
 import {DataTypes} from "../../common/DataTypes.sol";
 
 library WithdrawManagerStorage {
+    struct WithdrawQueue {
+        uint256 nextWithdrawRequestId;
+        uint256 resolutionIdPointer;
+        mapping(uint256 => DataTypes.WithdrawRequestDataLegacy) withdrawRequest;
+        mapping(address => uint256) userWithdrawRequestId;
+    }
+
     struct WithdrawManagerState {
         address vault;
         address asset;
-        uint256 nextWithdrawRequestId;
-        uint256 resolvedWithdrawRequestId;
-        address instantWithdrawModule;
-        mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
-        mapping(address => uint256) userWithdrawRequestId;
+        uint8 vaultDecimalOffset;
+        WithdrawQueue generalQueue;
+        WithdrawQueue lowSlippageQueue;
+        WithdrawQueue mediumSlippageQueue;
+        WithdrawQueue highSlippageQueue;
     }
 
     /**
@@ -28,41 +35,7 @@ library WithdrawManagerStorage {
         }
     }
 
-    function setWithdrawRequest(address user, uint256 shares, uint256 amount, uint256 id, bool claimed, bool cancelled)
-        internal
-    {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
 
-        $.withdrawRequest[id] = DataTypes.WithdrawRequestData(shares, amount, user, claimed, cancelled);
-    }
-
-    function setNextWithdrawRequestId() internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.nextWithdrawRequestId = $.nextWithdrawRequestId + 1;
-    }
-
-    function setUserWithdrawRequest(address user, uint256 id) internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.userWithdrawRequestId[user] = id;
-    }
-
-    function setResolvedWithdrawRequestId(uint256 id) internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.resolvedWithdrawRequestId = id;
-    }
-
-    function setVault(address __vault) internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.vault = __vault;
-    }
-
-    function setAsset(address __asset) internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.asset = __asset;
-    }
-
-    function setInstantWithdrawModule(address __instantWithdrawModule) internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.instantWithdrawModule = __instantWithdrawModule;
-    }
+    
+    
 }

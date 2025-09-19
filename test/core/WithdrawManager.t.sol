@@ -3,7 +3,7 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {WithdrawManager} from "../../src/core/WithdrawManager/WithdrawManager.sol";
+import {WithdrawManager} from "../../src/core/WithdrawManager/Legacy/WithdrawManager.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {Errors} from "../../src/common/Errors.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
@@ -34,7 +34,7 @@ contract WithdrawManagerTest is Test {
     event WithdrawRequest(address indexed user, uint256 shares, uint256 amount, uint256 id);
 
     // Helper function to compare enum values
-    function assertWithdrawRequestState(uint256 id, DataTypes.WithdrawRequestState expectedState) internal view {
+    function assertWithdrawRequestState(uint256 id, DataTypes.WithdrawRequestStateLegacy expectedState) internal view {
         assertEq(uint8(withdrawManager.getWithdrawRequestState(id)), uint8(expectedState));
     }
 
@@ -124,14 +124,14 @@ contract WithdrawManagerTest is Test {
         assertEq(withdrawManager.nextWithdrawRequestId(), 2);
         assertEq(withdrawManager.userWithdrawRequestId(user1), 1);
 
-        DataTypes.WithdrawRequestData memory request = withdrawManager.withdrawRequest(1);
+        DataTypes.WithdrawRequestDataLegacy memory request = withdrawManager.withdrawRequest(1);
         assertEq(request.user, user1);
         assertEq(request.shares, SHARES_AMOUNT);
         assertEq(request.amount, 0);
         assertEq(request.claimed, false);
         assertEq(request.cancelled, false);
 
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.UNPROCESSED);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.UNPROCESSED);
         vm.stopPrank();
     }
 
@@ -223,10 +223,10 @@ contract WithdrawManagerTest is Test {
         assertEq(withdrawManagerBalanceBefore - withdrawManagerBalanceAfter, SHARES_AMOUNT);
         assertEq(withdrawManager.userWithdrawRequestId(user1), 0);
 
-        DataTypes.WithdrawRequestData memory request = withdrawManager.withdrawRequest(1);
+        DataTypes.WithdrawRequestDataLegacy memory request = withdrawManager.withdrawRequest(1);
         assertEq(request.cancelled, true);
 
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CANCELLED);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CANCELLED);
         vm.stopPrank();
     }
 
@@ -309,9 +309,9 @@ contract WithdrawManagerTest is Test {
         assertEq(withdrawManager.resolvedWithdrawRequestId(), 3);
 
         // Check that all requests are now claimable
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CLAIMABLE);
-        assertWithdrawRequestState(2, DataTypes.WithdrawRequestState.CLAIMABLE);
-        assertWithdrawRequestState(3, DataTypes.WithdrawRequestState.CLAIMABLE);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CLAIMABLE);
+        assertWithdrawRequestState(2, DataTypes.WithdrawRequestStateLegacy.CLAIMABLE);
+        assertWithdrawRequestState(3, DataTypes.WithdrawRequestStateLegacy.CLAIMABLE);
     }
 
     function test_resolveWithdrawRequests_withCancelledRequest() public {
@@ -336,8 +336,8 @@ contract WithdrawManagerTest is Test {
         withdrawManager.resolveWithdrawRequests(2);
 
         assertEq(withdrawManager.resolvedWithdrawRequestId(), 2);
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CANCELLED);
-        assertWithdrawRequestState(2, DataTypes.WithdrawRequestState.CLAIMABLE);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CANCELLED);
+        assertWithdrawRequestState(2, DataTypes.WithdrawRequestStateLegacy.CLAIMABLE);
     }
 
     function test_resolveWithdrawRequests_revert_notVault() public {
@@ -387,14 +387,14 @@ contract WithdrawManagerTest is Test {
         uint256 assetBalanceAfter = asset.balanceOf(user1);
         uint256 withdrawManagerAssetBalanceAfter = asset.balanceOf(address(withdrawManager));
 
-        DataTypes.WithdrawRequestData memory request = withdrawManager.withdrawRequest(1);
+        DataTypes.WithdrawRequestDataLegacy memory request = withdrawManager.withdrawRequest(1);
         uint256 expectedAmount = request.amount;
 
         assertEq(assetBalanceAfter - assetBalanceBefore, expectedAmount);
         assertEq(withdrawManagerAssetBalanceBefore - withdrawManagerAssetBalanceAfter, expectedAmount);
         assertEq(request.claimed, true);
         assertEq(withdrawManager.userWithdrawRequestId(user1), 0);
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CLAIMED);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CLAIMED);
         vm.stopPrank();
     }
 
@@ -436,7 +436,7 @@ contract WithdrawManagerTest is Test {
 
     function test_getWithdrawRequestState() public {
         // Test NOT_EXIST
-        assertWithdrawRequestState(999, DataTypes.WithdrawRequestState.NOT_EXIST);
+        assertWithdrawRequestState(999, DataTypes.WithdrawRequestStateLegacy.NOT_EXIST);
 
         // Test UNPROCESSED
         vm.startPrank(user1);
@@ -444,20 +444,20 @@ contract WithdrawManagerTest is Test {
         withdrawManager.requestWithdraw(SHARES_AMOUNT);
         vm.stopPrank();
 
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.UNPROCESSED);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.UNPROCESSED);
 
         // Test CLAIMABLE
         vm.prank(address(vault));
         withdrawManager.resolveWithdrawRequests(1);
 
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CLAIMABLE);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CLAIMABLE);
 
         // Test CLAIMED
         vm.startPrank(user1);
         withdrawManager.withdraw();
         vm.stopPrank();
 
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CLAIMED);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CLAIMED);
 
         // Test CANCELLED
         vm.startPrank(user2);
@@ -466,7 +466,7 @@ contract WithdrawManagerTest is Test {
         withdrawManager.cancelWithdrawRequest(2);
         vm.stopPrank();
 
-        assertWithdrawRequestState(2, DataTypes.WithdrawRequestState.CANCELLED);
+        assertWithdrawRequestState(2, DataTypes.WithdrawRequestStateLegacy.CANCELLED);
     }
 
     function test_withdrawRequest() public {
@@ -475,7 +475,7 @@ contract WithdrawManagerTest is Test {
         withdrawManager.requestWithdraw(SHARES_AMOUNT);
         vm.stopPrank();
 
-        DataTypes.WithdrawRequestData memory request = withdrawManager.withdrawRequest(1);
+        DataTypes.WithdrawRequestDataLegacy memory request = withdrawManager.withdrawRequest(1);
         assertEq(request.user, user1);
         assertEq(request.shares, SHARES_AMOUNT);
         assertEq(request.amount, 0);
@@ -498,7 +498,7 @@ contract WithdrawManagerTest is Test {
         ids[0] = 1;
         ids[1] = 2;
 
-        DataTypes.WithdrawRequestData[] memory requests = withdrawManager.withdrawRequests(ids);
+        DataTypes.WithdrawRequestDataLegacy[] memory requests = withdrawManager.withdrawRequests(ids);
         assertEq(requests.length, 2);
         assertEq(requests[0].user, user1);
         assertEq(requests[1].user, user2);
@@ -549,7 +549,7 @@ contract WithdrawManagerTest is Test {
         assertGt(assetBalanceAfter, assetBalanceBefore);
 
         // Verify state
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CLAIMED);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CLAIMED);
         assertEq(withdrawManager.userWithdrawRequestId(user1), 0);
     }
 
@@ -588,9 +588,9 @@ contract WithdrawManagerTest is Test {
         vm.stopPrank();
 
         // Verify all requests are claimed
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CLAIMED);
-        assertWithdrawRequestState(2, DataTypes.WithdrawRequestState.CLAIMED);
-        assertWithdrawRequestState(3, DataTypes.WithdrawRequestState.CLAIMED);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CLAIMED);
+        assertWithdrawRequestState(2, DataTypes.WithdrawRequestStateLegacy.CLAIMED);
+        assertWithdrawRequestState(3, DataTypes.WithdrawRequestStateLegacy.CLAIMED);
 
         // Verify user IDs are reset
         assertEq(withdrawManager.userWithdrawRequestId(user1), 0);
@@ -614,8 +614,8 @@ contract WithdrawManagerTest is Test {
         // Verify new request
         assertEq(withdrawManager.nextWithdrawRequestId(), 3);
         assertEq(withdrawManager.userWithdrawRequestId(user1), 2);
-        assertWithdrawRequestState(1, DataTypes.WithdrawRequestState.CANCELLED);
-        assertWithdrawRequestState(2, DataTypes.WithdrawRequestState.UNPROCESSED);
+        assertWithdrawRequestState(1, DataTypes.WithdrawRequestStateLegacy.CANCELLED);
+        assertWithdrawRequestState(2, DataTypes.WithdrawRequestStateLegacy.UNPROCESSED);
     }
 
     // ============ Edge Cases ============

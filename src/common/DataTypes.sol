@@ -19,7 +19,14 @@ library DataTypes {
         address moduleAddress;
     }
 
-    enum DepositRequestProcessingState {
+    struct ExchangeRateSnapshot {
+        uint256 totalSupplyBefore;
+        uint256 totalSupplyAfter;
+        uint256 totalAssetsBefore;
+        uint256 totalAssetsAfter;
+    }
+
+    enum RequestProcessingState {
         NOT_EXIST,
         UNPROCESSED,
         PARTIALLY_PROCESSED, // partially processed means that the deposit request has been partially processed
@@ -32,7 +39,7 @@ library DataTypes {
         uint256 amount;
         uint256 amountProcessed; // amoutn remaining => amount - amountProcessed
         address user;
-        DepositRequestProcessingState state;
+        RequestProcessingState state;
     }
 
     struct ResolveDepositRequestsData {
@@ -41,11 +48,13 @@ library DataTypes {
         bytes callbackExecutionData;
     }
 
-    struct ExchangeRateSnapshot {
-        uint256 totalSupplyBefore;
-        uint256 totalSupplyAfter;
-        uint256 totalAssetsBefore;
-        uint256 totalAssetsAfter;
+    struct WithdrawRequestData {
+        uint256 shares;
+        uint256 sharesProcessed;
+        uint256 amountClaimable;
+        uint256 amountClaimed;
+        address user;
+        RequestProcessingState state;
     }
 
     /**
@@ -56,7 +65,7 @@ library DataTypes {
      * @param claimed Whether the withdrawal has been claimed
      * @param cancelled Whether the withdrawal request has been cancelled
      */
-    struct WithdrawRequestData {
+    struct WithdrawRequestDataLegacy {
         uint256 shares;
         uint256 amount;
         address user;
@@ -67,13 +76,12 @@ library DataTypes {
     /**
      * @notice Enumeration of possible withdrawal request states
      */
-    enum WithdrawRequestState {
+    enum WithdrawRequestStateLegacy {
         NOT_EXIST, // Request does not exist
         CLAIMED, // Request has been claimed
         UNPROCESSED, // Request is pending processing
         CLAIMABLE, // Request is ready to be claimed
         CANCELLED // Request has been cancelled
-
     }
 
     /**
