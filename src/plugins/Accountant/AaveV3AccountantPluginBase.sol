@@ -2,18 +2,16 @@
 
 pragma solidity ^0.8.13;
 
-import {OwnableUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {IAaveV3AccountantPlugin} from "../../interfaces/IAaveV3AccountantPlugin.sol";
 import {AaveV3AccountantPluginStorage} from "../../core/lib/AaveV3AccountantPluginStorage.sol";
 
-abstract contract AaveV3AccountantPluginBase is OwnableUpgradeable, IAaveV3AccountantPlugin {
+abstract contract AaveV3AccountantPluginBase is Ownable, IAaveV3AccountantPlugin {
     event PoolAddressesProviderUpdated(address indexed oldProvider, address indexed newProvider);
     event LendAssetsUpdated(address[] oldAssets, address[] newAssets);
     event BorrowAssetsUpdated(address[] oldAssets, address[] newAssets);
 
-    function __AaveV3AccountantPluginBase_init(address owner) internal onlyInitializing {
-        __Ownable_init(owner);
-    }
+    constructor(address owner) Ownable(owner) {}
 
     function setPoolAddressesProvider(address poolAddressesProvider_) external onlyOwner {
         address oldProvider = AaveV3AccountantPluginStorage.getAaveV3AccountantPluginStorage().poolAddressesProvider;

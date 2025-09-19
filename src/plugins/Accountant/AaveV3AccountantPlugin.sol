@@ -3,8 +3,6 @@
 pragma solidity ^0.8.13;
 
 import {AaveV3AccountantPluginBase} from "./AaveV3AccountantPluginBase.sol";
-import {ReentrancyGuardUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {AaveV3AccountantPluginStorage} from "../../core/lib/AaveV3AccountantPluginStorage.sol";
 import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
@@ -13,22 +11,10 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
+import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 
-contract AaveV3AccountantPlugin is AaveV3AccountantPluginBase, ReentrancyGuardUpgradeable {
-    constructor() {
-        _disableInitializers();
-    }
-
-    function initialize(DataTypes.AaveV3AccountantPluginModuleInitData memory data) public initializer {
-        __ReentrancyGuard_init();
-        __AaveV3AccountantPluginModule_init(data);
-        __AaveV3AccountantPluginBase_init(_msgSender());
-    }
-
-    function __AaveV3AccountantPluginModule_init(DataTypes.AaveV3AccountantPluginModuleInitData memory data)
-        internal
-        onlyInitializing
-    {
+contract AaveV3AccountantPlugin is AaveV3AccountantPluginBase {
+    constructor(DataTypes.AaveV3AccountantPluginModuleInitData memory data) AaveV3AccountantPluginBase(_msgSender()) {
         AaveV3AccountantPluginStorage.setPoolAddressesProvider(data.poolAddressesProvider);
         AaveV3AccountantPluginStorage.setLendAssets(data.lendAssets);
         AaveV3AccountantPluginStorage.setBorrowAssets(data.borrowAssets);
