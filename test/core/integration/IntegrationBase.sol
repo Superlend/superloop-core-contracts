@@ -65,7 +65,7 @@ abstract contract IntegrationBase is TestBase {
             supplyCap: 100000 * 10 ** 18,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
-            accountantModule: address(accountantAaveV3),
+            accountantModule: address(accountant),
             withdrawManagerModule: address(withdrawManager),
             depositManager: address(0),
             cashReserve: 1000,
@@ -93,14 +93,14 @@ abstract contract IntegrationBase is TestBase {
         superloop.setCallbackHandler(depositKey, address(depositManagerCallbackHandler));
 
         moduleRegistry.setModule("withdrawManager", address(withdrawManager));
-        moduleRegistry.setModule("accountantAaveV3", address(accountantAaveV3));
+        moduleRegistry.setModule("universalAccountant", address(accountant));
         moduleRegistry.setModule("depositManager", address(depositManager));
 
         superloop.setRegisteredModule(address(withdrawManager), true);
-        superloop.setRegisteredModule(address(accountantAaveV3), true);
+        superloop.setRegisteredModule(address(accountant), true);
         superloop.setRegisteredModule(address(depositManager), true);
 
-        superloop.setAccountantModule(address(accountantAaveV3));
+        superloop.setAccountantModule(address(accountant));
         superloop.setWithdrawManagerModule(address(withdrawManager));
         superloop.setDepositManagerModule(address(depositManager));
 

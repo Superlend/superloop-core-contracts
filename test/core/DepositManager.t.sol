@@ -63,7 +63,7 @@ contract DepositManagerTest is TestBase {
         _deployWithdrawManager(address(superloop));
         _deployDepositManager(address(superloop));
 
-        superloop.setAccountantModule(address(accountantAaveV3));
+        superloop.setAccountantModule(address(accountant));
         superloop.setWithdrawManagerModule(address(withdrawManager));
         superloop.setDepositManagerModule(address(depositManager));
 

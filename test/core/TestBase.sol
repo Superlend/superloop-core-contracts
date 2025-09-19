@@ -24,6 +24,8 @@ import {DepositManagerCallbackHandler} from "../../src/modules/DepositManagerCal
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {UniversalAccountant} from "../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
+import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
 
 contract TestBase is Test {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -59,6 +61,7 @@ contract TestBase is Test {
     AaveV3RepayModule public repayModule;
     UniversalDexModule public dexModule;
     AccountantAaveV3 public accountantAaveV3;
+    UniversalAccountant public accountant;
     WithdrawManager public withdrawManager;
     DepositManager public depositManager;
 
@@ -133,24 +136,32 @@ contract TestBase is Test {
         address[] memory borrowAssets = new address[](1);
         borrowAssets[0] = XTZ;
 
-        DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
+        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
+            .AaveV3AccountantPluginModuleInitData({
             poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
             lendAssets: lendAssets,
-            borrowAssets: borrowAssets,
+            borrowAssets: borrowAssets
+        });
+        address accountantPlugin = address(new AaveV3AccountantPlugin(accountantPluginInitData));
+
+        address[] memory registeredAccountants = new address[](1);
+        registeredAccountants[0] = accountantPlugin;
+
+        // deploy accountant
+        DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
+            registeredAccountants: registeredAccountants,
             performanceFee: uint16(PERFORMANCE_FEE),
-            vault: vault
+            vault: address(vault)
         });
 
-        AccountantAaveV3 accountantAaveV3Implementation = new AccountantAaveV3();
-        ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
-
+        address accountantImplementation = address(new UniversalAccountant());
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(accountantAaveV3Implementation),
-            address(proxyAdmin),
-            abi.encodeWithSelector(AccountantAaveV3.initialize.selector, initData)
+            accountantImplementation,
+            address(this),
+            abi.encodeWithSelector(UniversalAccountant.initialize.selector, initData)
         );
 
-        accountantAaveV3 = AccountantAaveV3(address(proxy));
+        accountant = UniversalAccountant(address(proxy));
     }
 
     function _deployWithdrawManager(address vault) internal {

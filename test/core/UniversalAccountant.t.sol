@@ -18,7 +18,6 @@ import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/AaveV3Account
 
 contract AccountantAaveV3Test is TestBase {
     UniversalAccountant public accountantImplementation;
-    UniversalAccountant public accountant;
     AaveV3AccountantPlugin public accountantPlugin;
 
     IERC20 public asset;
@@ -237,7 +236,6 @@ contract AccountantAaveV3Test is TestBase {
 
         console.log("Small interest fee:", fee3);
     }
-
 
     function _enableMockingPoolDataProvider() internal {
         vm.mockCall(
