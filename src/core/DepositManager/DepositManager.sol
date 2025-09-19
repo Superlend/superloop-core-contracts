@@ -52,10 +52,11 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
 
     function cancelDepositRequest(uint256 id) external nonReentrant {
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
-        _validateCancelDepositRequest($, id);
+        DataTypes.DepositRequestData memory _depositRequestCached = _depositRequest(id);
+        _validateCancelDepositRequest(_depositRequestCached);
 
         // handle cancel deposit request
-        uint256 amountRefunded = _handleCancelDepositRequest($, id);
+        uint256 amountRefunded = _handleCancelDepositRequest($, id, _depositRequestCached);
 
         // emit event
         emit DepositRequestCancelled(id, _msgSender(), amountRefunded);
@@ -99,6 +100,16 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         uint256 currentId = $.resolutionIdPointer;
         while (amountToIngest > 0) {
             DataTypes.DepositRequestData memory currentRequest = $.depositRequest[currentId];
+            if (
+                currentRequest.state == DataTypes.DepositRequestProcessingState.CANCELLED
+                    || currentRequest.state == DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED
+            ) {
+                unchecked {
+                    ++currentId;
+                }
+                continue;
+            }
+
             uint256 amountAvailableInCurrentRequest = currentRequest.amount - currentRequest.amountProcessed;
             uint256 amountToIngestInCurrentRequest =
                 amountToIngest > amountAvailableInCurrentRequest ? amountAvailableInCurrentRequest : amountToIngest;
@@ -146,12 +157,10 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         require(expectedShares > 0, Errors.INVALID_SHARES_AMOUNT);
 
         uint256 id = $.userDepositRequestId[user];
-        DataTypes.DepositRequestData memory _depositRequest = $.depositRequest[id];
+        DataTypes.DepositRequestData memory _depositRequest = _depositRequest(id);
         if (id != 0) {
-            bool isPending =
-                id > $.resolutionIdPointer && _depositRequest.state != DataTypes.DepositRequestProcessingState.CANCELLED;
-            bool isUnderProcess =
-                id == $.resolutionIdPointer && _depositRequest.amount != _depositRequest.amountProcessed;
+            bool isPending = _depositRequest.state == DataTypes.DepositRequestProcessingState.UNPROCESSED;
+            bool isUnderProcess = _depositRequest.state == DataTypes.DepositRequestProcessingState.PARTIALLY_PROCESSED;
 
             if (isPending || isUnderProcess) {
                 revert(Errors.DEPOSIT_REQUEST_ACTIVE);
@@ -177,17 +186,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         DepositManagerStorage.setTotalPendingDeposits($.totalPendingDeposits + amount);
     }
 
-    function _validateCancelDepositRequest(DepositManagerStorage.DepositManagerState storage $, uint256 id)
-        internal
-        view
-    {
-        // validations
-        // 1. request should not be processed already
-        // 2. reques should not be cancelled already
-        // 3. request can be partially cancelled
-        DataTypes.DepositRequestData memory _depositRequest = $.depositRequest[id];
-        uint256 resolutionPointer = $.resolutionIdPointer;
-
+    function _validateCancelDepositRequest(DataTypes.DepositRequestData memory _depositRequest) internal view {
         bool doesExist = _depositRequest.amount > 0;
         if (!doesExist) revert(Errors.DEPOSIT_REQUEST_NOT_FOUND);
 
@@ -195,29 +194,28 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
             || _depositRequest.state == DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED;
         if (isCancelled) revert(Errors.DEPOSIT_REQUEST_ALREADY_CANCELLED);
 
-        bool isProcessed = id < resolutionPointer
-            || (id == resolutionPointer && _depositRequest.amountProcessed == _depositRequest.amount);
-
+        bool isProcessed = _depositRequest.state == DataTypes.DepositRequestProcessingState.FULLY_PROCESSED;
         if (isProcessed) revert(Errors.DEPOSIT_REQUEST_ALREADY_PROCESSED);
 
         require(_depositRequest.user == _msgSender(), Errors.CALLER_NOT_DEPOSIT_REQUEST_OWNER);
     }
 
-    function _handleCancelDepositRequest(DepositManagerStorage.DepositManagerState storage $, uint256 id)
-        internal
-        returns (uint256)
-    {
-        uint256 amount = $.depositRequest[id].amount;
-        uint256 amountProcessed = $.depositRequest[id].amountProcessed;
+    function _handleCancelDepositRequest(
+        DepositManagerStorage.DepositManagerState storage $,
+        uint256 id,
+        DataTypes.DepositRequestData memory _depositRequest
+    ) internal returns (uint256) {
+        uint256 amount = _depositRequest.amount;
+        uint256 amountProcessed = _depositRequest.amountProcessed;
         uint256 amountToRefund = amount - amountProcessed;
 
+        DepositManagerStorage.setUserDepositRequest(_depositRequest.user, 0);
         $.depositRequest[id].state = amountToRefund == amount
             ? DataTypes.DepositRequestProcessingState.CANCELLED
             : DataTypes.DepositRequestProcessingState.PARTIALLY_CANCELLED;
-        DepositManagerStorage.setUserDepositRequest($.depositRequest[id].user, 0);
         $.totalPendingDeposits -= amountToRefund;
 
-        SafeERC20.safeTransfer(IERC20($.asset), $.depositRequest[id].user, amountToRefund);
+        SafeERC20.safeTransfer(IERC20($.asset), _depositRequest.user, amountToRefund);
 
         return amountToRefund;
     }
