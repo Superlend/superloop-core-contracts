@@ -44,7 +44,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
 
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
         address userCached = onBehalfOf == address(0) ? _msgSender() : onBehalfOf;
-        _validateWithdrawRequest($, amount, userCached);
+        _validateDepositRequest($, amount, userCached);
         _registerDepositRequest($, amount, userCached, _msgSender());
 
         emit DepositRequested(userCached, amount, $.nextDepositRequestId - 1);
@@ -136,7 +136,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         $.totalPendingDeposits -= data.amount;
     }
 
-    function _validateWithdrawRequest(DepositManagerStorage.DepositManagerState storage $, uint256 amount, address user)
+    function _validateDepositRequest(DepositManagerStorage.DepositManagerState storage $, uint256 amount, address user)
         internal
         view
     {
@@ -178,9 +178,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
 
         uint256 id = $.nextDepositRequestId;
 
-        DepositManagerStorage.setDepositRequest(
-            id, amount, 0, user, DataTypes.RequestProcessingState.UNPROCESSED
-        );
+        DepositManagerStorage.setDepositRequest(id, amount, 0, user, DataTypes.RequestProcessingState.UNPROCESSED);
         DepositManagerStorage.setUserDepositRequest(user, id);
         DepositManagerStorage.setNextDepositRequestId();
         DepositManagerStorage.setTotalPendingDeposits($.totalPendingDeposits + amount);

@@ -86,7 +86,10 @@ interface IWithdrawManager {
      * @param ids Array of withdrawal request IDs
      * @return Array of withdrawal request data
      */
-    function withdrawRequests(uint256[] memory ids) external view returns (DataTypes.WithdrawRequestDataLegacy[] memory);
+    function withdrawRequests(uint256[] memory ids)
+        external
+        view
+        returns (DataTypes.WithdrawRequestDataLegacy[] memory);
 
     /**
      * @notice Gets the withdrawal request ID for a specific user

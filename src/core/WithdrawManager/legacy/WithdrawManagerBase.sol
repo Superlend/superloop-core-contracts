@@ -19,27 +19,32 @@ abstract contract WithdrawManagerBase is Context, IWithdrawManager {
     }
 
     function vault() public view override returns (address) {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         return $.vault;
     }
 
     function asset() public view override returns (address) {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         return $.asset;
     }
 
     function nextWithdrawRequestId() public view override returns (uint256) {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         return $.nextWithdrawRequestId;
     }
 
     function resolvedWithdrawRequestId() public view override returns (uint256) {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         return $.resolvedWithdrawRequestId;
     }
 
     function withdrawRequest(uint256 id) public view override returns (DataTypes.WithdrawRequestDataLegacy memory) {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         return $.withdrawRequest[id];
     }
 
@@ -49,8 +54,10 @@ abstract contract WithdrawManagerBase is Context, IWithdrawManager {
         override
         returns (DataTypes.WithdrawRequestDataLegacy[] memory)
     {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
-        DataTypes.WithdrawRequestDataLegacy[] memory _withdrawRequests = new DataTypes.WithdrawRequestDataLegacy[](ids.length);
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        DataTypes.WithdrawRequestDataLegacy[] memory _withdrawRequests =
+            new DataTypes.WithdrawRequestDataLegacy[](ids.length);
         uint256 length = ids.length;
         for (uint256 i; i < length;) {
             _withdrawRequests[i] = $.withdrawRequest[ids[i]];
@@ -64,7 +71,8 @@ abstract contract WithdrawManagerBase is Context, IWithdrawManager {
 
     function userWithdrawRequestId(address user) public view override returns (uint256) {
         user = user == address(0) ? msg.sender : user;
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
 
         return $.userWithdrawRequestId[user];
     }

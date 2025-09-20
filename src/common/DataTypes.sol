@@ -48,6 +48,14 @@ library DataTypes {
         bytes callbackExecutionData;
     }
 
+    enum WithdrawRequestType {
+        GENERAL, // general queue
+        DEFERRED, // low slippage queue
+        PRIORITY, // medium slippage queue
+        INSTANT // high slippage queue
+
+    }
+
     struct WithdrawRequestData {
         uint256 shares;
         uint256 sharesProcessed;
@@ -82,6 +90,7 @@ library DataTypes {
         UNPROCESSED, // Request is pending processing
         CLAIMABLE, // Request is ready to be claimed
         CANCELLED // Request has been cancelled
+
     }
 
     /**

@@ -38,7 +38,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function requestWithdraw(uint256 shares) external override {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         _validateWithdrawRequest($, _msgSender(), shares);
         _registerWithdrawRequest($, _msgSender(), shares);
 
@@ -46,7 +47,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function cancelWithdrawRequest(uint256 id) external override nonReentrant {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         _validateCancelWithdrawRequest($, id);
         _handleCancelWithdrawRequest($, id);
 
@@ -54,7 +56,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function resolveWithdrawRequests(uint256 resolvedIdLimit) external override onlyVault {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         _validateResolveWithdrawRequests($, resolvedIdLimit);
         _handleResolveWithdrawRequests($, resolvedIdLimit);
 
@@ -62,7 +65,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function withdraw() external override nonReentrant {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         uint256 id = _validateWithdraw($);
         _handleWithdraw($, id);
 
@@ -76,7 +80,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     {
         require(shares > 0, Errors.INVALID_AMOUNT);
 
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         address instantWithdrawModule = $.instantWithdrawModule;
 
         if (instantWithdrawModule == address(0)) {
@@ -93,7 +98,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function getWithdrawRequestState(uint256 id) public view override returns (DataTypes.WithdrawRequestStateLegacy) {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         DataTypes.WithdrawRequestDataLegacy memory _withdrawRequest = $.withdrawRequest[id];
         uint256 resolvedId = $.resolvedWithdrawRequestId;
 
@@ -165,10 +171,10 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         return id;
     }
 
-    function _validateCancelWithdrawRequest(WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $, uint256 id)
-        internal
-        view
-    {
+    function _validateCancelWithdrawRequest(
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $,
+        uint256 id
+    ) internal view {
         require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
         require(id > $.resolvedWithdrawRequestId, Errors.INVALID_WITHDRAW_REQUEST_STATE);
 
@@ -226,7 +232,9 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         SafeERC20.safeTransfer(IERC20($.asset), _msgSender(), _withdrawRequest.amount);
     }
 
-    function _handleCancelWithdrawRequest(WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $, uint256 id) internal {
+    function _handleCancelWithdrawRequest(WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $, uint256 id)
+        internal
+    {
         DataTypes.WithdrawRequestDataLegacy memory _withdrawRequest = $.withdrawRequest[id];
 
         $.withdrawRequest[id].cancelled = true;
@@ -241,7 +249,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function _onlyVault() internal view {
-        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ = WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
+        WithdrawManagerStorageLegacy.WithdrawManagerStateLegacy storage $ =
+            WithdrawManagerStorageLegacy.getWithdrawManagerStorage();
         require(_msgSender() == $.vault, Errors.CALLER_NOT_VAULT);
     }
 }
