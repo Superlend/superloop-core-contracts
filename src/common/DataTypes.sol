@@ -56,6 +56,14 @@ library DataTypes {
 
     }
 
+    struct WithdrawQueue {
+        uint256 nextWithdrawRequestId;
+        uint256 resolutionIdPointer;
+        mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
+        mapping(address => uint256) userWithdrawRequestId;
+        uint256 totalPendingWithdraws;
+    }
+
     struct WithdrawRequestData {
         uint256 shares;
         uint256 sharesProcessed;
@@ -63,6 +71,12 @@ library DataTypes {
         uint256 amountClaimed;
         address user;
         RequestProcessingState state;
+    }
+
+    struct ResolveWithdrawRequestsData {
+        uint256 shares;
+        WithdrawRequestType requestType;
+        bytes callbackExecutionData;
     }
 
     /**

@@ -7,7 +7,7 @@ import {console} from "forge-std/console.sol";
 import {UniversalDexModule} from "../src/modules/UniversalDexModule.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {AaveV3FlashloanModule} from "../src/modules/AaveV3FlashloanModule.sol";
-import {AaveV3CallbackHandler} from "../src/modules/AaveV3CallbackHandler.sol";
+import {AaveV3CallbackHandler} from "../src/modules/callback/AaveV3CallbackHandler.sol";
 import {AaveV3EmodeModule} from "../src/modules/AaveV3EmodeModule.sol";
 import {AaveV3SupplyModule} from "../src/modules/AaveV3SupplyModule.sol";
 import {AaveV3WithdrawModule} from "../src/modules/AaveV3WithdrawModule.sol";

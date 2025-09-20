@@ -5,19 +5,11 @@ pragma solidity ^0.8.13;
 import {DataTypes} from "../../common/DataTypes.sol";
 
 library WithdrawManagerStorage {
-    struct WithdrawQueue {
-        uint256 nextWithdrawRequestId;
-        uint256 resolutionIdPointer;
-        mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
-        mapping(address => uint256) userWithdrawRequestId;
-        uint256 totalPendingWithdraws;
-    }
-
     struct WithdrawManagerState {
         address vault;
         address asset;
         uint8 vaultDecimalOffset;
-        mapping(DataTypes.WithdrawRequestType => WithdrawQueue) queues;
+        mapping(DataTypes.WithdrawRequestType => DataTypes.WithdrawQueue) queues;
     }
 
     /**

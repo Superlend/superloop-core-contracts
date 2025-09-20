@@ -8,7 +8,7 @@ import {Superloop} from "../../src/core/Superloop/Superloop.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegistry.sol";
 import {AaveV3FlashloanModule} from "../../src/modules/AaveV3FlashloanModule.sol";
-import {AaveV3CallbackHandler} from "../../src/modules/AaveV3CallbackHandler.sol";
+import {AaveV3CallbackHandler} from "../../src/modules/callback/AaveV3CallbackHandler.sol";
 import {AaveV3EmodeModule} from "../../src/modules/AaveV3EmodeModule.sol";
 import {AaveV3SupplyModule} from "../../src/modules/AaveV3SupplyModule.sol";
 import {AaveV3WithdrawModule} from "../../src/modules/AaveV3WithdrawModule.sol";
@@ -20,7 +20,7 @@ import {UniversalDexModule} from "../../src/modules/UniversalDexModule.sol";
 import {AccountantAaveV3} from "../../src/core/Accountant/aaveV3Accountant/AccountantAaveV3.sol";
 import {WithdrawManager} from "../../src/core/WithdrawManager/Legacy/WithdrawManager.sol";
 import {DepositManager} from "../../src/core/DepositManager/DepositManager.sol";
-import {DepositManagerCallbackHandler} from "../../src/modules/DepositManagerCallbackHandler.sol";
+import {DepositManagerCallbackHandler} from "../../src/modules/callback/DepositManagerCallbackHandler.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";

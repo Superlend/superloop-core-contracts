@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
-import {DataTypes} from "../common/DataTypes.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
 
 /**
  * @title AaveV3CallbackHandler

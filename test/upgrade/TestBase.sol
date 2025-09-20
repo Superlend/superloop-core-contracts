@@ -7,7 +7,7 @@ import {Superloop} from "../../src/core/Superloop/Superloop.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegistry.sol";
 import {AaveV3FlashloanModule} from "../../src/modules/AaveV3FlashloanModule.sol";
-import {AaveV3CallbackHandler} from "../../src/modules/AaveV3CallbackHandler.sol";
+import {AaveV3CallbackHandler} from "../../src/modules/callback/AaveV3CallbackHandler.sol";
 import {AaveV3EmodeModule} from "../../src/modules/AaveV3EmodeModule.sol";
 import {AaveV3SupplyModule} from "../../src/modules/AaveV3SupplyModule.sol";
 import {AaveV3WithdrawModule} from "../../src/modules/AaveV3WithdrawModule.sol";

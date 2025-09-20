@@ -14,6 +14,7 @@ import {ReentrancyGuardUpgradeable} from
 import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Errors} from "../../common/Errors.sol";
 
 abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeable {
@@ -158,6 +159,12 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
 
     function mintShares(address to, uint256 amount) public onlyDepositManager {
         _mint(to, amount);
+    }
+
+    function burnSharesAndClaimAssets(uint256 shares, uint256 assets) public onlyDepositManager {
+        address receiver = _msgSender();
+        _burn(receiver, shares);
+        SafeERC20.safeTransfer(IERC20(asset()), receiver, assets);
     }
 
     function _realizePerformanceFee() internal {

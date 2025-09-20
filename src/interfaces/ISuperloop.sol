@@ -43,6 +43,13 @@ interface ISuperloop is IERC4626 {
     function mintShares(address to, uint256 amount) external;
 
     /**
+     * @notice Burns shares and claims assets for an address
+     * @param shares The amount of shares to burn
+     * @param assets The amount of assets to claim
+     */
+    function burnSharesAndClaimAssets(uint256 shares, uint256 assets) external;
+
+    /**
      * @notice Sets the supply cap for the vault
      * @param supplyCap_ The new supply cap value
      */

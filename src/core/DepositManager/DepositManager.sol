@@ -94,12 +94,16 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         // calculate shares such that the exchange rate is not updated
         uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot, $.vaultDecimalOffset);
 
+        // decrease the total pending deposits before minting shares
+        $.totalPendingDeposits -= data.amount;
+
         // calculate the share value of each of the deposit request that is getting resolved
         // go from current resolutionIdPointer => until assets are over
         uint256 amountToIngest = data.amount;
         uint256 currentId = $.resolutionIdPointer;
+
         while (amountToIngest > 0) {
-            DataTypes.DepositRequestData memory currentRequest = $.depositRequest[currentId];
+            DataTypes.DepositRequestData memory currentRequest = _depositRequest(currentId);
             if (
                 currentRequest.state == DataTypes.RequestProcessingState.CANCELLED
                     || currentRequest.state == DataTypes.RequestProcessingState.PARTIALLY_CANCELLED
@@ -133,7 +137,6 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         }
 
         $.resolutionIdPointer = currentId;
-        $.totalPendingDeposits -= data.amount;
     }
 
     function _validateDepositRequest(DepositManagerStorage.DepositManagerState storage $, uint256 amount, address user)
@@ -247,7 +250,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         returns (uint256)
     {
         uint256 totalSupplyAfter = Math.mulDiv(
-            snapshot.totalSupplyBefore, snapshot.totalAssetsAfter, snapshot.totalAssetsBefore, Math.Rounding.Floor
+            snapshot.totalSupplyBefore, snapshot.totalAssetsAfter, snapshot.totalAssetsBefore, Math.Rounding.Ceil
         );
         uint256 totalNewSharesToMint = (totalSupplyAfter + 10 ** decimalOffset) - snapshot.totalSupplyBefore;
 

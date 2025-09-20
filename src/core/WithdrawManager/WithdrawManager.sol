@@ -14,6 +14,8 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import {Errors} from "../../common/Errors.sol";
 import {SafeERC20, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IWithdrawManagerCallbackHandler} from "../../interfaces/IWithdrawManagerCallbackHandler.sol";
+import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, WithdrawManagerBase {
     event WithdrawRequested(
@@ -82,8 +84,76 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         emit WithdrawRequestClaimed(_msgSender(), id, requestType, amountToClaim);
     }
 
-    function resolveWithdrawRequests() external onlyVault {
-        // TODO : Implement this
+    function resolveWithdrawRequests(DataTypes.ResolveWithdrawRequestsData memory data) external onlyVault {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+
+        // validations
+        _validateResolveWithdrawRequests($, data);
+
+        address vaultCached = $.vault;
+        // take a snapshot of the current exchange rate
+        DataTypes.ExchangeRateSnapshot memory snapshot = _createExchangeRateSnapshot(vaultCached, $.vaultDecimalOffset);
+
+        // encode the data to be used in the callback
+        bytes memory callbackExecutionData = abi.encode(
+            DataTypes.CallbackData({
+                asset: vaultCached, // this variable is not needed for withdraws, hence vault address is used
+                addressToApprove: address(0),
+                amountToApprove: 0,
+                executionData: data.callbackExecutionData
+            })
+        );
+
+        // call 'executeWithdraw' function on the vault
+        IWithdrawManagerCallbackHandler(vaultCached).executeWithdraw(data.shares, callbackExecutionData);
+
+        // update the snapshot
+        snapshot.totalSupplyAfter = snapshot.totalSupplyBefore - data.shares;
+
+        // calculate how much assets I can get for the shares I am burning
+        uint256 totalAssetsToClaim = _calculateAssetsToClaim(snapshot);
+
+        // decrease the  call vault
+        DataTypes.WithdrawQueue storage queue = $.queues[data.requestType];
+        queue.totalPendingWithdraws -= data.shares;
+        ISuperloop(vaultCached).burnSharesAndClaimAssets(data.shares, totalAssetsToClaim);
+
+        uint256 sharesBurnt = data.shares;
+        uint256 currentId = queue.resolutionIdPointer;
+        while (sharesBurnt > 0) {
+            DataTypes.WithdrawRequestData memory currentRequest = _withdrawRequest(currentId, data.requestType);
+            if (
+                currentRequest.state == DataTypes.RequestProcessingState.CANCELLED
+                    || currentRequest.state == DataTypes.RequestProcessingState.PARTIALLY_CANCELLED
+            ) {
+                unchecked {
+                    ++currentId;
+                }
+                continue;
+            }
+
+            uint256 sharesAvailableInCurrentRequest = currentRequest.shares - currentRequest.sharesProcessed;
+            uint256 sharesToBurnInCurrentRequest =
+                sharesBurnt > sharesAvailableInCurrentRequest ? sharesAvailableInCurrentRequest : sharesBurnt;
+
+            uint256 assetsToClaim =
+                Math.mulDiv(sharesToBurnInCurrentRequest, totalAssetsToClaim, data.shares, Math.Rounding.Floor);
+            queue.withdrawRequest[currentId].amountClaimable = currentRequest.amountClaimable + assetsToClaim;
+
+            sharesBurnt -= sharesToBurnInCurrentRequest;
+
+            if (currentRequest.sharesProcessed + sharesToBurnInCurrentRequest != currentRequest.shares) {
+                queue.withdrawRequest[currentId].state = DataTypes.RequestProcessingState.PARTIALLY_PROCESSED;
+                queue.withdrawRequest[currentId].sharesProcessed =
+                    currentRequest.sharesProcessed + sharesToBurnInCurrentRequest;
+            } else {
+                unchecked {
+                    ++currentId;
+                }
+            }
+        }
+
+        queue.resolutionIdPointer = currentId;
     }
 
     function _validateCancelWithdrawRequest(DataTypes.WithdrawRequestData memory _withdrawRequest) internal view {
@@ -156,6 +226,14 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         return (id, _withdrawRequest);
     }
 
+    function _validateResolveWithdrawRequests(
+        WithdrawManagerStorage.WithdrawManagerState storage $,
+        DataTypes.ResolveWithdrawRequestsData memory data
+    ) internal view {
+        require(data.shares > 0, Errors.INVALID_SHARES_AMOUNT);
+        require(data.shares <= $.queues[data.requestType].totalPendingWithdraws, Errors.INVALID_SHARES_AMOUNT);
+    }
+
     function _handleWithdraw(
         WithdrawManagerStorage.WithdrawManagerState storage $,
         uint256 id,
@@ -165,8 +243,9 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         uint256 amountToClaim = _withdrawRequest.amountClaimable;
 
         // State changes
-        $.queues[requestType].withdrawRequest[id].amountClaimable = 0;
-        $.queues[requestType].withdrawRequest[id].amountClaimed += amountToClaim;
+        DataTypes.WithdrawQueue storage queue = $.queues[requestType];
+        queue.withdrawRequest[id].amountClaimable = 0;
+        queue.withdrawRequest[id].amountClaimed += amountToClaim;
 
         // send tokens
         if (amountToClaim > 0) {
@@ -184,15 +263,14 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     ) internal {
         SafeERC20.safeTransferFrom(IERC20($.vault), user, address(this), shares);
 
-        uint256 id = $.queues[requestType].nextWithdrawRequestId;
+        DataTypes.WithdrawQueue storage queue = $.queues[requestType];
+        uint256 id = queue.nextWithdrawRequestId;
         WithdrawManagerStorage.setWithdrawRequest(
             requestType, id, shares, 0, 0, 0, user, DataTypes.RequestProcessingState.UNPROCESSED
         );
         WithdrawManagerStorage.setUserWithdrawRequest(requestType, user, id);
         WithdrawManagerStorage.setNextWithdrawRequestId(requestType);
-        WithdrawManagerStorage.setTotalPendingWithdraws(
-            requestType, $.queues[requestType].totalPendingWithdraws + shares
-        );
+        WithdrawManagerStorage.setTotalPendingWithdraws(requestType, queue.totalPendingWithdraws + shares);
     }
 
     function _handleCancelWithdrawRequest(
@@ -207,15 +285,14 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         uint256 amountToClaim = _withdrawRequest.amountClaimable;
 
         // State changes
+        DataTypes.WithdrawQueue storage queue = $.queues[requestType];
         WithdrawManagerStorage.setUserWithdrawRequest(requestType, _withdrawRequest.user, 0);
-        WithdrawManagerStorage.setTotalPendingWithdraws(
-            requestType, $.queues[requestType].totalPendingWithdraws - sharesToRefund
-        );
-        $.queues[requestType].withdrawRequest[id].state = sharesToRefund == shares
+        WithdrawManagerStorage.setTotalPendingWithdraws(requestType, queue.totalPendingWithdraws - sharesToRefund);
+        queue.withdrawRequest[id].state = sharesToRefund == shares
             ? DataTypes.RequestProcessingState.CANCELLED
             : DataTypes.RequestProcessingState.PARTIALLY_CANCELLED;
-        $.queues[requestType].withdrawRequest[id].amountClaimable = 0;
-        $.queues[requestType].withdrawRequest[id].amountClaimed += amountToClaim;
+        queue.withdrawRequest[id].amountClaimable = 0;
+        queue.withdrawRequest[id].amountClaimed += amountToClaim;
 
         // Send the shares and tokens back
         if (sharesToRefund > 0) {
@@ -226,6 +303,32 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         }
 
         return (sharesToRefund, amountToClaim);
+    }
+
+    function _createExchangeRateSnapshot(address vault, uint8 decimalOffset)
+        internal
+        view
+        returns (DataTypes.ExchangeRateSnapshot memory)
+    {
+        uint256 totalSupplyBefore = ISuperloop(vault).totalSupply() + 10 ** decimalOffset;
+        uint256 totalAssetsBefore = ISuperloop(vault).totalAssets() + 1;
+        return DataTypes.ExchangeRateSnapshot({
+            totalSupplyBefore: totalSupplyBefore,
+            totalSupplyAfter: 0,
+            totalAssetsBefore: totalAssetsBefore,
+            totalAssetsAfter: 0
+        });
+    }
+
+    function _calculateAssetsToClaim(DataTypes.ExchangeRateSnapshot memory snapshot) internal pure returns (uint256) {
+        // TODO: calculate if I need decimal offset here
+
+        uint256 totalAssetsAfter = Math.mulDiv(
+            snapshot.totalAssetsBefore, snapshot.totalSupplyAfter, snapshot.totalSupplyBefore, Math.Rounding.Floor
+        );
+
+        uint256 totalAssetsToClaim = totalAssetsAfter - snapshot.totalAssetsBefore;
+        return totalAssetsToClaim;
     }
 
     modifier onlyVault() {
