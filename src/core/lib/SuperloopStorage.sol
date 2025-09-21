@@ -102,15 +102,15 @@ library SuperloopStorage {
 
     /**
      * @notice Structure for storing Superloop essential roles
-     * @param accountantModule The address of the accountant module
-     * @param withdrawManagerModule The address of the withdraw manager module
+     * @param accountant The address of the accountant module
+     * @param withdrawManager The address of the withdraw manager module
      * @param vaultAdmin The address of the vault admin
      * @param treasury The address of the treasury
      * @param privilegedAddresses Mapping from address to privileged status
      */
     struct SuperloopEssentialRoles {
-        address accountantModule;
-        address withdrawManagerModule;
+        address accountant;
+        address withdrawManager;
         address depositManager;
         address vaultOperator;
         address vaultAdmin;
@@ -141,7 +141,7 @@ library SuperloopStorage {
      */
     function setAccountantModule(address accountantModule_) internal {
         SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
-        $.accountantModule = accountantModule_;
+        $.accountant = accountantModule_;
     }
 
     /**
@@ -150,7 +150,7 @@ library SuperloopStorage {
      */
     function setWithdrawManagerModule(address withdrawManagerModule_) internal {
         SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
-        $.withdrawManagerModule = withdrawManagerModule_;
+        $.withdrawManager = withdrawManagerModule_;
     }
 
     /**

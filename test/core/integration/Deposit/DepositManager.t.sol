@@ -10,6 +10,8 @@ import {console} from "forge-std/Test.sol";
 import {Errors} from "../../../../src/common/Errors.sol";
 
 contract DepositManagerTest is IntegrationBase {
+    bool depositAll = false;
+
     function setUp() public override {
         super.setUp();
 
@@ -37,7 +39,7 @@ contract DepositManagerTest is IntegrationBase {
         uint256 depositAmount = 100 * XTZ_SCALE;
         _makeDepositRequest(depositAmount, user1, true);
 
-        // // build the operate call
+        // build the operate call
         uint256 supplyAmount = 150 * STXTZ_SCALE;
         uint256 borrowAmount = 60 * XTZ_SCALE;
         uint256 swapAmount = borrowAmount + depositAmount;
@@ -78,7 +80,7 @@ contract DepositManagerTest is IntegrationBase {
     }
 
     function test_instantDepositWithLimit() public {
-        _createPartialDepositWithResolution();
+        _createPartialDepositWithResolution(depositAll);
 
         // i should be able to do an instant deposit of 0.001 xtz
         uint256 user1SharesBalanceBefore = superloop.balanceOf(user1);
@@ -100,7 +102,7 @@ contract DepositManagerTest is IntegrationBase {
     }
 
     function test_resolveDepositRequestWithPartials() public {
-        _createPartialDepositWithResolution(); // 300 worth of depostits, 150 pending
+        _createPartialDepositWithResolution(depositAll); // 300 worth of depostits, 150 pending
 
         // try to operate again
 
@@ -192,7 +194,7 @@ contract DepositManagerTest is IntegrationBase {
     }
 
     function test_resolveDepositRequestWithCancellation() public {
-        _createPartialDepositWithResolution(); // 300 worth of depostits, 150 pending
+        _createPartialDepositWithResolution(depositAll); // 300 worth of depostits, 150 pending
 
         // user1 should not be able to cancel deposit request 1 because it's already processed
         vm.startPrank(user1);
@@ -270,81 +272,5 @@ contract DepositManagerTest is IntegrationBase {
         vm.startPrank(user3);
         depositManager.requestDeposit(100 * XTZ_SCALE, address(0));
         vm.stopPrank();
-    }
-
-    function _makeDepositRequest(uint256 depositAmount, address user, bool _deal) public {
-        if (_deal) {
-            deal(XTZ, user, depositAmount);
-        }
-
-        vm.startPrank(user);
-        IERC20(XTZ).approve(address(depositManager), depositAmount);
-        depositManager.requestDeposit(depositAmount, address(0));
-        vm.stopPrank();
-    }
-
-    function _createPartialDepositWithResolution() public {
-        uint256 depositAmount = 100 * XTZ_SCALE;
-        _makeDepositRequest(depositAmount, user1, true);
-        _makeDepositRequest(depositAmount, user2, true);
-        _makeDepositRequest(depositAmount, user3, true);
-
-        uint256 depositAmount_firstBatch = (3 * depositAmount) / 2;
-        // build the operate call
-        uint256 supplyAmount = 250 * STXTZ_SCALE;
-        uint256 borrowAmount = 120 * XTZ_SCALE;
-        uint256 swapAmount = borrowAmount + depositAmount_firstBatch;
-        uint256 supplyAmountWithPremium = supplyAmount + (supplyAmount * 1) / 10000;
-
-        DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
-        moduleExecutionData[0] = _supplyCall(ST_XTZ, supplyAmount);
-        moduleExecutionData[1] = _borrowCall(XTZ, borrowAmount);
-
-        moduleExecutionData[2] =
-            _swapCallExactOutCurve(XTZ, ST_XTZ, XTZ_STXTZ_POOL, swapAmount, supplyAmountWithPremium, XTZ_STXTZ_SWAP);
-
-        DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
-        intermediateExecutionData[0] = _flashloanCall(ST_XTZ, supplyAmount, abi.encode(moduleExecutionData));
-
-        DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
-        finalExecutionData[0] =
-            _resolveDepositRequestsCall(XTZ, depositAmount_firstBatch, abi.encode(intermediateExecutionData));
-
-        uint256 exchangeRateBefore = superloop.convertToAssets(ONE_SHARE);
-
-        vm.prank(admin);
-        superloop.operate(finalExecutionData);
-
-        // user 1 and user user 2 should get shares
-        // user 3 should not get shares
-        assertTrue(superloop.balanceOf(user1) > 0);
-        assertTrue(superloop.balanceOf(user2) > 0);
-        assertTrue(superloop.balanceOf(user3) == 0);
-
-        // deposit manager should have 150 xtz now
-        assertEq(IERC20(XTZ).balanceOf(address(depositManager)), 150 * XTZ_SCALE);
-        // pending deposits should be 150 xtz
-        assertEq(depositManager.totalPendingDeposits(), 150 * XTZ_SCALE);
-
-        // resolution id pointer should be 2
-        assertEq(depositManager.resolutionIdPointer(), 2);
-
-        // deposit request 1 should be fully processed
-        DataTypes.DepositRequestData memory depositRequest1 = depositManager.depositRequest(1);
-        assertEq(uint256(depositRequest1.state), uint256(DataTypes.RequestProcessingState.FULLY_PROCESSED));
-        assertEq(depositRequest1.amountProcessed, 100 * XTZ_SCALE);
-
-        // deposit request 2 should be partially processed
-        DataTypes.DepositRequestData memory depositRequest2 = depositManager.depositRequest(2);
-        assertEq(uint256(depositRequest2.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_PROCESSED));
-        assertEq(depositRequest2.amountProcessed, 50 * XTZ_SCALE);
-
-        // deposit request 3 should be unprocessed
-        DataTypes.DepositRequestData memory depositRequest3 = depositManager.depositRequest(3);
-        assertEq(uint256(depositRequest3.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
-
-        // exchange rate before should equal to exchange rate after
-        uint256 exchangeRateAfter = superloop.convertToAssets(ONE_SHARE);
-        assertApproxEqAbs(exchangeRateBefore, exchangeRateAfter, 1000);
     }
 }

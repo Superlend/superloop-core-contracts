@@ -27,6 +27,7 @@ import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UniversalAccountant} from "../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
 import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
+import {WithdrawManagerCallbackHandler} from "../../src/modules/callback/WithdrawManagerCallbackHandler.sol";
 
 contract TestBase is Test {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -55,6 +56,7 @@ contract TestBase is Test {
     Superloop public superloop;
     AaveV3FlashloanModule public flashloanModule;
     DepositManagerCallbackHandler public depositManagerCallbackHandler;
+    WithdrawManagerCallbackHandler public withdrawManagerCallbackHandler;
     AaveV3CallbackHandler public callbackHandler;
     AaveV3SupplyModule public supplyModule;
     AaveV3WithdrawModule public withdrawModule;
@@ -121,6 +123,8 @@ contract TestBase is Test {
         moduleRegistry.setModule("UniversalDexModule", address(dexModule));
         depositManagerCallbackHandler = new DepositManagerCallbackHandler();
         moduleRegistry.setModule("DepositManagerCallbackHandler", address(depositManagerCallbackHandler));
+        withdrawManagerCallbackHandler = new WithdrawManagerCallbackHandler();
+        moduleRegistry.setModule("WithdrawManagerCallbackHandler", address(withdrawManagerCallbackHandler));
 
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");
@@ -131,6 +135,7 @@ contract TestBase is Test {
         vm.label(address(repayModule), "repayModule");
         vm.label(address(dexModule), "dexModule");
         vm.label(address(depositManagerCallbackHandler), "depositManagerCallbackHandler");
+        vm.label(address(withdrawManagerCallbackHandler), "withdrawManagerCallbackHandler");
     }
 
     function _deployAccountant(address vault) internal {

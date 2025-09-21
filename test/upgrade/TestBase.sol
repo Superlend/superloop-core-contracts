@@ -17,7 +17,7 @@ import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProv
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {UniversalDexModule} from "../../src/modules/UniversalDexModule.sol";
 import {AccountantAaveV3} from "../../src/core/Accountant/aaveV3Accountant/AccountantAaveV3.sol";
-import {WithdrawManager} from "../../src/core/WithdrawManager/Legacy/WithdrawManager.sol";
+import {WithdrawManager} from "../../src/core/WithdrawManager/WithdrawManager.sol";
 import {DepositManager} from "../../src/core/DepositManager/DepositManager.sol";
 
 contract TestBase is Test {

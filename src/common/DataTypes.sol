@@ -116,8 +116,8 @@ library DataTypes {
      * @param superloopModuleRegistry The address of the module registry
      * @param modules Array of module addresses to register
      * @param cashReserve The amount of cash reserve for the vault. Represented in BPS
-     * @param accountantModule The address of the accountant module
-     * @param withdrawManagerModule The address of the withdraw manager module
+     * @param accountant The address of the accountant module
+     * @param withdrawManager The address of the withdraw manager module
      * @param vaultAdmin The address of the vault admin
      * @param treasury The address of the treasury
      */
@@ -132,8 +132,8 @@ library DataTypes {
         address[] modules;
         uint256 cashReserve;
         // essential roles
-        address accountantModule;
-        address withdrawManagerModule;
+        address accountant;
+        address withdrawManager;
         address depositManager;
         address vaultAdmin;
         address treasury;

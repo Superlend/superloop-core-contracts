@@ -53,14 +53,13 @@ abstract contract SuperloopBase {
     }
 
     function setAccountantModule(address accountantModule_) external onlyVaultAdmin {
-        address oldModule = SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule;
+        address oldModule = SuperloopStorage.getSuperloopEssentialRolesStorage().accountant;
         SuperloopStorage.setAccountantModule(accountantModule_);
         emit AccountantModuleUpdated(oldModule, accountantModule_);
     }
 
     function setWithdrawManagerModule(address withdrawManagerModule_) external onlyVaultAdmin {
-        address currentWithdrawManagerModule =
-            SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManagerModule;
+        address currentWithdrawManagerModule = SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManager;
 
         SuperloopStorage.setPrivilegedAddress(currentWithdrawManagerModule, false);
         SuperloopStorage.setWithdrawManagerModule(withdrawManagerModule_);
@@ -118,12 +117,12 @@ abstract contract SuperloopBase {
         return SuperloopStorage.getSuperloopStorage().cashReserve;
     }
 
-    function accountantModule() external view returns (address) {
-        return SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule;
+    function accountant() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().accountant;
     }
 
-    function withdrawManagerModule() external view returns (address) {
-        return SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManagerModule;
+    function withdrawManager() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManager;
     }
 
     function vaultAdmin() external view returns (address) {

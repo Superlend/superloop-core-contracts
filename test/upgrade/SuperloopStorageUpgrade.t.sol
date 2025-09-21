@@ -46,8 +46,8 @@ contract SuperloopStorageUpgradeTest is TestBase {
         bool[] registeredModules;
         address[] callbackHandlers;
         uint256 cashReserve;
-        address accountantModule;
-        address withdrawManagerModule;
+        address accountant;
+        address withdrawManager;
         address vaultAdmin;
         address treasury;
         bool[] privilegedAddresses;
@@ -111,8 +111,8 @@ contract SuperloopStorageUpgradeTest is TestBase {
             registeredModules: new bool[](5),
             callbackHandlers: new address[](1),
             cashReserve: isUpgraded ? superloop.cashReserve() : 0,
-            accountantModule: superloop.accountantModule(),
-            withdrawManagerModule: superloop.withdrawManagerModule(),
+            accountant: superloop.accountant(),
+            withdrawManager: superloop.withdrawManager(),
             vaultAdmin: superloop.vaultAdmin(),
             treasury: superloop.treasury(),
             privilegedAddresses: new bool[](3),
@@ -168,8 +168,8 @@ contract SuperloopStorageUpgradeTest is TestBase {
         }
 
         console.log("SuperloopEssentialRoles data--------------------------------");
-        console.log("Accountant Module: %s", results.accountantModule);
-        console.log("Withdraw Manager Module: %s", results.withdrawManagerModule);
+        console.log("Accountant Module: %s", results.accountant);
+        console.log("Withdraw Manager Module: %s", results.withdrawManager);
         console.log("Vault Admin: %s", results.vaultAdmin);
         console.log("Treasury: %s", results.treasury);
         console.log("Deposit Manager Module: %s", results.depositManagerModule);

@@ -67,8 +67,8 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
             SuperloopStorage.setRegisteredModule(data.modules[i], true);
         }
 
-        SuperloopStorage.setAccountantModule(data.accountantModule);
-        SuperloopStorage.setWithdrawManagerModule(data.withdrawManagerModule);
+        SuperloopStorage.setAccountantModule(data.accountant);
+        SuperloopStorage.setWithdrawManagerModule(data.withdrawManager);
         SuperloopStorage.setDepositManager(data.depositManager);
         SuperloopStorage.setVaultAdmin(data.vaultAdmin);
         SuperloopStorage.setTreasury(data.treasury);
@@ -76,7 +76,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
 
         SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
         SuperloopStorage.setPrivilegedAddress(data.treasury, true);
-        SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
+        SuperloopStorage.setPrivilegedAddress(data.withdrawManager, true);
         SuperloopStorage.setPrivilegedAddress(data.depositManager, true);
     }
 

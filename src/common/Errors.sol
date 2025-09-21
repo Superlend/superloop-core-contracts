@@ -51,4 +51,5 @@ library Errors {
     string public constant CALLER_NOT_DEPOSIT_MANAGER = "42"; // the caller of function is not deposit manager
     string public constant DEPOSIT_REQUEST_NOT_FOUND = "43"; // deposit request not found
     string public constant CANNOT_CLAIM_ZERO_AMOUNT = "44"; // cannot claim zero amount
+    string public constant CALLER_NOT_WITHDRAW_MANAGER = "45"; // the caller of function is not withdraw manager
 }

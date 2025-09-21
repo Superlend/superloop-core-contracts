@@ -37,11 +37,13 @@ contract AaveV3SupplyModule is AaveV3ActionModule {
         IPool pool = IPool(poolAddressesProvider.getPool());
 
         // approve the asset
-        SafeERC20.forceApprove(IERC20(params.asset), address(pool), params.amount);
+        uint256 amount =
+            params.amount == type(uint256).max ? IERC20(params.asset).balanceOf(address(this)) : params.amount;
+        SafeERC20.forceApprove(IERC20(params.asset), address(pool), amount);
 
         // supply the asset
-        pool.supply(params.asset, params.amount, address(this), 0);
+        pool.supply(params.asset, amount, address(this), 0);
 
-        emit AssetSupplied(params.asset, params.amount, address(this));
+        emit AssetSupplied(params.asset, amount, address(this));
     }
 }

@@ -16,6 +16,7 @@ import {Errors} from "../../common/Errors.sol";
 import {SafeERC20, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IWithdrawManagerCallbackHandler} from "../../interfaces/IWithdrawManagerCallbackHandler.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {console} from "forge-std/console.sol";
 
 contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, WithdrawManagerBase {
     event WithdrawRequested(
@@ -58,6 +59,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function requestWithdraw(uint256 shares, DataTypes.WithdrawRequestType requestType) external nonReentrant {
+        ISuperloop(vault()).realizePerformanceFee();
+
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         _validateWithdrawRequest($, _msgSender(), shares, requestType);
         _registerWithdrawRequest($, _msgSender(), shares, requestType);
@@ -109,6 +112,7 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
 
         // update the snapshot
         snapshot.totalSupplyAfter = snapshot.totalSupplyBefore - data.shares;
+        snapshot.totalAssetsAfter = ISuperloop(vaultCached).totalAssets();
 
         // calculate how much assets I can get for the shares I am burning
         uint256 totalAssetsToClaim = _calculateAssetsToClaim(snapshot);
@@ -321,13 +325,10 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function _calculateAssetsToClaim(DataTypes.ExchangeRateSnapshot memory snapshot) internal pure returns (uint256) {
-        // TODO: calculate if I need decimal offset here
-
-        uint256 totalAssetsAfter = Math.mulDiv(
+        uint256 totalAssetsAfterExpected = Math.mulDiv(
             snapshot.totalAssetsBefore, snapshot.totalSupplyAfter, snapshot.totalSupplyBefore, Math.Rounding.Floor
         );
-
-        uint256 totalAssetsToClaim = totalAssetsAfter - snapshot.totalAssetsBefore;
+        uint256 totalAssetsToClaim = snapshot.totalAssetsAfter - totalAssetsAfterExpected; // not adding underflow check because even at 100% slippage, the total assets to claim will be positive
         return totalAssetsToClaim;
     }
 

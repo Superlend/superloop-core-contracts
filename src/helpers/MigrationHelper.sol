@@ -123,7 +123,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         uint256 batches
     ) external onlyOwner nonReentrant returns (bool) {
         // Ensure withdraw manager has no balance to prevent conflicts
-        address blackListedUser = ISuperloop(oldVault).withdrawManagerModule();
+        address blackListedUser = ISuperloop(oldVault).withdrawManager();
         uint256 blackListedUserBalance = ISuperloop(oldVault).balanceOf(blackListedUser);
         if (blackListedUserBalance > 0) {
             revert("withdraw manager must be empty");

@@ -29,7 +29,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     function totalAssets() public view override returns (uint256) {
         SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
 
-        uint256 _totalAssets = IAccountantModule($.accountantModule).getTotalAssets();
+        uint256 _totalAssets = IAccountantModule($.accountant).getTotalAssets();
 
         return _totalAssets;
     }
@@ -161,7 +161,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         _mint(to, amount);
     }
 
-    function burnSharesAndClaimAssets(uint256 shares, uint256 assets) public onlyDepositManager {
+    function burnSharesAndClaimAssets(uint256 shares, uint256 assets) public onlyWithdrawManager {
         address receiver = _msgSender();
         _burn(receiver, shares);
         SafeERC20.safeTransfer(IERC20(asset()), receiver, assets);
@@ -173,10 +173,10 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         // calculate current exchange rate
         (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
 
-        uint256 sharesToMint = _getPerformanceFeeAndShares(exchangeRate, $.accountantModule, decimals);
+        uint256 sharesToMint = _getPerformanceFeeAndShares(exchangeRate, $.accountant, decimals);
 
         // update the last realized fee exchange rate on the accountant module via delegate call
-        IAccountantModule($.accountantModule).setLastRealizedFeeExchangeRate(exchangeRate, totalSupply());
+        IAccountantModule($.accountant).setLastRealizedFeeExchangeRate(exchangeRate, totalSupply());
 
         // if vault made profit, take a performance fee
         if (sharesToMint > 0) {
@@ -187,7 +187,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         }
     }
 
-    function _getPerformanceFeeAndShares(uint256 exchangeRate, address accountantModule, uint8 decimals)
+    function _getPerformanceFeeAndShares(uint256 exchangeRate, address accountant, uint8 decimals)
         internal
         view
         returns (uint256 shares)
@@ -196,8 +196,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         uint256 totalSupplyCached = totalSupply();
 
         // get performance fee
-        uint256 assets =
-            IAccountantModule(accountantModule).getPerformanceFee(totalSupplyCached, exchangeRate, decimals);
+        uint256 assets = IAccountantModule(accountant).getPerformanceFee(totalSupplyCached, exchangeRate, decimals);
 
         // calculate how much shares to dilute ie. mint for the treasury as performance fee
         uint256 denominator = totalAssetsCached - assets + 1;
@@ -227,7 +226,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     {
         (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
         uint256 treasuryShares = _getPerformanceFeeAndShares(
-            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule, decimals
+            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountant, decimals
         );
         uint256 _totalSupply = totalSupply() + treasuryShares + 10 ** _decimalsOffset();
         uint256 _totalAssets = totalAssets() + 1;
@@ -244,7 +243,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     {
         (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
         uint256 treasuryShares = _getPerformanceFeeAndShares(
-            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule, decimals
+            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountant, decimals
         );
         uint256 _totalSupply = totalSupply() + treasuryShares + 10 ** _decimalsOffset();
         uint256 _totalAssets = totalAssets() + 1;
@@ -277,6 +276,16 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     function _onlyPrivileged() internal view {
         SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
         require($.privilegedAddresses[_msgSender()], Errors.CALLER_NOT_PRIVILEGED);
+    }
+
+    modifier onlyWithdrawManager() {
+        _onlyWithdrawManager();
+        _;
+    }
+
+    function _onlyWithdrawManager() internal view {
+        SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
+        require($.withdrawManager == _msgSender(), Errors.CALLER_NOT_WITHDRAW_MANAGER);
     }
 
     modifier onlyDepositManager() {
