@@ -60,13 +60,13 @@ contract WithdrawTest is IntegrationBase {
         // lets say user want to redeem 0.5 shares
         // make a withdraw request for this
         uint256 shares = 5 * XTZ_SCALE * 10;
-        superloop.approve(address(withdrawManager), shares);
-        withdrawManager.requestWithdraw(shares);
+        superloop.approve(address(withdrawManagerLegacy), shares);
+        withdrawManagerLegacy.requestWithdraw(shares);
         vm.stopPrank();
 
         // check if the withdraw request is marked on the withdraw manager
         DataTypes.WithdrawRequestDataLegacy memory withdrawRequest =
-            withdrawManager.withdrawRequest(withdrawManager.nextWithdrawRequestId() - 1);
+            withdrawManagerLegacy.withdrawRequest(withdrawManagerLegacy.nextWithdrawRequestId() - 1);
 
         assertEq(withdrawRequest.shares, shares);
         assertEq(withdrawRequest.user, user1);
@@ -94,22 +94,23 @@ contract WithdrawTest is IntegrationBase {
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](2);
         finalExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
 
-        uint256 withdrawRequestId = withdrawManager.nextWithdrawRequestId() - 1;
+        uint256 withdrawRequestId = withdrawManagerLegacy.nextWithdrawRequestId() - 1;
         finalExecutionData[1] = DataTypes.ModuleExecutionData({
             executionType: DataTypes.CallType.CALL,
-            module: address(withdrawManager),
-            data: abi.encodeWithSelector(withdrawManager.resolveWithdrawRequests.selector, withdrawRequestId)
+            module: address(withdrawManagerLegacy),
+            data: abi.encodeWithSelector(withdrawManagerLegacy.resolveWithdrawRequests.selector, withdrawRequestId)
         });
 
         vm.prank(admin);
         superloop.operate(finalExecutionData);
 
-        uint256 xtzBalanceOfWithdrawManager = IERC20(XTZ).balanceOf(address(withdrawManager));
-        uint256 shareBalanceOfWithdrawManager = superloop.balanceOf(address(withdrawManager));
+        uint256 xtzBalanceOfWithdrawManager = IERC20(XTZ).balanceOf(address(withdrawManagerLegacy));
+        uint256 shareBalanceOfWithdrawManager = superloop.balanceOf(address(withdrawManagerLegacy));
 
-        DataTypes.WithdrawRequestDataLegacy memory _withdrawRequest = withdrawManager.withdrawRequest(withdrawRequestId);
+        DataTypes.WithdrawRequestDataLegacy memory _withdrawRequest =
+            withdrawManagerLegacy.withdrawRequest(withdrawRequestId);
 
-        DataTypes.WithdrawRequestStateLegacy state = withdrawManager.getWithdrawRequestState(withdrawRequestId);
+        DataTypes.WithdrawRequestStateLegacy state = withdrawManagerLegacy.getWithdrawRequestState(withdrawRequestId);
 
         assertTrue(xtzBalanceOfWithdrawManager > 0);
         assertTrue(shareBalanceOfWithdrawManager == 0);
@@ -119,11 +120,11 @@ contract WithdrawTest is IntegrationBase {
 
         uint256 user1BalanceBefore = IERC20(XTZ).balanceOf(address(user1));
         vm.prank(user1);
-        withdrawManager.withdraw();
+        withdrawManagerLegacy.withdraw();
 
-        _withdrawRequest = withdrawManager.withdrawRequest(withdrawRequestId);
+        _withdrawRequest = withdrawManagerLegacy.withdrawRequest(withdrawRequestId);
         uint256 user1BalanceAfter = IERC20(XTZ).balanceOf(address(user1));
-        state = withdrawManager.getWithdrawRequestState(withdrawRequestId);
+        state = withdrawManagerLegacy.getWithdrawRequestState(withdrawRequestId);
 
         assertTrue(user1BalanceAfter - user1BalanceBefore == _withdrawRequest.amount);
         assertTrue(_withdrawRequest.claimed == true);

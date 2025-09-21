@@ -18,7 +18,8 @@ import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProv
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {UniversalDexModule} from "../../src/modules/UniversalDexModule.sol";
 import {AccountantAaveV3} from "../../src/core/Accountant/aaveV3Accountant/AccountantAaveV3.sol";
-import {WithdrawManager} from "../../src/core/WithdrawManager/Legacy/WithdrawManager.sol";
+import {WithdrawManager as WithdrawManagerLegacy} from "../../src/core/WithdrawManager/Legacy/WithdrawManager.sol";
+import {WithdrawManager} from "../../src/core/WithdrawManager/WithdrawManager.sol";
 import {DepositManager} from "../../src/core/DepositManager/DepositManager.sol";
 import {DepositManagerCallbackHandler} from "../../src/modules/callback/DepositManagerCallbackHandler.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
@@ -62,7 +63,9 @@ contract TestBase is Test {
     UniversalDexModule public dexModule;
     AccountantAaveV3 public accountantAaveV3;
     UniversalAccountant public accountant;
+    WithdrawManagerLegacy public withdrawManagerLegacy;
     WithdrawManager public withdrawManager;
+
     DepositManager public depositManager;
 
     address public mockModule;
@@ -164,30 +167,37 @@ contract TestBase is Test {
         accountant = UniversalAccountant(address(proxy));
     }
 
-    function _deployWithdrawManager(address vault) internal {
-        WithdrawManager withdrawManagerImplementation = new WithdrawManager();
+    function _deployWithdrawManagerLegacy(address vault) internal {
+        WithdrawManagerLegacy withdrawManagerImplementation = new WithdrawManagerLegacy();
         ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
 
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(withdrawManagerImplementation),
             address(proxyAdmin),
-            abi.encodeWithSelector(WithdrawManager.initialize.selector, vault)
+            abi.encodeWithSelector(WithdrawManagerLegacy.initialize.selector, vault)
         );
 
-        withdrawManager = WithdrawManager(address(proxy));
+        withdrawManagerLegacy = WithdrawManagerLegacy(address(proxy));
     }
 
     function _deployDepositManager(address vault) internal {
         DepositManager depositManagerImplementation = new DepositManager();
-        // ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
-        vm.recordLogs();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(depositManagerImplementation),
             address(this),
             abi.encodeWithSelector(DepositManager.initialize.selector, vault)
         );
-        // Vm.Log[] memory entries = vm.getRecordedLogs();
 
         depositManager = DepositManager(address(proxy));
+    }
+
+    function _deployWithdrawManager(address vault) internal {
+        WithdrawManager withdrawManagerImplementation = new WithdrawManager();
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(withdrawManagerImplementation),
+            address(this),
+            abi.encodeWithSelector(WithdrawManager.initialize.selector, vault)
+        );
+        withdrawManager = WithdrawManager(address(proxy));
     }
 }

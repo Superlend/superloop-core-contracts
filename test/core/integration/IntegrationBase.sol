@@ -66,7 +66,7 @@ abstract contract IntegrationBase is TestBase {
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountantModule: address(accountant),
-            withdrawManagerModule: address(withdrawManager),
+            withdrawManagerModule: address(withdrawManagerLegacy),
             depositManager: address(0),
             cashReserve: 1000,
             vaultAdmin: admin,
@@ -83,7 +83,7 @@ abstract contract IntegrationBase is TestBase {
         superloop = Superloop(address(proxy));
 
         _deployAccountant(address(superloop));
-        _deployWithdrawManager(address(superloop));
+        _deployWithdrawManagerLegacy(address(superloop));
         _deployDepositManager(address(superloop));
 
         bytes32 key = keccak256(abi.encodePacked(POOL, IFlashLoanSimpleReceiver.executeOperation.selector));
@@ -92,16 +92,16 @@ abstract contract IntegrationBase is TestBase {
         superloop.setCallbackHandler(key, address(callbackHandler));
         superloop.setCallbackHandler(depositKey, address(depositManagerCallbackHandler));
 
-        moduleRegistry.setModule("withdrawManager", address(withdrawManager));
+        moduleRegistry.setModule("withdrawManagerLegacy", address(withdrawManagerLegacy));
         moduleRegistry.setModule("universalAccountant", address(accountant));
         moduleRegistry.setModule("depositManager", address(depositManager));
 
-        superloop.setRegisteredModule(address(withdrawManager), true);
+        superloop.setRegisteredModule(address(withdrawManagerLegacy), true);
         superloop.setRegisteredModule(address(accountant), true);
         superloop.setRegisteredModule(address(depositManager), true);
 
         superloop.setAccountantModule(address(accountant));
-        superloop.setWithdrawManagerModule(address(withdrawManager));
+        superloop.setWithdrawManagerModule(address(withdrawManagerLegacy));
         superloop.setDepositManagerModule(address(depositManager));
 
         vm.stopPrank();

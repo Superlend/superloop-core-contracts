@@ -60,11 +60,11 @@ contract DepositManagerTest is TestBase {
         superloop = Superloop(address(proxy));
 
         _deployAccountant(address(superloop));
-        _deployWithdrawManager(address(superloop));
+        _deployWithdrawManagerLegacy(address(superloop));
         _deployDepositManager(address(superloop));
 
         superloop.setAccountantModule(address(accountant));
-        superloop.setWithdrawManagerModule(address(withdrawManager));
+        superloop.setWithdrawManagerModule(address(withdrawManagerLegacy));
         superloop.setDepositManagerModule(address(depositManager));
 
         vm.stopPrank();

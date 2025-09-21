@@ -58,10 +58,10 @@ contract SuperloopTest is TestBase {
         superloop = Superloop(address(proxy));
 
         _deployAccountant(address(superloop));
-        _deployWithdrawManager(address(superloop));
+        _deployWithdrawManagerLegacy(address(superloop));
 
         superloop.setAccountantModule(address(accountantAaveV3));
-        superloop.setWithdrawManagerModule(address(withdrawManager));
+        superloop.setWithdrawManagerModule(address(withdrawManagerLegacy));
 
         vm.stopPrank();
 
