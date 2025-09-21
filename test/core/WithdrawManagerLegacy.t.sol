@@ -17,7 +17,7 @@ import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/Pro
 import {MockAsset} from "../../src/mock/MockAsset.sol";
 import {MockVault} from "../../src/mock/MockVault.sol";
 
-contract WithdrawManagerTest is Test {
+contract WithdrawManagerLegacyTest is Test {
     WithdrawManager public withdrawManagerImplementation;
     WithdrawManager public withdrawManager;
     ProxyAdmin public proxyAdmin;
