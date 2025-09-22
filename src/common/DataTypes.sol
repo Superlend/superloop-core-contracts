@@ -297,4 +297,9 @@ library DataTypes {
     struct StakeParams {
         uint256 assets;
     }
+
+    enum DepositType {
+        INSTANT,
+        REQUESTED
+    }
 }

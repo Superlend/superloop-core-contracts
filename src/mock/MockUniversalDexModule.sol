@@ -11,7 +11,7 @@ contract MockUniversalDexModule {
         mockAmountOut = _mockAmountOut;
     }
 
-    function executeAndExit(DataTypes.ExecuteSwapParams memory, address) external returns (uint256) {
+    function executeAndExit(DataTypes.ExecuteSwapParams memory, address) external view returns (uint256) {
         if (shouldRevert) {
             revert("MockDexModule: execution failed");
         }

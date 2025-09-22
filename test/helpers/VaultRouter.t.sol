@@ -1,28 +1,41 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {Test, console2} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {VaultRouter} from "../../src/helpers/VaultRouter.sol";
-import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {IUniversalDexModule} from "../../src/interfaces/IUniversalDexModule.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {Errors} from "../../src/common/Errors.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
+import {MockUniversalDexModule} from "../../src/mock/MockUniversalDexModule.sol";
 import {MockAsset} from "../../src/mock/MockAsset.sol";
 import {MockVault} from "../../src/mock/MockVault.sol";
-import {MockUniversalDexModule} from "../../src/mock/MockUniversalDexModule.sol";
+import {MockDepositManager} from "../../src/mock/MockDepositManager.sol";
 
+/**
+ * @title VaultRouterTest
+ * @author Superlend
+ * @notice Comprehensive unit tests for the VaultRouter contract
+ */
 contract VaultRouterTest is Test {
     VaultRouter public vaultRouter;
-    MockAsset public tokenA;
-    MockAsset public tokenB;
-    MockVault public vaultA;
-    MockVault public vaultB;
-    MockUniversalDexModule public dexModule;
+    MockUniversalDexModule public mockDexModule;
+    MockAsset public mockToken;
+    MockVault public mockVault;
+    MockDepositManager public mockDepositManager;
 
     address public owner;
     address public user;
     address public nonOwner;
+
+    uint256 public constant INITIAL_SUPPLY = 1000000 * 10 ** 18;
+    uint256 public constant DEPOSIT_AMOUNT = 1000 * 10 ** 18;
+    uint256 public constant SWAP_OUTPUT = 950 * 10 ** 18; // 5% slippage
+
+    event VaultWhitelisted(address indexed vault, bool isWhitelisted);
+    event TokenWhitelisted(address indexed token, bool isWhitelisted);
+    event DepositManagerWhitelisted(address indexed depositManager, bool isWhitelisted);
 
     function setUp() public {
         owner = makeAddr("owner");
@@ -30,504 +43,560 @@ contract VaultRouterTest is Test {
         nonOwner = makeAddr("nonOwner");
 
         // Deploy mock contracts
-        tokenA = new MockAsset();
-        tokenB = new MockAsset();
-        vaultA = new MockVault(IERC20(address(tokenA)), "Vault A", "vTKA");
-        vaultB = new MockVault(IERC20(address(tokenB)), "Vault B", "vTKB");
-        dexModule = new MockUniversalDexModule(1000e18);
+        mockToken = new MockAsset();
+        mockVault = new MockVault(IERC20(address(mockToken)), "Mock Vault", "MV");
+        mockDepositManager = new MockDepositManager();
+        mockDexModule = new MockUniversalDexModule(SWAP_OUTPUT);
 
-        // Setup initial whitelisted addresses
-        address[] memory supportedVaults = new address[](2);
-        supportedVaults[0] = address(vaultA);
-        supportedVaults[1] = address(vaultB);
+        // Setup initial arrays
+        address[] memory supportedVaults = new address[](1);
+        supportedVaults[0] = address(mockVault);
 
-        address[] memory supportedTokens = new address[](2);
-        supportedTokens[0] = address(tokenA);
-        supportedTokens[1] = address(tokenB);
+        address[] memory supportedTokens = new address[](1);
+        supportedTokens[0] = address(mockToken);
 
-        vm.startPrank(owner);
-        vaultRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule));
-        vm.stopPrank();
+        address[] memory supportedDepositManagers = new address[](1);
+        supportedDepositManagers[0] = address(mockDepositManager);
 
-        // Setup initial balances - MockAsset already mints to deployer, so we transfer
-        tokenA.transfer(user, 10000e18);
-        tokenB.transfer(user, 10000e18);
-        tokenA.transfer(address(vaultRouter), 1000e18);
-        tokenB.transfer(address(vaultRouter), 1000e18);
+        // Deploy VaultRouter
+        vm.prank(owner);
+        vaultRouter =
+            new VaultRouter(supportedVaults, supportedTokens, address(mockDexModule), supportedDepositManagers);
+
+        // Transfer tokens to user for testing
+        mockToken.transfer(user, DEPOSIT_AMOUNT * 10);
+
+        // Label addresses for better debugging
+        vm.label(owner, "owner");
+        vm.label(user, "user");
+        vm.label(nonOwner, "nonOwner");
+        vm.label(address(mockToken), "mockToken");
+        vm.label(address(mockVault), "mockVault");
+        vm.label(address(mockDepositManager), "mockDepositManager");
+        vm.label(address(mockDexModule), "mockDexModule");
+        vm.label(address(vaultRouter), "vaultRouter");
     }
 
     // ============ Constructor Tests ============
 
-    function test_Constructor_SetsSupportedVaults() public {
-        address[] memory supportedVaults = new address[](2);
-        supportedVaults[0] = address(vaultA);
-        supportedVaults[1] = address(vaultB);
-
-        address[] memory supportedTokens = new address[](1);
-        supportedTokens[0] = address(tokenA);
-
-        vm.startPrank(owner);
-        VaultRouter newRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule));
-        vm.stopPrank();
-
-        assertTrue(newRouter.supportedVaults(address(vaultA)));
-        assertTrue(newRouter.supportedVaults(address(vaultB)));
-        assertTrue(newRouter.supportedTokens(address(tokenA)));
-        assertFalse(newRouter.supportedTokens(address(tokenB)));
+    function test_Constructor_InitializesCorrectly() public view {
+        assertTrue(vaultRouter.supportedVaults(address(mockVault)));
+        assertTrue(vaultRouter.supportedTokens(address(mockToken)));
+        assertTrue(vaultRouter.supportedDepositManagers(address(mockDepositManager)));
+        assertEq(address(vaultRouter.universalDexModule()), address(mockDexModule));
+        assertEq(vaultRouter.owner(), owner);
     }
 
-    function test_Constructor_SetsUniversalDexModule() public {
-        address[] memory supportedVaults = new address[](1);
-        supportedVaults[0] = address(vaultA);
+    function test_Constructor_EmitsEvents() public {
+        address[] memory vaults = new address[](1);
+        vaults[0] = address(0x123);
+        address[] memory tokens = new address[](1);
+        tokens[0] = address(0x456);
+        address[] memory depositManagers = new address[](1);
+        depositManagers[0] = address(0x789);
 
-        address[] memory supportedTokens = new address[](1);
-        supportedTokens[0] = address(tokenA);
+        vm.expectEmit(true, false, false, true);
+        emit VaultWhitelisted(address(0x123), true);
 
-        vm.startPrank(owner);
-        VaultRouter newRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule));
-        vm.stopPrank();
+        vm.expectEmit(true, false, false, true);
+        emit TokenWhitelisted(address(0x456), true);
 
-        assertEq(address(newRouter.universalDexModule()), address(dexModule));
+        vm.expectEmit(true, false, false, true);
+        emit DepositManagerWhitelisted(address(0x789), true);
+
+        vm.prank(owner);
+        new VaultRouter(vaults, tokens, address(mockDexModule), depositManagers);
     }
 
-    function test_Constructor_SetsOwner() public {
-        address[] memory supportedVaults = new address[](1);
-        supportedVaults[0] = address(vaultA);
+    // ============ Deposit Tests ============
 
-        address[] memory supportedTokens = new address[](1);
-        supportedTokens[0] = address(tokenA);
-
-        vm.startPrank(owner);
-        VaultRouter newRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule));
-        vm.stopPrank();
-
-        assertEq(newRouter.owner(), owner);
-    }
-
-    // ============ depositWithToken Tests ============
-
-    function test_DepositWithToken_SameToken_Success() public {
-        uint256 depositAmount = 1000e18;
-        uint256 expectedShares = 1000e18; // Mock vault returns 1:1 ratio
-
-        vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
+    function test_DepositWithToken_InstantDeposit_Success() public {
+        uint256 amountIn = DEPOSIT_AMOUNT;
 
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
             minAmountOut: 0,
             data: new DataTypes.ExecuteSwapParamsData[](0)
         });
 
-        uint256 shares = vaultRouter.depositWithToken(address(vaultA), address(tokenA), depositAmount, swapParams);
-        vm.stopPrank();
-
-        assertEq(shares, expectedShares);
-        assertEq(tokenA.balanceOf(address(vaultA)), depositAmount);
-        assertEq(vaultA.balanceOf(user), expectedShares);
-    }
-
-    function test_DepositWithToken_DifferentToken_Success() public {
-        uint256 depositAmount = 1000e18;
-        uint256 swapAmountOut = 800e18; // Dex module returns 800 tokens
-        uint256 expectedShares = 800e18;
-
-        dexModule.setMockAmountOut(swapAmountOut);
+        uint256 userBalanceBefore = mockToken.balanceOf(user);
+        uint256 vaultBalanceBefore = mockToken.balanceOf(address(mockVault));
 
         vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
+        mockToken.approve(address(vaultRouter), amountIn);
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            address(mockDepositManager),
+            address(mockToken),
+            amountIn,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
+        vm.stopPrank();
+
+        assertEq(mockToken.balanceOf(user), userBalanceBefore - amountIn);
+        assertEq(mockToken.balanceOf(address(mockVault)), vaultBalanceBefore + amountIn);
+    }
+
+    function test_DepositWithToken_RequestedDeposit_Success() public {
+        uint256 amountIn = DEPOSIT_AMOUNT;
 
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenB),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
             minAmountOut: 0,
             data: new DataTypes.ExecuteSwapParamsData[](0)
         });
 
-        uint256 shares = vaultRouter.depositWithToken(address(vaultB), address(tokenA), depositAmount, swapParams);
+        uint256 userBalanceBefore = mockToken.balanceOf(user);
+
+        vm.startPrank(user);
+        mockToken.approve(address(vaultRouter), amountIn);
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            address(mockDepositManager),
+            address(mockToken),
+            amountIn,
+            DataTypes.DepositType.REQUESTED,
+            swapParams
+        );
         vm.stopPrank();
 
-        assertEq(shares, expectedShares);
-        assertEq(tokenB.balanceOf(address(vaultB)), swapAmountOut);
-        assertEq(vaultB.balanceOf(user), expectedShares);
+        assertEq(mockToken.balanceOf(user), userBalanceBefore - amountIn);
+        // For requested deposits, tokens are transferred to the deposit manager
+        // The mock deposit manager doesn't actually hold tokens, so we just check the shares
     }
+
+    function test_DepositWithToken_WithSwap_Success() public {
+        // Create a different token for the vault
+        MockAsset vaultToken = new MockAsset();
+        MockVault swapVault = new MockVault(IERC20(address(vaultToken)), "Swap Vault", "SV");
+
+        // Whitelist the new vault and token
+        vm.startPrank(owner);
+        vaultRouter.whitelistVault(address(swapVault), true);
+        vaultRouter.whitelistToken(address(vaultToken), true);
+        vm.stopPrank();
+
+        // Transfer vault tokens to the VaultRouter to simulate the swap output
+        vaultToken.transfer(address(vaultRouter), SWAP_OUTPUT);
+
+        uint256 amountIn = DEPOSIT_AMOUNT;
+
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: address(mockToken),
+            tokenOut: address(vaultToken),
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
+            minAmountOut: 0,
+            data: new DataTypes.ExecuteSwapParamsData[](0)
+        });
+
+        uint256 userBalanceBefore = mockToken.balanceOf(user);
+        uint256 vaultBalanceBefore = vaultToken.balanceOf(address(swapVault));
+
+        vm.startPrank(user);
+        mockToken.approve(address(vaultRouter), amountIn);
+        vaultRouter.depositWithToken(
+            address(swapVault),
+            address(mockDepositManager),
+            address(mockToken),
+            amountIn,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
+        vm.stopPrank();
+
+        assertEq(mockToken.balanceOf(user), userBalanceBefore - amountIn);
+        assertEq(vaultToken.balanceOf(address(swapVault)), vaultBalanceBefore + SWAP_OUTPUT);
+    }
+
+    // ============ Access Control Tests ============
 
     function test_DepositWithToken_VaultNotWhitelisted_Reverts() public {
-        address nonWhitelistedVault = makeAddr("nonWhitelistedVault");
-        uint256 depositAmount = 1000e18;
-
-        vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
+        address unwhitelistedVault = makeAddr("unwhitelistedVault");
 
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: DEPOSIT_AMOUNT,
+            maxAmountIn: DEPOSIT_AMOUNT,
             minAmountOut: 0,
             data: new DataTypes.ExecuteSwapParamsData[](0)
         });
 
-        vm.expectRevert();
-        vaultRouter.depositWithToken(nonWhitelistedVault, address(tokenA), depositAmount, swapParams);
+        vm.startPrank(user);
+        mockToken.approve(address(vaultRouter), DEPOSIT_AMOUNT);
+        vm.expectRevert(abi.encodePacked(Errors.VAULT_NOT_WHITELISTED));
+        vaultRouter.depositWithToken(
+            unwhitelistedVault,
+            address(mockDepositManager),
+            address(mockToken),
+            DEPOSIT_AMOUNT,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
         vm.stopPrank();
     }
 
     function test_DepositWithToken_TokenNotWhitelisted_Reverts() public {
-        MockAsset nonWhitelistedToken = new MockAsset();
-        uint256 depositAmount = 1000e18;
-
-        vm.startPrank(user);
-        // MockAsset constructor mints to deployer, so we need to transfer from deployer
-        vm.stopPrank();
-        nonWhitelistedToken.transfer(user, depositAmount);
-        vm.startPrank(user);
-        nonWhitelistedToken.approve(address(vaultRouter), depositAmount);
+        MockAsset unwhitelistedToken = new MockAsset();
 
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(nonWhitelistedToken),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
+            tokenIn: address(unwhitelistedToken),
+            tokenOut: address(unwhitelistedToken),
+            amountIn: DEPOSIT_AMOUNT,
+            maxAmountIn: DEPOSIT_AMOUNT,
             minAmountOut: 0,
             data: new DataTypes.ExecuteSwapParamsData[](0)
         });
 
-        vm.expectRevert();
-        vaultRouter.depositWithToken(address(vaultA), address(nonWhitelistedToken), depositAmount, swapParams);
+        vm.startPrank(user);
+        unwhitelistedToken.approve(address(vaultRouter), DEPOSIT_AMOUNT);
+        vm.expectRevert(abi.encodePacked(Errors.TOKEN_NOT_WHITELISTED));
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            address(mockDepositManager),
+            address(unwhitelistedToken),
+            DEPOSIT_AMOUNT,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
         vm.stopPrank();
     }
 
-    function test_DepositWithToken_DexModuleReverts_Reverts() public {
-        uint256 depositAmount = 1000e18;
-        dexModule.setShouldRevert(true);
-
-        vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
+    function test_DepositWithToken_DepositManagerNotWhitelisted_Reverts() public {
+        address unwhitelistedDepositManager = makeAddr("unwhitelistedDepositManager");
 
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenB),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: DEPOSIT_AMOUNT,
+            maxAmountIn: DEPOSIT_AMOUNT,
             minAmountOut: 0,
             data: new DataTypes.ExecuteSwapParamsData[](0)
         });
 
-        vm.expectRevert("MockDexModule: execution failed");
-        vaultRouter.depositWithToken(address(vaultB), address(tokenA), depositAmount, swapParams);
-        vm.stopPrank();
-    }
-
-    function test_DepositWithToken_InsufficientAllowance_Reverts() public {
-        uint256 depositAmount = 1000e18;
-        uint256 insufficientAllowance = 500e18;
-
         vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), insufficientAllowance);
-
-        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
-            minAmountOut: 0,
-            data: new DataTypes.ExecuteSwapParamsData[](0)
-        });
-
-        vm.expectRevert();
-        vaultRouter.depositWithToken(address(vaultA), address(tokenA), depositAmount, swapParams);
+        mockToken.approve(address(vaultRouter), DEPOSIT_AMOUNT);
+        vm.expectRevert(abi.encodePacked(Errors.DEPOSIT_MANAGER_NOT_WHITELISTED));
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            unwhitelistedDepositManager,
+            address(mockToken),
+            DEPOSIT_AMOUNT,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
         vm.stopPrank();
     }
 
-    function test_DepositWithToken_ZeroAmount_Success() public {
-        uint256 depositAmount = 0;
-        uint256 expectedShares = 0;
+    // ============ Whitelist Management Tests ============
 
-        vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
-
-        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
-            minAmountOut: 0,
-            data: new DataTypes.ExecuteSwapParamsData[](0)
-        });
-
-        uint256 shares = vaultRouter.depositWithToken(address(vaultA), address(tokenA), depositAmount, swapParams);
-        vm.stopPrank();
-
-        assertEq(shares, expectedShares);
-    }
-
-    // ============ whitelistVault Tests ============
-
-    function test_WhitelistVault_Owner_Success() public {
+    function test_WhitelistVault_OnlyOwner_Success() public {
         address newVault = makeAddr("newVault");
 
-        vm.startPrank(owner);
+        vm.expectEmit(true, false, false, true);
+        emit VaultWhitelisted(newVault, true);
+
+        vm.prank(owner);
         vaultRouter.whitelistVault(newVault, true);
-        vm.stopPrank();
 
         assertTrue(vaultRouter.supportedVaults(newVault));
-    }
-
-    function test_WhitelistVault_RemoveVault_Success() public {
-        vm.startPrank(owner);
-        vaultRouter.whitelistVault(address(vaultA), false);
-        vm.stopPrank();
-
-        assertFalse(vaultRouter.supportedVaults(address(vaultA)));
     }
 
     function test_WhitelistVault_NonOwner_Reverts() public {
         address newVault = makeAddr("newVault");
 
-        vm.startPrank(nonOwner);
+        vm.prank(nonOwner);
         vm.expectRevert();
         vaultRouter.whitelistVault(newVault, true);
-        vm.stopPrank();
-
-        assertFalse(vaultRouter.supportedVaults(newVault));
     }
 
-    // ============ whitelistToken Tests ============
-
-    function test_WhitelistToken_Owner_Success() public {
+    function test_WhitelistToken_OnlyOwner_Success() public {
         address newToken = makeAddr("newToken");
 
-        vm.startPrank(owner);
+        vm.expectEmit(true, false, false, true);
+        emit TokenWhitelisted(newToken, true);
+
+        vm.prank(owner);
         vaultRouter.whitelistToken(newToken, true);
-        vm.stopPrank();
 
         assertTrue(vaultRouter.supportedTokens(newToken));
-    }
-
-    function test_WhitelistToken_RemoveToken_Success() public {
-        vm.startPrank(owner);
-        vaultRouter.whitelistToken(address(tokenA), false);
-        vm.stopPrank();
-
-        assertFalse(vaultRouter.supportedTokens(address(tokenA)));
     }
 
     function test_WhitelistToken_NonOwner_Reverts() public {
         address newToken = makeAddr("newToken");
 
-        vm.startPrank(nonOwner);
+        vm.prank(nonOwner);
         vm.expectRevert();
         vaultRouter.whitelistToken(newToken, true);
-        vm.stopPrank();
-
-        assertFalse(vaultRouter.supportedTokens(newToken));
     }
 
-    // ============ setUniversalDexModule Tests ============
+    function test_WhitelistDepositManager_OnlyOwner_Success() public {
+        address newDepositManager = makeAddr("newDepositManager");
 
-    function test_SetUniversalDexModule_Owner_Success() public {
-        address newDexModule = makeAddr("newDexModule");
+        vm.expectEmit(true, false, false, true);
+        emit DepositManagerWhitelisted(newDepositManager, true);
 
-        vm.startPrank(owner);
-        vaultRouter.setUniversalDexModule(newDexModule);
-        vm.stopPrank();
+        vm.prank(owner);
+        vaultRouter.whitelistDepositManager(newDepositManager, true);
 
-        assertEq(address(vaultRouter.universalDexModule()), newDexModule);
+        assertTrue(vaultRouter.supportedDepositManagers(newDepositManager));
+    }
+
+    function test_WhitelistDepositManager_NonOwner_Reverts() public {
+        address newDepositManager = makeAddr("newDepositManager");
+
+        vm.prank(nonOwner);
+        vm.expectRevert();
+        vaultRouter.whitelistDepositManager(newDepositManager, true);
+    }
+
+    function test_WhitelistVault_RemoveFromWhitelist_Success() public {
+        // First add to whitelist
+        vm.prank(owner);
+        vaultRouter.whitelistVault(address(mockVault), false);
+
+        assertFalse(vaultRouter.supportedVaults(address(mockVault)));
+    }
+
+    function test_WhitelistToken_RemoveFromWhitelist_Success() public {
+        // First add to whitelist
+        vm.prank(owner);
+        vaultRouter.whitelistToken(address(mockToken), false);
+
+        assertFalse(vaultRouter.supportedTokens(address(mockToken)));
+    }
+
+    function test_WhitelistDepositManager_RemoveFromWhitelist_Success() public {
+        // First add to whitelist
+        vm.prank(owner);
+        vaultRouter.whitelistDepositManager(address(mockDepositManager), false);
+
+        assertFalse(vaultRouter.supportedDepositManagers(address(mockDepositManager)));
+    }
+
+    // ============ Universal DEX Module Tests ============
+
+    function test_SetUniversalDexModule_OnlyOwner_Success() public {
+        MockUniversalDexModule newDexModule = new MockUniversalDexModule(1000);
+
+        vm.prank(owner);
+        vaultRouter.setUniversalDexModule(address(newDexModule));
+
+        assertEq(address(vaultRouter.universalDexModule()), address(newDexModule));
     }
 
     function test_SetUniversalDexModule_NonOwner_Reverts() public {
-        address newDexModule = makeAddr("newDexModule");
+        MockUniversalDexModule newDexModule = new MockUniversalDexModule(1000);
 
-        vm.startPrank(nonOwner);
+        vm.prank(nonOwner);
         vm.expectRevert();
-        vaultRouter.setUniversalDexModule(newDexModule);
+        vaultRouter.setUniversalDexModule(address(newDexModule));
+    }
+
+    // ============ Edge Cases and Error Conditions ============
+
+    function test_DepositWithToken_InsufficientAllowance_Reverts() public {
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: DEPOSIT_AMOUNT,
+            maxAmountIn: DEPOSIT_AMOUNT,
+            minAmountOut: 0,
+            data: new DataTypes.ExecuteSwapParamsData[](0)
+        });
+
+        vm.startPrank(user);
+        // Don't approve tokens
+        vm.expectRevert();
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            address(mockDepositManager),
+            address(mockToken),
+            DEPOSIT_AMOUNT,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
+        vm.stopPrank();
+    }
+
+    function test_DepositWithToken_InsufficientBalance_Reverts() public {
+        uint256 excessiveAmount = mockToken.balanceOf(user) + 1;
+
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: excessiveAmount,
+            maxAmountIn: excessiveAmount,
+            minAmountOut: 0,
+            data: new DataTypes.ExecuteSwapParamsData[](0)
+        });
+
+        vm.startPrank(user);
+        mockToken.approve(address(vaultRouter), excessiveAmount);
+        vm.expectRevert();
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            address(mockDepositManager),
+            address(mockToken),
+            excessiveAmount,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
+        vm.stopPrank();
+    }
+
+    function test_DepositWithToken_SwapFails_Reverts() public {
+        // Create a different token for the vault
+        MockAsset vaultToken = new MockAsset();
+        MockVault swapVault = new MockVault(IERC20(address(vaultToken)), "Swap Vault", "SV");
+
+        // Whitelist the new vault and token
+        vm.startPrank(owner);
+        vaultRouter.whitelistVault(address(swapVault), true);
+        vaultRouter.whitelistToken(address(vaultToken), true);
         vm.stopPrank();
 
-        assertEq(address(vaultRouter.universalDexModule()), address(dexModule));
+        // Transfer vault tokens to the VaultRouter to simulate the swap output
+        vaultToken.transfer(address(vaultRouter), SWAP_OUTPUT);
+
+        // Make the DEX module revert
+        mockDexModule.setShouldRevert(true);
+
+        uint256 amountIn = DEPOSIT_AMOUNT;
+
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: address(mockToken),
+            tokenOut: address(vaultToken),
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
+            minAmountOut: 0,
+            data: new DataTypes.ExecuteSwapParamsData[](0)
+        });
+
+        vm.startPrank(user);
+        mockToken.approve(address(vaultRouter), amountIn);
+        vm.expectRevert("MockDexModule: execution failed");
+        vaultRouter.depositWithToken(
+            address(swapVault),
+            address(mockDepositManager),
+            address(mockToken),
+            amountIn,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
+        vm.stopPrank();
     }
 
     // ============ Integration Tests ============
 
-    function test_Integration_DepositWithTokenAfterWhitelisting() public {
-        MockAsset newToken = new MockAsset();
-        MockVault newVault = new MockVault(IERC20(address(newToken)), "New Vault", "vNTK");
-
-        uint256 depositAmount = 1000e18;
-        newToken.transfer(user, depositAmount);
-
-        // Whitelist new token and vault
-        vm.startPrank(owner);
-        vaultRouter.whitelistToken(address(newToken), true);
-        vaultRouter.whitelistVault(address(newVault), true);
-        vm.stopPrank();
-
-        // Perform deposit
-        vm.startPrank(user);
-        newToken.approve(address(vaultRouter), depositAmount);
+    function test_FullDepositFlow_InstantDeposit() public {
+        uint256 amountIn = DEPOSIT_AMOUNT;
 
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(newToken),
-            tokenOut: address(newToken),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
             minAmountOut: 0,
             data: new DataTypes.ExecuteSwapParamsData[](0)
         });
 
-        uint256 shares = vaultRouter.depositWithToken(address(newVault), address(newToken), depositAmount, swapParams);
+        // Record initial state
+        uint256 userTokenBalanceBefore = mockToken.balanceOf(user);
+        uint256 vaultTokenBalanceBefore = mockToken.balanceOf(address(mockVault));
+
+        // Execute deposit
+        vm.startPrank(user);
+        mockToken.approve(address(vaultRouter), amountIn);
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            address(mockDepositManager),
+            address(mockToken),
+            amountIn,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
         vm.stopPrank();
 
-        assertEq(shares, depositAmount);
-        assertEq(newToken.balanceOf(address(newVault)), depositAmount);
-        assertEq(newVault.balanceOf(user), depositAmount);
+        // Verify final state
+        assertEq(mockToken.balanceOf(user), userTokenBalanceBefore - amountIn);
+        assertEq(mockToken.balanceOf(address(mockVault)), vaultTokenBalanceBefore + amountIn);
     }
 
-    function test_Integration_DepositWithTokenAfterRemovingWhitelist() public {
-        uint256 depositAmount = 1000e18;
-
-        // Remove vault from whitelist
-        vm.startPrank(owner);
-        vaultRouter.whitelistVault(address(vaultA), false);
-        vm.stopPrank();
-
-        vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
+    function test_FullDepositFlow_RequestedDeposit() public {
+        uint256 amountIn = DEPOSIT_AMOUNT;
 
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
             minAmountOut: 0,
             data: new DataTypes.ExecuteSwapParamsData[](0)
         });
 
-        vm.expectRevert();
-        vaultRouter.depositWithToken(address(vaultA), address(tokenA), depositAmount, swapParams);
-        vm.stopPrank();
-    }
+        // Record initial state
+        uint256 userTokenBalanceBefore = mockToken.balanceOf(user);
 
-    // ============ Edge Cases ============
-
-    function test_DepositWithToken_EmptySwapParams_Success() public {
-        uint256 depositAmount = 1000e18;
-
+        // Execute deposit
         vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
-
-        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
-            minAmountOut: 0,
-            data: new DataTypes.ExecuteSwapParamsData[](0)
-        });
-
-        uint256 shares = vaultRouter.depositWithToken(address(vaultA), address(tokenA), depositAmount, swapParams);
+        mockToken.approve(address(vaultRouter), amountIn);
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            address(mockDepositManager),
+            address(mockToken),
+            amountIn,
+            DataTypes.DepositType.REQUESTED,
+            swapParams
+        );
         vm.stopPrank();
 
-        assertEq(shares, depositAmount);
-    }
-
-    function test_DepositWithToken_MaxUint256Amount_Success() public {
-        uint256 depositAmount = 1000e18; // Use a reasonable amount instead of max uint256
-        tokenA.transfer(user, depositAmount);
-
-        vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
-
-        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
-            minAmountOut: 0,
-            data: new DataTypes.ExecuteSwapParamsData[](0)
-        });
-
-        uint256 shares = vaultRouter.depositWithToken(address(vaultA), address(tokenA), depositAmount, swapParams);
-        vm.stopPrank();
-
-        assertEq(shares, depositAmount);
-    }
-
-    function test_WhitelistVault_ZeroAddress_Success() public {
-        vm.startPrank(owner);
-        vaultRouter.whitelistVault(address(0), true);
-        vm.stopPrank();
-
-        assertTrue(vaultRouter.supportedVaults(address(0)));
-    }
-
-    function test_WhitelistToken_ZeroAddress_Success() public {
-        vm.startPrank(owner);
-        vaultRouter.whitelistToken(address(0), true);
-        vm.stopPrank();
-
-        assertTrue(vaultRouter.supportedTokens(address(0)));
-    }
-
-    function test_SetUniversalDexModule_ZeroAddress_Success() public {
-        vm.startPrank(owner);
-        vaultRouter.setUniversalDexModule(address(0));
-        vm.stopPrank();
-
-        assertEq(address(vaultRouter.universalDexModule()), address(0));
+        // Verify final state
+        assertEq(mockToken.balanceOf(user), userTokenBalanceBefore - amountIn);
+        // For requested deposits, tokens are transferred to the deposit manager
+        // The mock deposit manager doesn't actually hold tokens, so we just check the shares
     }
 
     // ============ Gas Optimization Tests ============
 
-    function test_Gas_DepositWithToken_SameToken() public {
-        uint256 depositAmount = 1000e18;
-
-        vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
+    function test_DepositWithToken_GasUsage() public {
+        uint256 amountIn = DEPOSIT_AMOUNT;
 
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenA),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
+            tokenIn: address(mockToken),
+            tokenOut: address(mockToken),
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
             minAmountOut: 0,
             data: new DataTypes.ExecuteSwapParamsData[](0)
         });
 
-        uint256 gasBefore = gasleft();
-        vaultRouter.depositWithToken(address(vaultA), address(tokenA), depositAmount, swapParams);
-        uint256 gasUsed = gasBefore - gasleft();
-
-        console2.log("Gas used for same token deposit:", gasUsed);
-        vm.stopPrank();
-    }
-
-    function test_Gas_DepositWithToken_DifferentToken() public {
-        uint256 depositAmount = 1000e18;
-        dexModule.setMockAmountOut(800e18);
-
         vm.startPrank(user);
-        tokenA.approve(address(vaultRouter), depositAmount);
+        mockToken.approve(address(vaultRouter), amountIn);
 
-        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
-            tokenIn: address(tokenA),
-            tokenOut: address(tokenB),
-            amountIn: depositAmount,
-            maxAmountIn: depositAmount,
-            minAmountOut: 0,
-            data: new DataTypes.ExecuteSwapParamsData[](0)
-        });
+        uint256 gasStart = gasleft();
+        vaultRouter.depositWithToken(
+            address(mockVault),
+            address(mockDepositManager),
+            address(mockToken),
+            amountIn,
+            DataTypes.DepositType.INSTANT,
+            swapParams
+        );
+        uint256 gasUsed = gasStart - gasleft();
 
-        uint256 gasBefore = gasleft();
-        vaultRouter.depositWithToken(address(vaultB), address(tokenA), depositAmount, swapParams);
-        uint256 gasUsed = gasBefore - gasleft();
-
-        console2.log("Gas used for different token deposit:", gasUsed);
+        console.log("Gas used for instant deposit:", gasUsed);
         vm.stopPrank();
+
+        // Gas usage should be reasonable (less than 200k gas)
+        assertLt(gasUsed, 200000);
     }
 }

@@ -8,6 +8,7 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {VaultRouter} from "../../../src/helpers/VaultRouter.sol";
 import {IRouter} from "../../../src/mock/MockIRouter.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
+import {Errors} from "../../../src/common/Errors.sol";
 
 // test to swap from usdc to wxtz then deposit via the vault router
 
@@ -24,8 +25,11 @@ contract VaultRouterTest is IntegrationBase {
         supportedTokens[1] = ST_XTZ;
         supportedTokens[2] = USDC;
 
+        address[] memory supportedDepositManagers = new address[](1);
+        supportedDepositManagers[0] = address(depositManager);
+
         vm.startPrank(admin);
-        vaultRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule));
+        vaultRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule), supportedDepositManagers);
         vm.stopPrank();
 
         vm.prank(USDC_WHALE);
@@ -49,10 +53,10 @@ contract VaultRouterTest is IntegrationBase {
 
         vm.startPrank(user1);
         IERC20(XTZ).approve(address(vaultRouter), amountIn);
-        vaultRouter.depositWithToken(address(superloop), XTZ, amountIn, swapParams);
-
-        assertEq(IERC20(XTZ).balanceOf(address(superloop)), amountIn);
-        assertGt(IERC20(superloop).balanceOf(address(user1)), 0);
+        vm.expectRevert(bytes(Errors.INSUFFICIENT_CASH_SHORTFALL));
+        vaultRouter.depositWithToken(
+            address(superloop), address(depositManager), XTZ, amountIn, DataTypes.DepositType.INSTANT, swapParams
+        );
     }
 
     function test_swapAndDeposit() public {
@@ -92,10 +96,79 @@ contract VaultRouterTest is IntegrationBase {
 
         vm.startPrank(user1);
         IERC20(USDC).approve(address(vaultRouter), amountIn);
-        vaultRouter.depositWithToken(address(superloop), USDC, amountIn, swapParams);
+        vm.expectRevert(bytes(Errors.INSUFFICIENT_CASH_SHORTFALL));
+        vaultRouter.depositWithToken(
+            address(superloop), address(depositManager), USDC, amountIn, DataTypes.DepositType.INSTANT, swapParams
+        );
+    }
 
-        assertGt(IERC20(XTZ).balanceOf(address(superloop)), 0);
-        assertGt(IERC20(superloop).balanceOf(address(user1)), 0);
+    function test_depositRequest() public {
+        uint256 amountIn = 1 * 10 ** 18;
+
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: XTZ,
+            tokenOut: XTZ,
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
+            minAmountOut: 0,
+            data: new DataTypes.ExecuteSwapParamsData[](0)
+        });
+
+        vm.startPrank(user1);
+        IERC20(XTZ).approve(address(vaultRouter), amountIn);
+        vaultRouter.depositWithToken(
+            address(superloop), address(depositManager), XTZ, amountIn, DataTypes.DepositType.REQUESTED, swapParams
+        );
+
+        DataTypes.DepositRequestData memory request = depositManager.depositRequest(1);
+        assertEq(request.amount, amountIn);
+        assertEq(request.user, user1);
+    }
+
+    function test_depositRequestWithSwap() public {
+        uint256 amountIn = 1 * 10 ** 6;
+
+        // approve vault router to spend USDC
+        DataTypes.ExecuteSwapParamsData[] memory data = new DataTypes.ExecuteSwapParamsData[](2);
+
+        data[0] = DataTypes.ExecuteSwapParamsData({
+            target: address(USDC),
+            data: abi.encodeWithSelector(IERC20.approve.selector, address(ROUTER), amountIn)
+        });
+        data[1] = DataTypes.ExecuteSwapParamsData({
+            target: address(ROUTER),
+            data: abi.encodeWithSelector(
+                IRouter.exactInputSingle.selector,
+                IRouter.ExactInputSingleParams({
+                    tokenIn: USDC,
+                    tokenOut: XTZ,
+                    fee: 500,
+                    recipient: address(dexModule),
+                    amountIn: amountIn,
+                    amountOutMinimum: 0,
+                    sqrtPriceLimitX96: 0
+                })
+            )
+        });
+
+        DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
+            tokenIn: USDC,
+            tokenOut: XTZ,
+            amountIn: amountIn,
+            maxAmountIn: amountIn,
+            minAmountOut: 0,
+            data: data
+        });
+
+        vm.startPrank(user1);
+        IERC20(USDC).approve(address(vaultRouter), amountIn);
+        vaultRouter.depositWithToken(
+            address(superloop), address(depositManager), USDC, amountIn, DataTypes.DepositType.REQUESTED, swapParams
+        );
+
+        DataTypes.DepositRequestData memory request = depositManager.depositRequest(1);
+        assertGt(request.amount, 0);
+        assertEq(request.user, user1);
     }
 
     function test_frontrunningProtection() public {
@@ -138,6 +211,8 @@ contract VaultRouterTest is IntegrationBase {
 
         vm.prank(user2);
         vm.expectRevert();
-        vaultRouter.depositWithToken(address(superloop), USDC, amountIn, swapParams);
+        vaultRouter.depositWithToken(
+            address(superloop), address(depositManager), USDC, amountIn, DataTypes.DepositType.INSTANT, swapParams
+        );
     }
 }

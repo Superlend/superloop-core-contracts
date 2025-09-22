@@ -8,6 +8,7 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Errors} from "../common/Errors.sol";
 import {DataTypes} from "../common/DataTypes.sol";
+import {IDepositManager} from "../interfaces/IDepositManager.sol";
 
 /**
  * @title VaultRouter
@@ -31,6 +32,13 @@ contract VaultRouter is Ownable {
     event TokenWhitelisted(address indexed token, bool isWhitelisted);
 
     /**
+     * @notice Emitted when a deposit manager is whitelisted or unwhitelisted
+     * @param depositManager The address of the deposit manager
+     * @param isWhitelisted True if the deposit manager is whitelisted, false if it is unwhitelisted
+     */
+    event DepositManagerWhitelisted(address indexed depositManager, bool isWhitelisted);
+
+    /**
      * @notice Mapping of supported vault addresses to their whitelist status
      */
     mapping(address => bool) public supportedVaults;
@@ -39,6 +47,11 @@ contract VaultRouter is Ownable {
      * @notice Mapping of supported token addresses to their whitelist status
      */
     mapping(address => bool) public supportedTokens;
+
+    /**
+     * @notice Mapping of supported deposit manager addresses to their whitelist status
+     */
+    mapping(address => bool) public supportedDepositManagers;
 
     /**
      * @notice The universal DEX module for token swaps
@@ -50,10 +63,14 @@ contract VaultRouter is Ownable {
      * @param _supportedVaults Array of initially supported vault addresses
      * @param _supportedTokens Array of initially supported token addresses
      * @param _universalDexModule The address of the universal DEX module
+     * @param _supportedDepositManagers Array of initially supported deposit manager addresses
      */
-    constructor(address[] memory _supportedVaults, address[] memory _supportedTokens, address _universalDexModule)
-        Ownable(_msgSender())
-    {
+    constructor(
+        address[] memory _supportedVaults,
+        address[] memory _supportedTokens,
+        address _universalDexModule,
+        address[] memory _supportedDepositManagers
+    ) Ownable(_msgSender()) {
         for (uint256 i = 0; i < _supportedVaults.length; i++) {
             supportedVaults[_supportedVaults[i]] = true;
 
@@ -66,6 +83,12 @@ contract VaultRouter is Ownable {
             emit TokenWhitelisted(_supportedTokens[i], true);
         }
 
+        for (uint256 i = 0; i < _supportedDepositManagers.length; i++) {
+            supportedDepositManagers[_supportedDepositManagers[i]] = true;
+
+            emit DepositManagerWhitelisted(_supportedDepositManagers[i], true);
+        }
+
         universalDexModule = IUniversalDexModule(_universalDexModule);
     }
 
@@ -75,32 +98,31 @@ contract VaultRouter is Ownable {
      * @param tokenIn The address of the input token
      * @param amountIn The amount of input tokens to deposit
      * @param swapParams Parameters for executing a swap if needed
-     * @return The number of shares received from the deposit
      */
     function depositWithToken(
         address vault,
+        address depositManager,
         address tokenIn,
         uint256 amountIn,
+        DataTypes.DepositType depositType,
         DataTypes.ExecuteSwapParams memory swapParams
-    ) external returns (uint256) {
+    ) external {
         require(supportedVaults[vault], Errors.VAULT_NOT_WHITELISTED);
         require(supportedTokens[tokenIn], Errors.TOKEN_NOT_WHITELISTED);
+        require(supportedDepositManagers[depositManager], Errors.DEPOSIT_MANAGER_NOT_WHITELISTED);
 
         address vaultAsset = IERC4626(vault).asset();
         SafeERC20.safeTransferFrom(IERC20(tokenIn), _msgSender(), address(this), amountIn);
 
         if (vaultAsset == tokenIn) {
-            SafeERC20.forceApprove(IERC20(tokenIn), vault, amountIn);
-            uint256 _shares = IERC4626(vault).deposit(amountIn, _msgSender());
-            return _shares;
+            _handleDeposit(vault, depositManager, tokenIn, amountIn, depositType);
+            return;
         }
 
         SafeERC20.forceApprove(IERC20(tokenIn), address(universalDexModule), amountIn);
         uint256 amountOut = universalDexModule.executeAndExit(swapParams, address(this));
 
-        SafeERC20.forceApprove(IERC20(vaultAsset), vault, amountOut);
-        uint256 shares = IERC4626(vault).deposit(amountOut, _msgSender());
-        return shares;
+        _handleDeposit(vault, depositManager, vaultAsset, amountOut, depositType);
     }
 
     /**
@@ -126,10 +148,65 @@ contract VaultRouter is Ownable {
     }
 
     /**
+     * @notice Adds or removes a deposit manager from the whitelist (restricted to owner)
+     * @param depositManager The address of the deposit manager to whitelist/unwhitelist
+     * @param isWhitelisted True to whitelist, false to remove from whitelist
+     */
+    function whitelistDepositManager(address depositManager, bool isWhitelisted) external onlyOwner {
+        supportedDepositManagers[depositManager] = isWhitelisted;
+
+        emit DepositManagerWhitelisted(depositManager, isWhitelisted);
+    }
+
+    /**
      * @notice Sets the universal DEX module address (restricted to owner)
      * @param _universalDexModule The address of the universal DEX module
      */
     function setUniversalDexModule(address _universalDexModule) external onlyOwner {
         universalDexModule = IUniversalDexModule(_universalDexModule);
+    }
+
+    /**
+     * @notice Handles the deposit based on the deposit type
+     * @param vault The address of the vault
+     * @param depositManager The address of the deposit manager
+     * @param tokenIn The address of the input token
+     * @param amountIn The amount of input tokens to deposit
+     * @param depositType The type of deposit
+     */
+    function _handleDeposit(
+        address vault,
+        address depositManager,
+        address tokenIn,
+        uint256 amountIn,
+        DataTypes.DepositType depositType
+    ) internal {
+        if (depositType == DataTypes.DepositType.INSTANT) {
+            _instantDeposit(vault, tokenIn, amountIn);
+        } else {
+            _requestedDeposit(depositManager, tokenIn, amountIn);
+        }
+    }
+
+    /**
+     * @notice Handles the instant deposit
+     * @param vault The address of the vault
+     * @param tokenIn The address of the input token
+     * @param amountIn The amount of input tokens to deposit
+     */
+    function _instantDeposit(address vault, address tokenIn, uint256 amountIn) internal {
+        SafeERC20.forceApprove(IERC20(tokenIn), vault, amountIn);
+        IERC4626(vault).deposit(amountIn, _msgSender());
+    }
+
+    /**
+     * @notice Handles the requested deposit
+     * @param depositManager The address of the deposit manager
+     * @param tokenIn The address of the input token
+     * @param amountIn The amount of input tokens to deposit
+     */
+    function _requestedDeposit(address depositManager, address tokenIn, uint256 amountIn) internal {
+        SafeERC20.forceApprove(IERC20(tokenIn), depositManager, amountIn);
+        IDepositManager(depositManager).requestDeposit(amountIn, _msgSender());
     }
 }

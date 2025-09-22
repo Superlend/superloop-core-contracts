@@ -55,4 +55,5 @@ library Errors {
     string public constant CALLER_NOT_VAULT_OPERATOR = "46"; // the caller of function is not vault operator
     string public constant VAULT_PAUSED = "47"; // vault is paused
     string public constant VAULT_FROZEN = "48"; // vault is frozen
+    string public constant DEPOSIT_MANAGER_NOT_WHITELISTED = "49"; // deposit manager is not whitelisted
 }
