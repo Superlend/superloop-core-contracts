@@ -2,9 +2,9 @@
 pragma solidity ^0.8.13;
 
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
-import {DataTypes} from "../common/DataTypes.sol";
-import {Errors} from "../common/Errors.sol";
-import {SuperloopStorage} from "../core/lib/SuperloopStorage.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
+import {Errors} from "../../common/Errors.sol";
+import {SuperloopStorage} from "../../core/lib/SuperloopStorage.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 

@@ -4,10 +4,10 @@ pragma solidity ^0.8.13;
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {SuperloopStorage} from "../core/lib/SuperloopStorage.sol";
-import {Errors} from "../common/Errors.sol";
+import {SuperloopStorage} from "../../core/lib/SuperloopStorage.sol";
+import {Errors} from "../../common/Errors.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
-import {DataTypes} from "../common/DataTypes.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
 contract AaveV3FlashloanModule is Context {

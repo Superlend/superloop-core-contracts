@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
-import {DataTypes} from "../common/DataTypes.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
 import {AaveV3ActionModule} from "./AaveV3ActionModule.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

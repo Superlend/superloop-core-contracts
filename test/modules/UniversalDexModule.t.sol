@@ -3,7 +3,7 @@
 pragma solidity ^0.8.13;
 
 import {console} from "forge-std/Test.sol";
-import {UniversalDexModule} from "../../src/modules/UniversalDexModule.sol";
+import {UniversalDexModule} from "../../src/modules/dex/UniversalDexModule.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {TestBase} from "../core/TestBase.sol";

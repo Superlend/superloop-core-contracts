@@ -8,8 +8,8 @@ import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAdd
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {DataTypes} from "../common/DataTypes.sol";
-import {AaveV3ActionModule} from "../modules/AaveV3ActionModule.sol";
-import {UniversalDexModule} from "../modules/UniversalDexModule.sol";
+import {AaveV3ActionModule} from "../modules/aave/AaveV3ActionModule.sol";
+import {UniversalDexModule} from "../modules/dex/UniversalDexModule.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 
