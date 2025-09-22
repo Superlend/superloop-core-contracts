@@ -121,7 +121,7 @@ contract Deploy is Script {
             modules: modules,
             accountant: address(accountant),
             withdrawManager: address(withdrawManager),
-            cashReserve: 1000,
+            cashReserve: 100,
             depositManager: address(depositManager),
             vaultAdmin: vaultAdmin,
             treasury: treasury
@@ -132,7 +132,7 @@ contract Deploy is Script {
             address(vaultAdmin),
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
-        superloop = Superloop(address(proxy));
+        superloop = Superloop(payable(address(proxy)));
 
         // deploy accountant
         _deployAccountant(address(superloop));

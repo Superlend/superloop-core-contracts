@@ -47,7 +47,7 @@ contract AaveV3EmodeModuleTest is TestBase {
             address(proxyAdmin),
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
-        superloop = Superloop(address(proxy));
+        superloop = Superloop(payable(address(proxy)));
 
         vm.stopPrank();
         user = makeAddr("user");

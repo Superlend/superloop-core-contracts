@@ -28,6 +28,8 @@ import {TransparentUpgradeableProxy} from
 import {UniversalAccountant} from "../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
 import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
 import {WithdrawManagerCallbackHandler} from "../../src/modules/callback/WithdrawManagerCallbackHandler.sol";
+import {UnwrapModule} from "../../src/modules/helper/UnwrapModule.sol";
+import {WrapModule} from "../../src/modules/helper/WrapModule.sol";
 
 contract TestBase is Test {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -67,6 +69,8 @@ contract TestBase is Test {
     UniversalAccountant public accountant;
     WithdrawManagerLegacy public withdrawManagerLegacy;
     WithdrawManager public withdrawManager;
+    UnwrapModule public unwrapModule;
+    WrapModule public wrapModule;
 
     DepositManager public depositManager;
 
@@ -125,6 +129,10 @@ contract TestBase is Test {
         moduleRegistry.setModule("DepositManagerCallbackHandler", address(depositManagerCallbackHandler));
         withdrawManagerCallbackHandler = new WithdrawManagerCallbackHandler();
         moduleRegistry.setModule("WithdrawManagerCallbackHandler", address(withdrawManagerCallbackHandler));
+        unwrapModule = new UnwrapModule(XTZ);
+        moduleRegistry.setModule("UnwrapModule", address(unwrapModule));
+        wrapModule = new WrapModule(XTZ);
+        moduleRegistry.setModule("WrapModule", address(wrapModule));
 
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");

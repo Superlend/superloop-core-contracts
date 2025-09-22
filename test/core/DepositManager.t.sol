@@ -57,7 +57,7 @@ contract DepositManagerTest is TestBase {
             address(proxyAdmin),
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
-        superloop = Superloop(address(proxy));
+        superloop = Superloop(payable(address(proxy)));
 
         _deployAccountant(address(superloop));
         _deployWithdrawManagerLegacy(address(superloop));

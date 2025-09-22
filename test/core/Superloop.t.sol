@@ -55,7 +55,7 @@ contract SuperloopTest is TestBase {
             address(proxyAdmin),
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
-        superloop = Superloop(address(proxy));
+        superloop = Superloop(payable(address(proxy)));
 
         _deployAccountant(address(superloop));
         _deployWithdrawManagerLegacy(address(superloop));
@@ -101,7 +101,7 @@ contract SuperloopTest is TestBase {
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
 
-        Superloop newSuperloop = Superloop(address(proxy));
+        Superloop newSuperloop = Superloop(payable(address(proxy)));
 
         // Test that the contract is properly initialized
         assertEq(newSuperloop.name(), "Test Vault");

@@ -124,7 +124,7 @@ contract Deploy is Script {
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
         ProxyAdmin(vaultProxyAdmin).transferOwnership(vaultAdmin);
-        superloop = Superloop(address(proxy));
+        superloop = Superloop(payable(address(proxy)));
 
         // deploy accountant
         _deployAccountant(address(superloop));

@@ -117,6 +117,9 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         }
     }
 
+    // TODO: Handle this more gracefully
+    receive() external payable {}
+
     /**
      * @notice Internal function to handle callback execution
      * @return The result of the callback execution

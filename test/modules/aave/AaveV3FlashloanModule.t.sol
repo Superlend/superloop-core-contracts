@@ -47,7 +47,7 @@ contract AaveV3FlashloanModuleTest is TestBase {
             address(proxyAdmin),
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
-        superloop = Superloop(address(proxy));
+        superloop = Superloop(payable(address(proxy)));
 
         bytes32 key = keccak256(abi.encodePacked(POOL, IFlashLoanSimpleReceiver.executeOperation.selector));
         superloop.setCallbackHandler(key, address(callbackHandler));

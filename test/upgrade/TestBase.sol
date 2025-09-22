@@ -68,7 +68,7 @@ contract TestBase is Test {
         moduleRegistry = SuperloopModuleRegistry(0x1480147Dd62d6Ea12630a617fb6743AB106CAFeA);
         accountantAaveV3 = AccountantAaveV3(0x3ffd7C95517Af13b999fDE7335c95201fD28B2Aa);
         withdrawManager = WithdrawManager(0x100295F097Aa724641E1037De05883C771BF3475);
-        superloop = Superloop(0xe24e5DEbA01Ab0B5D78A0093442De0864832803E);
+        superloop = Superloop(payable(0xe24e5DEbA01Ab0B5D78A0093442De0864832803E));
         flashloanModule = AaveV3FlashloanModule(0x653BDa572ca9D64B9f9De3Ade96Ed2Dd17fD55fB);
         callbackHandler = AaveV3CallbackHandler(0xbe775b5848D84283098e74a90F259A46f9342573);
         emodeModule = AaveV3EmodeModule(0x365916932cDCb4C6dcef136A065C4e3F81416BF6);
