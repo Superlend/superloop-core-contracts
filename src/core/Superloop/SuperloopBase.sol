@@ -17,6 +17,7 @@ abstract contract SuperloopBase {
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
     event PrivilegedAddressUpdated(address indexed privilegedAddress, bool oldStatus, bool newStatus);
     event CashReserveUpdated(uint256 oldReserve, uint256 newReserve);
+    event FallbackHandlerUpdated(bytes32 indexed key, address indexed oldHandler, address indexed newHandler);
 
     function setSupplyCap(uint256 supplyCap_) external onlyVaultAdmin {
         uint256 oldCap = SuperloopStorage.getSuperloopStorage().supplyCap;
@@ -50,6 +51,12 @@ abstract contract SuperloopBase {
         address oldHandler = SuperloopStorage.getSuperloopStorage().callbackHandlers[key];
         SuperloopStorage.setCallbackHandler(key, handler_);
         emit CallbackHandlerUpdated(key, oldHandler, handler_);
+    }
+
+    function setFallbackHandler(bytes32 key, address handler_) external onlyVaultAdmin {
+        address oldHandler = SuperloopStorage.getSuperloopStorage().fallbackHandlers[key];
+        SuperloopStorage.setFallbackHandler(key, handler_);
+        emit FallbackHandlerUpdated(key, oldHandler, handler_);
     }
 
     function setAccountantModule(address accountantModule_) external onlyVaultAdmin {
@@ -111,6 +118,10 @@ abstract contract SuperloopBase {
 
     function callbackHandler(bytes32 key) external view returns (address) {
         return SuperloopStorage.getSuperloopStorage().callbackHandlers[key];
+    }
+
+    function fallbackHandler(bytes32 key) external view returns (address) {
+        return SuperloopStorage.getSuperloopStorage().fallbackHandlers[key];
     }
 
     function cashReserve() external view returns (uint256) {

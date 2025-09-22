@@ -20,6 +20,7 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {SuperloopActions} from "./SuperloopActions.sol";
 import {SuperloopVault} from "./SuperloopVault.sol";
 import {SuperloopBase} from "./SuperloopBase.sol";
+import {console} from "forge-std/Test.sol";
 
 /**
  * @title Superloop
@@ -141,11 +142,22 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
     fallback(bytes calldata) external returns (bytes memory) {
         if (SuperloopStorage.isInExecutionContext()) {
             return _handleCallback();
+        } else {
+            bytes memory data = _handleFallback();
+            return data;
         }
     }
 
-    // TODO: Handle this more gracefully
-    receive() external payable {}
+    /**
+     * @notice Receives ETH sent to the vault
+     * @dev This function allows the vault to receive and operate with ETH
+     *      - WETH wrapping operations via WrapModule
+     *      - Unwrap operations via UnwrapModule     *
+     */
+    receive() external payable {
+        // ETH is accepted but should be managed through modules
+        // This allows for WETH wrapping, unwrapping and other ETH-based operations
+    }
 
     /**
      * @notice Internal function to handle callback execution
@@ -175,6 +187,31 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         }
 
         return abi.encode(success);
+    }
+
+    function _handleFallback() internal returns (bytes memory) {
+        /**
+         * 4 => selector
+         *     32 => encodedId
+         *     32 => callType
+         */
+        if (msg.data.length < 68) {
+            revert(Errors.INVALID_FALLBACK_DATA);
+        }
+
+        (bytes32 encodedId, DataTypes.CallType callType) = abi.decode(msg.data[4:4 + 64], (bytes32, DataTypes.CallType));
+        bytes32 key = keccak256(abi.encodePacked(msg.sig, encodedId, callType));
+
+        address handler = SuperloopStorage.getSuperloopStorage().fallbackHandlers[key];
+        require(handler != address(0), Errors.FALLBACK_HANDLER_NOT_FOUND);
+
+        if (callType == DataTypes.CallType.CALL) {
+            Address.functionCall(handler, msg.data);
+        } else {
+            Address.functionDelegateCall(handler, msg.data);
+        }
+
+        return abi.encode(true);
     }
 
     modifier onlyVaultOperator() {

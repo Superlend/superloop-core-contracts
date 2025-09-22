@@ -56,4 +56,6 @@ library Errors {
     string public constant VAULT_PAUSED = "47"; // vault is paused
     string public constant VAULT_FROZEN = "48"; // vault is frozen
     string public constant DEPOSIT_MANAGER_NOT_WHITELISTED = "49"; // deposit manager is not whitelisted
+    string public constant FALLBACK_HANDLER_NOT_FOUND = "50"; // fallback handler not found
+    string public constant INVALID_FALLBACK_DATA = "51"; // invalid fallback data
 }

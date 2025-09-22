@@ -26,6 +26,7 @@ library SuperloopStorage {
      * @param registeredModules Mapping from module address to registration status
      * @param callbackHandlers Mapping from callback key to handler address
      * @param cashReserve The amount of cash reserve for the vault. Represented in BPS
+     * @param fallbackHandlers Mapping from fallback key to handler address
      */
     struct SuperloopState {
         uint256 supplyCap;
@@ -33,6 +34,7 @@ library SuperloopStorage {
         uint256 cashReserve;
         mapping(address => bool) registeredModules;
         mapping(bytes32 => address) callbackHandlers;
+        mapping(bytes32 => address) fallbackHandlers;
     }
 
     /**
@@ -98,6 +100,16 @@ library SuperloopStorage {
     function setCallbackHandler(bytes32 key, address handler_) internal {
         SuperloopState storage $ = getSuperloopStorage();
         $.callbackHandlers[key] = handler_;
+    }
+
+    /**
+     * @notice Sets a fallback handler for a specific key
+     * @param key The key identifier for the fallback handler
+     * @param handler_ The address of the fallback handler
+     */
+    function setFallbackHandler(bytes32 key, address handler_) internal {
+        SuperloopState storage $ = getSuperloopStorage();
+        $.fallbackHandlers[key] = handler_;
     }
 
     /**
