@@ -287,4 +287,12 @@ library DataTypes {
         address[] lendAssets;
         address[] borrowAssets;
     }
+
+    /**
+     * @notice Structure for stake parameters
+     * @param assets The amount of assets to stake
+     */
+    struct StakeParams {
+        uint256 assets;
+    }
 }

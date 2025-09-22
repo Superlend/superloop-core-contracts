@@ -2,16 +2,17 @@
 
 pragma solidity ^0.8.13;
 
-import {TestBase} from "../core/TestBase.sol";
+import {TestBase} from "../../core/TestBase.sol";
 import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
-import {DataTypes} from "../../src/common/DataTypes.sol";
-import {Superloop} from "../../src/core/Superloop/Superloop.sol";
+import {DataTypes} from "../../../src/common/DataTypes.sol";
+import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {console} from "forge-std/console.sol";
 
-contract AaveV3FlashloanModuleTest is TestBase {
+contract AaveV3SupplyModuleTest is TestBase {
     Superloop public superloopImplementation;
     ProxyAdmin public proxyAdmin;
     address public user;
@@ -23,7 +24,7 @@ contract AaveV3FlashloanModuleTest is TestBase {
         _deployModules();
 
         address[] memory modules = new address[](1);
-        modules[0] = address(flashloanModule);
+        modules[0] = address(supplyModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
             asset: XTZ,
@@ -48,50 +49,46 @@ contract AaveV3FlashloanModuleTest is TestBase {
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
         superloop = Superloop(address(proxy));
-
-        bytes32 key = keccak256(abi.encodePacked(POOL, IFlashLoanSimpleReceiver.executeOperation.selector));
-        superloop.setCallbackHandler(key, address(callbackHandler));
         vm.stopPrank();
-        user = makeAddr("user");
 
+        user = makeAddr("user");
         vm.label(user, "user");
         vm.label(address(superloop), "superloop");
     }
 
-    function test_FlashloanBasicFlow() public {
+    function test_SupplyBasicFlow() public {
         vm.startPrank(XTZ_WHALE);
-        IERC20(XTZ).transfer(address(superloop), 10 * 10 ** 18);
+        IERC20(XTZ).transfer(address(superloop), 1000 * 10 ** 18);
         vm.stopPrank();
 
         // Arrange
-        uint256 flashloanAmount = 1000 * 10 ** 18; // 1000 XTZ
-        uint16 referralCode = 0;
+        uint256 supplyAmount = 1000 * 10 ** 18; // 1000 XTZ
 
-        // Create flashloan params
-        DataTypes.AaveV3FlashloanParams memory flashloanParams = DataTypes.AaveV3FlashloanParams({
-            asset: XTZ,
-            amount: flashloanAmount,
-            referralCode: referralCode,
-            callbackExecutionData: "" // No additional execution data for simple return
-        });
+        // Create supply params
+        DataTypes.AaveV3ActionParams memory supplyParams =
+            DataTypes.AaveV3ActionParams({asset: XTZ, amount: supplyAmount});
 
         // Create module execution data
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
         moduleExecutionData[0] = DataTypes.ModuleExecutionData({
             executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(flashloanModule),
-            data: abi.encodeWithSelector(flashloanModule.execute.selector, flashloanParams)
+            module: address(supplyModule),
+            data: abi.encodeWithSelector(supplyModule.execute.selector, supplyParams)
         });
 
-        // Record initial balances
-        uint256 initialXTZBalance = IERC20(XTZ).balanceOf(address(superloop));
+        // current supply
+        (uint256 currentSupply,,,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
+        uint256 currentBalance = IERC20(XTZ).balanceOf(address(superloop));
 
         // Act
         vm.prank(admin);
         superloop.operate(moduleExecutionData);
 
         // Assert
-        uint256 finalXTZBalance = IERC20(XTZ).balanceOf(address(superloop));
-        assertLt(finalXTZBalance, initialXTZBalance, "Balance should decrease slightly after flashloan due to premium");
+        (uint256 finalSupply,,,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
+        uint256 finalBalance = IERC20(XTZ).balanceOf(address(superloop));
+
+        assertEq(finalSupply, currentSupply + supplyAmount);
+        assertEq(finalBalance, currentBalance - supplyAmount);
     }
 }

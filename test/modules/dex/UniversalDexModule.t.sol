@@ -3,15 +3,15 @@
 pragma solidity ^0.8.13;
 
 import {console} from "forge-std/Test.sol";
-import {UniversalDexModule} from "../../src/modules/dex/UniversalDexModule.sol";
-import {DataTypes} from "../../src/common/DataTypes.sol";
+import {UniversalDexModule} from "../../../src/modules/dex/UniversalDexModule.sol";
+import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {TestBase} from "../core/TestBase.sol";
-import {Superloop} from "../../src/core/Superloop/Superloop.sol";
+import {TestBase} from "../../core/TestBase.sol";
+import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {IRouter} from "../../src/mock/MockIRouter.sol";
+import {IRouter} from "../../../src/mock/MockIRouter.sol";
 
 contract UniversalDexModuleTest is TestBase {
     Superloop public superloopImplementation;
