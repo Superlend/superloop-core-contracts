@@ -14,6 +14,7 @@ import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigur
 import {IRouter} from "../../../src/mock/MockIRouter.sol";
 import {ICurvePool} from "../../../src/mock/ICurvePool.sol";
 import {console} from "forge-std/console.sol";
+
 abstract contract IntegrationBase is TestBase {
     struct CURVE_IJ {
         int128 i;
@@ -451,7 +452,7 @@ abstract contract IntegrationBase is TestBase {
      * @notice Creates 3 withdraw requests with 100 shares each.
      * @notice request 1 is fully processed, request 2 is partially processed, request 3 is unprocessed.
      */
-    function _createPartialWithdrawWithResolution() internal {
+    function _createPartialWithdrawWithResolution() internal returns (uint256, uint256, uint256) {
         (uint256 supplyAmountUnscaled, uint256 borrowAmountUnscaled) = _createPartialDepositWithResolution(true);
 
         // make 3 withdraw requests
@@ -515,5 +516,7 @@ abstract contract IntegrationBase is TestBase {
         assertApproxEqAbs(exchangeRateAfter, exchangeRateBefore, 1000);
         assertEq(totalPendingWithdraws, totalShares - sharesToResolve);
         assertEq(resolutionIdPointer, 2);
+
+        return (totalShares - sharesToResolve, repayAmount, withdrawAmount);
     }
 }
