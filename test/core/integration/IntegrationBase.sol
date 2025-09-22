@@ -452,16 +452,19 @@ abstract contract IntegrationBase is TestBase {
      * @notice Creates 3 withdraw requests with 100 shares each.
      * @notice request 1 is fully processed, request 2 is partially processed, request 3 is unprocessed.
      */
-    function _createPartialWithdrawWithResolution() internal returns (uint256, uint256, uint256) {
+    function _createPartialWithdrawWithResolution(DataTypes.WithdrawRequestType requestType)
+        internal
+        returns (uint256, uint256, uint256)
+    {
         (uint256 supplyAmountUnscaled, uint256 borrowAmountUnscaled) = _createPartialDepositWithResolution(true);
 
         // make 3 withdraw requests
         uint256 user1ShareBalance = superloop.balanceOf(user1);
         uint256 user2ShareBalance = superloop.balanceOf(user2);
         uint256 user3ShareBalance = superloop.balanceOf(user3);
-        _makeWithdrawRequest(address(superloop), user1ShareBalance, user1, DataTypes.WithdrawRequestType.GENERAL);
-        _makeWithdrawRequest(address(superloop), user2ShareBalance, user2, DataTypes.WithdrawRequestType.GENERAL);
-        _makeWithdrawRequest(address(superloop), user3ShareBalance, user3, DataTypes.WithdrawRequestType.GENERAL);
+        _makeWithdrawRequest(address(superloop), user1ShareBalance, user1, requestType);
+        _makeWithdrawRequest(address(superloop), user2ShareBalance, user2, requestType);
+        _makeWithdrawRequest(address(superloop), user3ShareBalance, user3, requestType);
 
         // resolve 1st fully, and 2nd partially
         // repay half of borrow amount
@@ -481,9 +484,8 @@ abstract contract IntegrationBase is TestBase {
         intermediateExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
 
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
-        finalExecutionData[0] = _resolveWithdrawRequestsCall(
-            sharesToResolve, DataTypes.WithdrawRequestType.GENERAL, abi.encode(intermediateExecutionData)
-        );
+        finalExecutionData[0] =
+            _resolveWithdrawRequestsCall(sharesToResolve, requestType, abi.encode(intermediateExecutionData));
 
         uint256 exchangeRateBefore = superloop.convertToAssets(ONE_SHARE);
 
@@ -491,14 +493,11 @@ abstract contract IntegrationBase is TestBase {
         superloop.operate(finalExecutionData);
 
         // withdraw requests should have claimable > 0 and sharesProcessed > 0, exchange rate remains the same
-        DataTypes.WithdrawRequestData memory withdrawRequest1 =
-            withdrawManager.withdrawRequest(1, DataTypes.WithdrawRequestType.GENERAL);
-        DataTypes.WithdrawRequestData memory withdrawRequest2 =
-            withdrawManager.withdrawRequest(2, DataTypes.WithdrawRequestType.GENERAL);
-        DataTypes.WithdrawRequestData memory withdrawRequest3 =
-            withdrawManager.withdrawRequest(3, DataTypes.WithdrawRequestType.GENERAL);
-        uint256 resolutionIdPointer = withdrawManager.resolutionIdPointer(DataTypes.WithdrawRequestType.GENERAL);
-        uint256 totalPendingWithdraws = withdrawManager.totalPendingWithdraws(DataTypes.WithdrawRequestType.GENERAL);
+        DataTypes.WithdrawRequestData memory withdrawRequest1 = withdrawManager.withdrawRequest(1, requestType);
+        DataTypes.WithdrawRequestData memory withdrawRequest2 = withdrawManager.withdrawRequest(2, requestType);
+        DataTypes.WithdrawRequestData memory withdrawRequest3 = withdrawManager.withdrawRequest(3, requestType);
+        uint256 resolutionIdPointer = withdrawManager.resolutionIdPointer(requestType);
+        uint256 totalPendingWithdraws = withdrawManager.totalPendingWithdraws(requestType);
 
         assertTrue(withdrawRequest1.amountClaimable > 0);
         assertTrue(withdrawRequest1.sharesProcessed == withdrawRequest1.shares);

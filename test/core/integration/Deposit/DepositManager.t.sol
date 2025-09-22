@@ -11,6 +11,7 @@ import {Errors} from "../../../../src/common/Errors.sol";
 
 contract DepositManagerTest is IntegrationBase {
     bool depositAll = false;
+    DataTypes.WithdrawRequestType requestType = DataTypes.WithdrawRequestType.GENERAL;
 
     function setUp() public override {
         super.setUp();
