@@ -2,16 +2,16 @@
 
 pragma solidity ^0.8.13;
 
-import {TestBase} from "./TestBase.sol";
+import {TestBase} from "../TestBase.sol";
 import {console} from "forge-std/console.sol";
-import {Superloop} from "../../src/core/Superloop/Superloop.sol";
+import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {DataTypes} from "../../src/common/DataTypes.sol";
-import {Errors} from "../../src/common/Errors.sol";
+import {DataTypes} from "../../../src/common/DataTypes.sol";
+import {Errors} from "../../../src/common/Errors.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {DepositManager} from "../../src/core/DepositManager/DepositManager.sol";
+import {DepositManager} from "../../../src/core/DepositManager/DepositManager.sol";
 
 contract DepositManagerTest is TestBase {
     Superloop public superloopImplementation;

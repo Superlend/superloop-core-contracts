@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.13;
 
-import {IntegrationBase} from "../IntegrationBase.sol";
-import {DataTypes} from "../../../../src/common/DataTypes.sol";
+import {IntegrationBase} from "./IntegrationBase.sol";
+import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {console} from "forge-std/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {Errors} from "../../../../src/common/Errors.sol";
+import {Errors} from "../../../src/common/Errors.sol";
 
 contract WithdrawManagerTest is IntegrationBase {
     bool depositAll = true;

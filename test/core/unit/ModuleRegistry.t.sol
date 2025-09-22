@@ -3,9 +3,9 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
-import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegistry.sol";
-import {DataTypes} from "../../src/common/DataTypes.sol";
-import {Errors} from "../../src/common/Errors.sol";
+import {SuperloopModuleRegistry} from "../../../src/core/ModuleRegistry/ModuleRegistry.sol";
+import {DataTypes} from "../../../src/common/DataTypes.sol";
+import {Errors} from "../../../src/common/Errors.sol";
 
 contract ModuleRegistryTest is Test {
     SuperloopModuleRegistry public moduleRegistry;
