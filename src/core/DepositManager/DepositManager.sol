@@ -39,7 +39,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         DepositManagerStorage.setNextDepositRequestId();
     }
 
-    function requestDeposit(uint256 amount, address onBehalfOf) external nonReentrant {
+    function requestDeposit(uint256 amount, address onBehalfOf) external nonReentrant whenNotPaused {
         ISuperloop(vault()).realizePerformanceFee();
 
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
@@ -50,7 +50,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         emit DepositRequested(userCached, amount, $.nextDepositRequestId - 1);
     }
 
-    function cancelDepositRequest(uint256 id) external nonReentrant {
+    function cancelDepositRequest(uint256 id) external nonReentrant whenNotPaused {
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
         DataTypes.DepositRequestData memory _depositRequestCached = _depositRequest(id);
         _validateCancelDepositRequest(_depositRequestCached);
@@ -257,6 +257,11 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         return totalNewSharesToMint;
     }
 
+    modifier whenNotPaused() {
+        _requireNotPaused();
+        _;
+    }
+
     modifier onlyVault() {
         _onlyVault();
         _;
@@ -265,5 +270,9 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
     function _onlyVault() internal view {
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
         require(_msgSender() == $.vault, Errors.CALLER_NOT_VAULT);
+    }
+
+    function _requireNotPaused() internal view {
+        require(!ISuperloop(vault()).paused(), Errors.VAULT_PAUSED);
     }
 }

@@ -31,6 +31,12 @@ interface ISuperloop is IERC4626 {
     function skim(address asset_) external;
 
     /**
+     * @notice Gets the pause state of the vault
+     * @return The pause state of the vault
+     */
+    function paused() external view returns (bool);
+
+    /**
      * @notice Realizes the performance fee
      */
     function realizePerformanceFee() external;

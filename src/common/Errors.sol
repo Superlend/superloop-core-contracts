@@ -53,4 +53,6 @@ library Errors {
     string public constant CANNOT_CLAIM_ZERO_AMOUNT = "44"; // cannot claim zero amount
     string public constant CALLER_NOT_WITHDRAW_MANAGER = "45"; // the caller of function is not withdraw manager
     string public constant CALLER_NOT_VAULT_OPERATOR = "46"; // the caller of function is not vault operator
+    string public constant VAULT_PAUSED = "47"; // vault is paused
+    string public constant VAULT_FROZEN = "48"; // vault is frozen
 }

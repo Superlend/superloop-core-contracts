@@ -16,12 +16,14 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Errors} from "../../common/Errors.sol";
+import {PausableUpgradeableEnhanced} from "../../helpers/PausableUpgradeableEnhanced.sol";
 
-abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeable {
+abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeable, PausableUpgradeableEnhanced {
     event PerformanceFeeRealized(uint256 sharesMinted, address indexed treasury);
 
     function __SuperloopVault_init(address asset, string memory name, string memory symbol) internal onlyInitializing {
         __ReentrancyGuard_init();
+        __PausableUpgradeableEnhanced_init();
         __ERC4626_init(IERC20(asset));
         __ERC20_init(name, symbol);
     }
@@ -75,7 +77,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         }
     }
 
-    function deposit(uint256 assets, address receiver) public override nonReentrant returns (uint256) {
+    function deposit(uint256 assets, address receiver) public override nonReentrant whenNotPaused returns (uint256) {
         // realize performance fee
         _realizePerformanceFee();
 
@@ -95,7 +97,7 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         return shares;
     }
 
-    function mint(uint256 shares, address receiver) public override nonReentrant returns (uint256) {
+    function mint(uint256 shares, address receiver) public override nonReentrant whenNotPaused returns (uint256) {
         // realize performance fee
         _realizePerformanceFee();
 
@@ -113,7 +115,13 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         return assets;
     }
 
-    function withdraw(uint256 assets, address receiver, address owner) public override nonReentrant returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        override
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
+    {
         // realize performance fee
         _realizePerformanceFee();
 
@@ -126,7 +134,13 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         return shares;
     }
 
-    function redeem(uint256 shares, address receiver, address owner) public override nonReentrant returns (uint256) {
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        override
+        nonReentrant
+        whenNotPaused
+        returns (uint256)
+    {
         // realize performance fee
         _realizePerformanceFee();
 

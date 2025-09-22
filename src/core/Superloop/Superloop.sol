@@ -86,7 +86,11 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
      * @notice Executes module operations (restricted to privileged addresses)
      * @param moduleExecutionData Array of module execution data
      */
-    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyVaultOperator {
+    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData)
+        external
+        whenNotFrozen
+        onlyVaultOperator
+    {
         _operate(moduleExecutionData);
     }
 
@@ -94,12 +98,36 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
      * @notice Skims excess tokens from the vault (restricted to vault admin)
      * @param asset_ The address of the asset to skim (cannot be the vault's primary asset)
      */
-    function skim(address asset_) public onlyVaultOperator {
+    function skim(address asset_) public whenNotFrozen onlyVaultOperator {
         require(asset_ != asset(), Errors.INVALID_SKIM_ASSET);
         uint256 balance = IERC20(asset_).balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(asset_), SuperloopStorage.getSuperloopEssentialRolesStorage().treasury, balance);
 
         emit AssetSkimmed(asset_, balance, SuperloopStorage.getSuperloopEssentialRolesStorage().treasury);
+    }
+
+    /**
+     * @notice Pauses or unpauses the vault
+     * @param isPaused_ The boolean value to set the pause state to
+     */
+    function setPause(bool isPaused_) external onlyVaultAdmin {
+        if (isPaused_) {
+            _pause();
+        } else {
+            _unpause();
+        }
+    }
+
+    /**
+     * @notice Freezes or unfreezes the vault
+     * @param isFrozen_ The boolean value to set the freeze state to
+     */
+    function setFrozen(bool isFrozen_) external onlyVaultAdmin {
+        if (isFrozen_) {
+            _freeze();
+        } else {
+            _unfreeze();
+        }
     }
 
     function realizePerformanceFee() external {

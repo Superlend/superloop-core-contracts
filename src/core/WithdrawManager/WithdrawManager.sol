@@ -58,7 +58,11 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         WithdrawManagerStorage.setNextWithdrawRequestId(DataTypes.WithdrawRequestType.DEFERRED);
     }
 
-    function requestWithdraw(uint256 shares, DataTypes.WithdrawRequestType requestType) external nonReentrant {
+    function requestWithdraw(uint256 shares, DataTypes.WithdrawRequestType requestType)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         ISuperloop(vault()).realizePerformanceFee();
 
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
@@ -68,7 +72,11 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         emit WithdrawRequested(_msgSender(), shares, $.queues[requestType].nextWithdrawRequestId - 1, requestType);
     }
 
-    function cancelWithdrawRequest(uint256 id, DataTypes.WithdrawRequestType requestType) external nonReentrant {
+    function cancelWithdrawRequest(uint256 id, DataTypes.WithdrawRequestType requestType)
+        external
+        nonReentrant
+        whenNotPaused
+    {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         DataTypes.WithdrawRequestData memory _withdrawRequest = _withdrawRequest(id, requestType);
 
@@ -79,7 +87,7 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         emit WithdrawRequestCancelled(id, _msgSender(), sharesToRefund, amountToClaim, requestType);
     }
 
-    function withdraw(DataTypes.WithdrawRequestType requestType) external nonReentrant {
+    function withdraw(DataTypes.WithdrawRequestType requestType) external nonReentrant whenNotPaused {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         (uint256 id, DataTypes.WithdrawRequestData memory _withdrawRequest) = _validateWithdraw($, requestType);
         uint256 amountToClaim = _handleWithdraw($, id, _withdrawRequest, requestType);
@@ -340,5 +348,14 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     function _onlyVault() internal view {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         require(_msgSender() == $.vault, Errors.CALLER_NOT_VAULT);
+    }
+
+    modifier whenNotPaused() {
+        _requireNotPaused();
+        _;
+    }
+
+    function _requireNotPaused() internal view {
+        require(!ISuperloop(vault()).paused(), Errors.VAULT_PAUSED);
     }
 }
