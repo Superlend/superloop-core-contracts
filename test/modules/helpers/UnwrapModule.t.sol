@@ -1,4 +1,3 @@
-
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.13;
@@ -39,7 +38,8 @@ contract UnwrapModuleTest is TestBase {
             depositManager: mockModule,
             cashReserve: 1000,
             vaultAdmin: admin,
-            treasury: treasury
+            treasury: treasury,
+            vaultOperator: admin
         });
         superloopImplementation = new Superloop();
         proxyAdmin = new ProxyAdmin(address(this));

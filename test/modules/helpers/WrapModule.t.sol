@@ -1,5 +1,3 @@
-
-
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.13;
@@ -41,7 +39,8 @@ contract WrapModuleTest is TestBase {
             depositManager: mockModule,
             cashReserve: 1000,
             vaultAdmin: admin,
-            treasury: treasury
+            treasury: treasury,
+            vaultOperator: admin
         });
         superloopImplementation = new Superloop();
         proxyAdmin = new ProxyAdmin(address(this));
@@ -67,7 +66,7 @@ contract WrapModuleTest is TestBase {
         uint256 supplyAmount = 100 * 10 ** 18;
         _executeUnwrap(supplyAmount);
 
-        // warp 
+        // warp
         DataTypes.AaveV3ActionParams memory wrapParams =
             DataTypes.AaveV3ActionParams({asset: XTZ, amount: supplyAmount});
 
@@ -118,6 +117,5 @@ contract WrapModuleTest is TestBase {
         // Assert
         assertEq(finalBalanceWrappedToken, currentBalanceWrappedToken - supplyAmount);
         assertEq(finalBalanceUnderlyingToken, currentBalanceUnderlyingToken + supplyAmount);
-
     }
 }

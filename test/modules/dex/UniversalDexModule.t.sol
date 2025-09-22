@@ -39,7 +39,8 @@ contract UniversalDexModuleTest is TestBase {
             depositManager: mockModule,
             cashReserve: 1000,
             vaultAdmin: admin,
-            treasury: treasury
+            treasury: treasury,
+            vaultOperator: admin
         });
         superloopImplementation = new Superloop();
         proxyAdmin = new ProxyAdmin(address(this));

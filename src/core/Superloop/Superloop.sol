@@ -73,18 +73,20 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setVaultAdmin(data.vaultAdmin);
         SuperloopStorage.setTreasury(data.treasury);
         SuperloopStorage.setCashReserve(data.cashReserve);
+        SuperloopStorage.setVaultOperator(data.vaultOperator);
 
         SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
         SuperloopStorage.setPrivilegedAddress(data.treasury, true);
         SuperloopStorage.setPrivilegedAddress(data.withdrawManager, true);
         SuperloopStorage.setPrivilegedAddress(data.depositManager, true);
+        SuperloopStorage.setPrivilegedAddress(data.vaultOperator, true);
     }
 
     /**
      * @notice Executes module operations (restricted to privileged addresses)
      * @param moduleExecutionData Array of module execution data
      */
-    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyPrivileged {
+    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyVaultOperator {
         _operate(moduleExecutionData);
     }
 
@@ -92,7 +94,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
      * @notice Skims excess tokens from the vault (restricted to vault admin)
      * @param asset_ The address of the asset to skim (cannot be the vault's primary asset)
      */
-    function skim(address asset_) public onlyVaultAdmin {
+    function skim(address asset_) public onlyVaultOperator {
         require(asset_ != asset(), Errors.INVALID_SKIM_ASSET);
         uint256 balance = IERC20(asset_).balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(asset_), SuperloopStorage.getSuperloopEssentialRolesStorage().treasury, balance);
@@ -110,9 +112,6 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
      */
     fallback(bytes calldata) external returns (bytes memory) {
         if (SuperloopStorage.isInExecutionContext()) {
-            return _handleCallback();
-        } else {
-            _onlyPrivileged();
             return _handleCallback();
         }
     }
@@ -148,5 +147,15 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         }
 
         return abi.encode(success);
+    }
+
+    modifier onlyVaultOperator() {
+        _onlyVaultOperator();
+        _;
+    }
+
+    function _onlyVaultOperator() internal view {
+        SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
+        require($.vaultOperator == _msgSender(), Errors.CALLER_NOT_VAULT_OPERATOR);
     }
 }

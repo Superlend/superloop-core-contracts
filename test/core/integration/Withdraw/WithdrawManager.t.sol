@@ -256,7 +256,7 @@ contract WithdrawManagerTest is IntegrationBase {
     }
 
     function test_isolationOfQueues() public {
-        if(requestType != DataTypes.WithdrawRequestType.GENERAL) return;
+        if (requestType != DataTypes.WithdrawRequestType.GENERAL) return;
 
         _createPartialDepositWithResolution(true);
 
@@ -287,17 +287,21 @@ contract WithdrawManagerTest is IntegrationBase {
         users[1] = user2;
         users[2] = user3;
 
-        DataTypes.WithdrawRequestData[] memory withdrawRequestsGeneral = withdrawManager.withdrawRequests(ids, DataTypes.WithdrawRequestType.GENERAL);
-        DataTypes.WithdrawRequestData[] memory withdrawRequestsDeferred = withdrawManager.withdrawRequests(ids, DataTypes.WithdrawRequestType.DEFERRED);
-        DataTypes.WithdrawRequestData[] memory withdrawRequestsPriority = withdrawManager.withdrawRequests(ids, DataTypes.WithdrawRequestType.PRIORITY);
-        DataTypes.WithdrawRequestData[] memory withdrawRequestsInstant = withdrawManager.withdrawRequests(ids, DataTypes.WithdrawRequestType.INSTANT);
+        DataTypes.WithdrawRequestData[] memory withdrawRequestsGeneral =
+            withdrawManager.withdrawRequests(ids, DataTypes.WithdrawRequestType.GENERAL);
+        DataTypes.WithdrawRequestData[] memory withdrawRequestsDeferred =
+            withdrawManager.withdrawRequests(ids, DataTypes.WithdrawRequestType.DEFERRED);
+        DataTypes.WithdrawRequestData[] memory withdrawRequestsPriority =
+            withdrawManager.withdrawRequests(ids, DataTypes.WithdrawRequestType.PRIORITY);
+        DataTypes.WithdrawRequestData[] memory withdrawRequestsInstant =
+            withdrawManager.withdrawRequests(ids, DataTypes.WithdrawRequestType.INSTANT);
 
         assertEq(withdrawRequestsGeneral.length, 3);
         assertEq(withdrawRequestsDeferred.length, 3);
         assertEq(withdrawRequestsPriority.length, 3);
         assertEq(withdrawRequestsInstant.length, 3);
 
-        for(uint256 i = 0; i < 3; i++) {
+        for (uint256 i = 0; i < 3; i++) {
             assertEq(withdrawRequestsGeneral[i].user, users[i]);
             assertEq(withdrawRequestsDeferred[i].user, users[i]);
             assertEq(withdrawRequestsPriority[i].user, users[i]);
@@ -359,5 +363,4 @@ contract WithdrawManagerTest is IntegrationBase {
         assertEq(totalPendingWithdraws, 0);
         assertEq(resolutionIdPointer, 4);
     }
-
 }

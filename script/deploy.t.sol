@@ -113,7 +113,8 @@ contract Deploy is Script {
             cashReserve: 1000,
             depositManager: address(0),
             vaultAdmin: deployer,
-            treasury: treasury
+            treasury: treasury,
+            vaultOperator: deployer
         });
         vaultImplementation = address(new Superloop());
         vaultProxyAdmin = address(new ProxyAdmin(deployer));

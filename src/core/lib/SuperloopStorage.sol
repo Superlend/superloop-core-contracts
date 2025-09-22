@@ -181,6 +181,15 @@ library SuperloopStorage {
     }
 
     /**
+     * @notice Sets the vault operator address
+     * @param vaultOperator_ The address of the vault operator
+     */
+    function setVaultOperator(address vaultOperator_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.vaultOperator = vaultOperator_;
+    }
+
+    /**
      * @notice Sets privileged status for an address
      * @param privilegedAddress_ The address to set privileged status for
      * @param isPrivileged_ True to grant privileges, false to revoke

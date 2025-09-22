@@ -120,6 +120,7 @@ library DataTypes {
      * @param withdrawManager The address of the withdraw manager module
      * @param vaultAdmin The address of the vault admin
      * @param treasury The address of the treasury
+     * @param vaultOperator The address of the vault operator
      */
     struct VaultInitData {
         // vault specific
@@ -137,6 +138,7 @@ library DataTypes {
         address depositManager;
         address vaultAdmin;
         address treasury;
+        address vaultOperator;
     }
 
     /**

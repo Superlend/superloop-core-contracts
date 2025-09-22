@@ -31,6 +31,7 @@ contract Deploy is Script {
     address public vaultAdmin;
     address public rebalanceAdmin;
     address public treasury;
+    address public vaultOperator;
 
     address public AAVE_V3_POOL_ADDRESSES_PROVIDER = 0x5ccF60c7E10547c5389E9cBFf543E5D0Db9F4feC;
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -83,11 +84,13 @@ contract Deploy is Script {
         vaultAdmin = deployer;
         rebalanceAdmin = deployer;
         treasury = TREASURY;
+        vaultOperator = deployer;
 
         console.log("deployer", deployer);
         console.log("vaultAdmin", vaultAdmin);
         console.log("rebalanceAdmin", rebalanceAdmin);
         console.log("treasury", treasury);
+        console.log("vaultOperator", vaultOperator);
     }
 
     function run() public {
@@ -124,7 +127,8 @@ contract Deploy is Script {
             cashReserve: 100,
             depositManager: address(depositManager),
             vaultAdmin: vaultAdmin,
-            treasury: treasury
+            treasury: treasury,
+            vaultOperator: vaultOperator
         });
         vaultImplementation = address(new Superloop());
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
