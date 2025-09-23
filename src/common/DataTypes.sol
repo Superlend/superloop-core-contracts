@@ -293,9 +293,11 @@ library DataTypes {
     /**
      * @notice Structure for stake parameters
      * @param assets The amount of assets to stake
+     * @param data Any additional data to pass to the stake module
      */
     struct StakeParams {
         uint256 assets;
+        bytes data;
     }
 
     enum DepositType {

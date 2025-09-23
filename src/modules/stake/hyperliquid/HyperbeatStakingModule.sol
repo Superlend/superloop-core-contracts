@@ -12,12 +12,15 @@ contract HyperbeatStakingModule is Context {
 
     event HyperbeatStaked(uint256 assets, address caller);
 
-    constructor(address _stakingManager) {
-        stakingCore = IStakingCore(_stakingManager);
+    constructor(address _stakingCore) {
+        stakingCore = IStakingCore(_stakingCore);
     }
 
     function execute(DataTypes.StakeParams memory params) external onlyExecutionContext {
-        stakingCore.stake{value: params.assets}();
+        // convert bytes to string
+        string memory communityCode = abi.decode(params.data, (string));
+
+        stakingCore.stake{value: params.assets}(communityCode);
 
         emit HyperbeatStaked(params.assets, _msgSender());
     }
