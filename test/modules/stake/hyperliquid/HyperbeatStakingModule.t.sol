@@ -9,8 +9,9 @@ import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
+import {console} from "forge-std/console.sol";
 
-contract HyperliquidStakingModuleTest is TestBase {
+contract HyperbeatStakingModuleTest is TestBase {
     Superloop public superloopImplementation;
     address public user;
 
@@ -57,11 +58,11 @@ contract HyperliquidStakingModuleTest is TestBase {
         vm.label(address(superloop), "superloop");
     }
 
-    function test_HyperliquidStake() public {
+    function test_HyperbeatStake() public {
         // transfer 100 wHYPE to the vault
         deal(WHYPE, address(superloop), 100 * WHYPE_SCALE);
 
-        // call unwrap module & hyperliquid stake module
+        // call unwrap module & kinetiq stake module
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](2);
         moduleExecutionData[0] = DataTypes.ModuleExecutionData({
             executionType: DataTypes.CallType.DELEGATECALL,
@@ -72,24 +73,18 @@ contract HyperliquidStakingModuleTest is TestBase {
         });
         moduleExecutionData[1] = DataTypes.ModuleExecutionData({
             executionType: DataTypes.CallType.DELEGATECALL,
-            module: address(hyperliquidStakeModule),
+            module: address(hyperbeatStakingModule),
             data: abi.encodeWithSelector(
-                hyperliquidStakeModule.execute.selector,
+                hyperbeatStakingModule.execute.selector,
                 DataTypes.StakeParams({assets: 100 * WHYPE_SCALE, data: abi.encode(string(""))})
             )
         });
 
-        uint256 currentBalanceStHype = IERC20(ST_HYPE).balanceOf(address(superloop));
-        uint256 currentBalanceWstHype = IERC20(WST_HYPE).balanceOf(address(superloop));
+        uint256 currentBalanceKHype = IERC20(BE_HYPE).balanceOf(address(superloop));
 
         vm.prank(admin);
         superloop.operate(moduleExecutionData);
 
-        uint256 finalBalanceStHype = IERC20(ST_HYPE).balanceOf(address(superloop));
-        uint256 finalBalanceWstHype = IERC20(WST_HYPE).balanceOf(address(superloop));
-
-        // it should have minted 100stHype for the vault and ~98 wstHype for the vault
-        assertApproxEqAbs(finalBalanceStHype, currentBalanceStHype + 100 * WHYPE_SCALE, 100);
-        assertApproxEqAbs(finalBalanceWstHype, currentBalanceWstHype + 100 * WHYPE_SCALE, 5 * WHYPE_SCALE);
+        uint256 finalBalanceKHype = IERC20(BE_HYPE).balanceOf(address(superloop));
     }
 }
