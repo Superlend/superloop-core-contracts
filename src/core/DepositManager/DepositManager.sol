@@ -39,38 +39,72 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         DepositManagerStorage.setNextDepositRequestId();
     }
 
-    function requestDeposit(uint256 amount, address onBehalfOf) external nonReentrant whenNotPaused {
-        ISuperloop(vault()).realizePerformanceFee();
+    struct DepositManagerCache {
+        address vault;
+        address asset;
+        uint8 vaultDecimalOffset;
+        uint256 nextDepositRequestId;
+        uint256 resolutionIdPointer;
+        uint256 totalPendingDeposits;
+    }
 
+    function _createDepositManagerCache()
+        internal
+        view
+        returns (DepositManagerCache memory, DepositManagerStorage.DepositManagerState storage)
+    {
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
-        address userCached = onBehalfOf == address(0) ? _msgSender() : onBehalfOf;
-        _validateDepositRequest($, amount, userCached);
-        _registerDepositRequest($, amount, userCached, _msgSender());
+        return (
+            DepositManagerCache({
+                vault: $.vault,
+                asset: $.asset,
+                vaultDecimalOffset: $.vaultDecimalOffset,
+                nextDepositRequestId: $.nextDepositRequestId,
+                resolutionIdPointer: $.resolutionIdPointer,
+                totalPendingDeposits: $.totalPendingDeposits
+            }),
+            $
+        );
+    }
 
-        emit DepositRequested(userCached, amount, $.nextDepositRequestId - 1);
+    function requestDeposit(uint256 amount, address onBehalfOf) external nonReentrant whenNotPaused {
+        (DepositManagerCache memory cache, DepositManagerStorage.DepositManagerState storage $) =
+            _createDepositManagerCache();
+        ISuperloop(cache.vault).realizePerformanceFee();
+
+        // vault, total pending deposit, userdepositrequestId,
+        // asset, next deposit request id
+
+        address user = onBehalfOf == address(0) ? _msgSender() : onBehalfOf;
+        _validateDepositRequest(cache, $.userDepositRequestId, amount, user);
+        _registerDepositRequest(cache, amount, user, _msgSender());
+
+        emit DepositRequested(user, amount, $.nextDepositRequestId - 1);
     }
 
     function cancelDepositRequest(uint256 id) external nonReentrant whenNotPaused {
-        DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
+        (DepositManagerCache memory cache, DepositManagerStorage.DepositManagerState storage $) =
+            _createDepositManagerCache();
         DataTypes.DepositRequestData memory _depositRequestCached = _depositRequest(id);
         _validateCancelDepositRequest(_depositRequestCached);
 
         // handle cancel deposit request
-        uint256 amountRefunded = _handleCancelDepositRequest($, id, _depositRequestCached);
+        uint256 amountRefunded = _handleCancelDepositRequest(cache, $, id, _depositRequestCached);
 
         // emit event
         emit DepositRequestCancelled(id, _msgSender(), amountRefunded);
     }
 
     function resolveDepositRequests(DataTypes.ResolveDepositRequestsData memory data) external onlyVault {
-        DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
+        (DepositManagerCache memory cache, DepositManagerStorage.DepositManagerState storage $) =
+            _createDepositManagerCache();
 
         // validations
-        _validateResolveDepositRequests($, data);
+        _validateResolveDepositRequests(cache, data);
 
-        address vaultCached = $.vault;
         // take a snapshot of the current exchange rate
-        DataTypes.ExchangeRateSnapshot memory snapshot = _createExchangeRateSnapshot(vaultCached, $.vaultDecimalOffset);
+        DataTypes.ExchangeRateSnapshot memory snapshot =
+            _createExchangeRateSnapshot(cache.vault, cache.vaultDecimalOffset);
 
         // encode the data to be used in the callback
         bytes memory callbackExecutionData = abi.encode(
@@ -83,16 +117,16 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         );
 
         // transfer the assets to the vault
-        SafeERC20.safeTransfer(IERC20(data.asset), vaultCached, data.amount);
+        SafeERC20.safeTransfer(IERC20(data.asset), cache.vault, data.amount);
 
         // call 'executeDeposit' function on the vault
-        IDepositManagerCallbackHandler(vaultCached).executeDeposit(data.amount, callbackExecutionData);
+        IDepositManagerCallbackHandler(cache.vault).executeDeposit(data.amount, callbackExecutionData);
 
         // update the snapshot
-        snapshot.totalAssetsAfter = ISuperloop(vaultCached).totalAssets() + 1;
+        snapshot.totalAssetsAfter = ISuperloop(cache.vault).totalAssets() + 1;
 
         // calculate shares such that the exchange rate is not updated
-        uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot, $.vaultDecimalOffset);
+        uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot, cache.vaultDecimalOffset);
 
         // decrease the total pending deposits before minting shares
         $.totalPendingDeposits -= data.amount;
@@ -100,7 +134,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         // calculate the share value of each of the deposit request that is getting resolved
         // go from current resolutionIdPointer => until assets are over
         uint256 amountToIngest = data.amount;
-        uint256 currentId = $.resolutionIdPointer;
+        uint256 currentId = cache.resolutionIdPointer;
 
         while (amountToIngest > 0) {
             DataTypes.DepositRequestData memory currentRequest = _depositRequest(currentId);
@@ -122,7 +156,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
                 Math.mulDiv(amountToIngestInCurrentRequest, totalNewSharesToMint, data.amount, Math.Rounding.Floor);
 
             if (sharesToMint != 0) {
-                ISuperloop(vaultCached).mintShares(currentRequest.user, sharesToMint);
+                ISuperloop(cache.vault).mintShares(currentRequest.user, sharesToMint);
             }
 
             amountToIngest -= amountToIngestInCurrentRequest;
@@ -139,27 +173,27 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         $.resolutionIdPointer = currentId;
     }
 
-    function _validateDepositRequest(DepositManagerStorage.DepositManagerState storage $, uint256 amount, address user)
-        internal
-        view
-    {
+    function _validateDepositRequest(
+        DepositManagerCache memory cache,
+        mapping(address => uint256) storage userDepositRequestId,
+        uint256 amount,
+        address user
+    ) internal view {
         // 1. supply cap
         // 2. Non zero amount
         // 3. Non zero share amount based on current exchange rate value
         // 4. User has no active deposit request
 
         require(amount > 0, Errors.INVALID_AMOUNT);
-        uint256 allPendingDeposits = $.totalPendingDeposits + amount;
+        uint256 allPendingDeposits = cache.totalPendingDeposits + amount;
 
-        address vaultCached = vault();
-
-        uint256 supplyCap = ISuperloop(vaultCached).maxDeposit(address(0));
+        uint256 supplyCap = ISuperloop(cache.vault).maxDeposit(address(0));
         require(allPendingDeposits <= supplyCap, Errors.SUPPLY_CAP_EXCEEDED);
 
-        uint256 expectedShares = ISuperloop(vaultCached).convertToShares(amount);
+        uint256 expectedShares = ISuperloop(cache.vault).convertToShares(amount);
         require(expectedShares > 0, Errors.INVALID_SHARES_AMOUNT);
 
-        uint256 id = $.userDepositRequestId[user];
+        uint256 id = userDepositRequestId[user];
         DataTypes.DepositRequestData memory _depositRequest = _depositRequest(id);
         if (id != 0) {
             bool isPending = _depositRequest.state == DataTypes.RequestProcessingState.UNPROCESSED;
@@ -171,20 +205,17 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         }
     }
 
-    function _registerDepositRequest(
-        DepositManagerStorage.DepositManagerState storage $,
-        uint256 amount,
-        address user,
-        address sender
-    ) internal {
-        SafeERC20.safeTransferFrom(IERC20($.asset), sender, address(this), amount);
+    function _registerDepositRequest(DepositManagerCache memory cache, uint256 amount, address user, address sender)
+        internal
+    {
+        SafeERC20.safeTransferFrom(IERC20(cache.asset), sender, address(this), amount);
 
-        uint256 id = $.nextDepositRequestId;
+        uint256 id = cache.nextDepositRequestId;
 
         DepositManagerStorage.setDepositRequest(id, amount, 0, user, DataTypes.RequestProcessingState.UNPROCESSED);
         DepositManagerStorage.setUserDepositRequest(user, id);
         DepositManagerStorage.setNextDepositRequestId();
-        DepositManagerStorage.setTotalPendingDeposits($.totalPendingDeposits + amount);
+        DepositManagerStorage.setTotalPendingDeposits(cache.totalPendingDeposits + amount);
     }
 
     function _validateCancelDepositRequest(DataTypes.DepositRequestData memory _depositRequest) internal view {
@@ -202,6 +233,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
     }
 
     function _handleCancelDepositRequest(
+        DepositManagerCache memory cache,
         DepositManagerStorage.DepositManagerState storage $,
         uint256 id,
         DataTypes.DepositRequestData memory _depositRequest
@@ -216,17 +248,17 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
             : DataTypes.RequestProcessingState.PARTIALLY_CANCELLED;
         $.totalPendingDeposits -= amountToRefund;
 
-        SafeERC20.safeTransfer(IERC20($.asset), _depositRequest.user, amountToRefund);
+        SafeERC20.safeTransfer(IERC20(cache.asset), _depositRequest.user, amountToRefund);
 
         return amountToRefund;
     }
 
     function _validateResolveDepositRequests(
-        DepositManagerStorage.DepositManagerState storage $,
+        DepositManagerCache memory cache,
         DataTypes.ResolveDepositRequestsData memory data
-    ) internal view {
-        require(data.amount > 0 && data.amount <= $.totalPendingDeposits, Errors.INVALID_AMOUNT);
-        require(data.asset == $.asset, Errors.INVALID_ASSET);
+    ) internal pure {
+        require(data.amount > 0 && data.amount <= cache.totalPendingDeposits, Errors.INVALID_AMOUNT);
+        require(data.asset == cache.asset, Errors.INVALID_ASSET);
     }
 
     function _createExchangeRateSnapshot(address vault, uint8 decimalOffset)

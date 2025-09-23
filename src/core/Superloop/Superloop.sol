@@ -143,8 +143,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         if (SuperloopStorage.isInExecutionContext()) {
             return _handleCallback();
         } else {
-            bytes memory data = _handleFallback();
-            return data;
+            return _handleFallback();
         }
     }
 
