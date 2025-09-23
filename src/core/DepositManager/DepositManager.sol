@@ -39,34 +39,6 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         DepositManagerStorage.setNextDepositRequestId();
     }
 
-    struct DepositManagerCache {
-        address vault;
-        address asset;
-        uint8 vaultDecimalOffset;
-        uint256 nextDepositRequestId;
-        uint256 resolutionIdPointer;
-        uint256 totalPendingDeposits;
-    }
-
-    function _createDepositManagerCache()
-        internal
-        view
-        returns (DepositManagerCache memory, DepositManagerStorage.DepositManagerState storage)
-    {
-        DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();
-        return (
-            DepositManagerCache({
-                vault: $.vault,
-                asset: $.asset,
-                vaultDecimalOffset: $.vaultDecimalOffset,
-                nextDepositRequestId: $.nextDepositRequestId,
-                resolutionIdPointer: $.resolutionIdPointer,
-                totalPendingDeposits: $.totalPendingDeposits
-            }),
-            $
-        );
-    }
-
     function requestDeposit(uint256 amount, address onBehalfOf) external nonReentrant whenNotPaused {
         (DepositManagerCache memory cache, DepositManagerStorage.DepositManagerState storage $) =
             _createDepositManagerCache();

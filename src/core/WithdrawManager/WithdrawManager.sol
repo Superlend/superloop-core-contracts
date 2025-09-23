@@ -63,11 +63,12 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         nonReentrant
         whenNotPaused
     {
-        ISuperloop(vault()).realizePerformanceFee();
+        (WithdrawManagerCache memory cache, WithdrawManagerStorage.WithdrawManagerState storage $) =
+            _createWithdrawManagerCache(requestType);
+        ISuperloop(cache.vault).realizePerformanceFee();
 
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        _validateWithdrawRequest($, _msgSender(), shares, requestType);
-        _registerWithdrawRequest($, _msgSender(), shares, requestType);
+        _validateWithdrawRequest(cache, $, _msgSender(), shares, requestType);
+        _registerWithdrawRequest(cache, $, _msgSender(), shares, requestType);
 
         emit WithdrawRequested(_msgSender(), shares, $.queues[requestType].nextWithdrawRequestId - 1, requestType);
     }
@@ -77,20 +78,23 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         nonReentrant
         whenNotPaused
     {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        (WithdrawManagerCache memory cache, WithdrawManagerStorage.WithdrawManagerState storage $) =
+            _createWithdrawManagerCache(requestType);
         DataTypes.WithdrawRequestData memory _withdrawRequest = _withdrawRequest(id, requestType);
 
         _validateCancelWithdrawRequest(_withdrawRequest);
         (uint256 sharesToRefund, uint256 amountToClaim) =
-            _handleCancelWithdrawRequest($, id, requestType, _withdrawRequest);
+            _handleCancelWithdrawRequest(cache, $, id, requestType, _withdrawRequest);
 
         emit WithdrawRequestCancelled(id, _msgSender(), sharesToRefund, amountToClaim, requestType);
     }
 
     function withdraw(DataTypes.WithdrawRequestType requestType) external nonReentrant whenNotPaused {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        (WithdrawManagerCache memory cache, WithdrawManagerStorage.WithdrawManagerState storage $) =
+            _createWithdrawManagerCache(requestType);
+
         (uint256 id, DataTypes.WithdrawRequestData memory _withdrawRequest) = _validateWithdraw($, requestType);
-        uint256 amountToClaim = _handleWithdraw($, id, _withdrawRequest, requestType);
+        uint256 amountToClaim = _handleWithdraw(cache, $, id, _withdrawRequest, requestType);
 
         emit WithdrawRequestClaimed(_msgSender(), id, requestType, amountToClaim);
     }
@@ -183,6 +187,7 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function _validateWithdrawRequest(
+        WithdrawManagerCache memory cache,
         WithdrawManagerStorage.WithdrawManagerState storage $,
         address user,
         uint256 shares,
@@ -191,7 +196,7 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         require(shares > 0, Errors.INVALID_SHARES_AMOUNT);
 
         // expected withdraw amount > 0
-        uint256 expectedWithdrawAmount = ISuperloop(vault()).convertToAssets(shares);
+        uint256 expectedWithdrawAmount = ISuperloop(cache.vault).convertToAssets(shares);
         require(expectedWithdrawAmount > 0, Errors.INVALID_AMOUNT);
 
         uint256 id = $.queues[requestType].userWithdrawRequestId[user];
@@ -247,6 +252,7 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function _handleWithdraw(
+        WithdrawManagerCache memory cache,
         WithdrawManagerStorage.WithdrawManagerState storage $,
         uint256 id,
         DataTypes.WithdrawRequestData memory _withdrawRequest,
@@ -261,22 +267,23 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
 
         // send tokens
         if (amountToClaim > 0) {
-            SafeERC20.safeTransfer(IERC20($.asset), _withdrawRequest.user, amountToClaim);
+            SafeERC20.safeTransfer(IERC20(cache.asset), _withdrawRequest.user, amountToClaim);
         }
 
         return amountToClaim;
     }
 
     function _registerWithdrawRequest(
+        WithdrawManagerCache memory cache,
         WithdrawManagerStorage.WithdrawManagerState storage $,
         address user,
         uint256 shares,
         DataTypes.WithdrawRequestType requestType
     ) internal {
-        SafeERC20.safeTransferFrom(IERC20($.vault), user, address(this), shares);
+        SafeERC20.safeTransferFrom(IERC20(cache.vault), user, address(this), shares);
 
         DataTypes.WithdrawQueue storage queue = $.queues[requestType];
-        uint256 id = queue.nextWithdrawRequestId;
+        uint256 id = cache.nextWithdrawRequestId;
         WithdrawManagerStorage.setWithdrawRequest(
             requestType, id, shares, 0, 0, 0, user, DataTypes.RequestProcessingState.UNPROCESSED
         );
@@ -286,6 +293,7 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function _handleCancelWithdrawRequest(
+        WithdrawManagerCache memory cache,
         WithdrawManagerStorage.WithdrawManagerState storage $,
         uint256 id,
         DataTypes.WithdrawRequestType requestType,
@@ -299,7 +307,8 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         // State changes
         DataTypes.WithdrawQueue storage queue = $.queues[requestType];
         WithdrawManagerStorage.setUserWithdrawRequest(requestType, _withdrawRequest.user, 0);
-        WithdrawManagerStorage.setTotalPendingWithdraws(requestType, queue.totalPendingWithdraws - sharesToRefund);
+        WithdrawManagerStorage.setTotalPendingWithdraws(requestType, cache.totalPendingWithdraws - sharesToRefund);
+
         queue.withdrawRequest[id].state = sharesToRefund == shares
             ? DataTypes.RequestProcessingState.CANCELLED
             : DataTypes.RequestProcessingState.PARTIALLY_CANCELLED;
@@ -308,10 +317,10 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
 
         // Send the shares and tokens back
         if (sharesToRefund > 0) {
-            SafeERC20.safeTransfer(IERC20($.vault), _withdrawRequest.user, sharesToRefund);
+            SafeERC20.safeTransfer(IERC20(cache.vault), _withdrawRequest.user, sharesToRefund);
         }
         if (amountToClaim > 0) {
-            SafeERC20.safeTransfer(IERC20($.asset), _withdrawRequest.user, amountToClaim);
+            SafeERC20.safeTransfer(IERC20(cache.asset), _withdrawRequest.user, amountToClaim);
         }
 
         return (sharesToRefund, amountToClaim);

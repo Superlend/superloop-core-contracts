@@ -92,4 +92,32 @@ abstract contract WithdrawManagerBase is Context {
             return __withdrawRequest;
         }
     }
+
+    struct WithdrawManagerCache {
+        address vault;
+        address asset;
+        uint8 vaultDecimalOffset;
+        uint256 nextWithdrawRequestId;
+        uint256 resolutionIdPointer;
+        uint256 totalPendingWithdraws;
+    }
+
+    function _createWithdrawManagerCache(DataTypes.WithdrawRequestType requestType)
+        internal
+        view
+        returns (WithdrawManagerCache memory, WithdrawManagerStorage.WithdrawManagerState storage)
+    {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return (
+            WithdrawManagerCache({
+                vault: $.vault,
+                asset: $.asset,
+                vaultDecimalOffset: $.vaultDecimalOffset,
+                nextWithdrawRequestId: $.queues[requestType].nextWithdrawRequestId,
+                resolutionIdPointer: $.queues[requestType].resolutionIdPointer,
+                totalPendingWithdraws: $.queues[requestType].totalPendingWithdraws
+            }),
+            $
+        );
+    }
 }
