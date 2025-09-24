@@ -66,8 +66,11 @@ library Errors {
     string public constant PRELIQUIDATION_LIF_TOO_LOW = "55"; // lif is too low
     string public constant PRELIQUIDATION_LIF_DECREASING = "56"; // lif is decreasing
     string public constant PRELIQUIDATION_LIF_TOO_HIGH = "57"; // lif is too high
+    string public constant PRELIQUIDATION_INVALID_ID = "58"; // id is invalid
+    string public constant PRELIQUIDATION_INVALID_USER = "59"; // user is invalid
+    string public constant PRELIQUIDATION_POSSIBLE_BAD_DEBT = "60"; // possible bad debt
+    string public constant PRELIQUIDATION_NOT_IN_PRELIQUIDATION_STATE = "61"; // not in preliquidation state
 
     // Aave V3 Preliquidation
-    string public constant AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY = "58"; // reserve is not in the correct emode category
-    string public constant AAVE_V3_PRELIQUIDATION_STORAGE_OCCUPIED = "59"; // storage is occupied
+    string public constant AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY = "62"; // reserve is not in the correct emode category
 }

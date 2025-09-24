@@ -12,6 +12,9 @@ import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReserveConfiguration} from "aave-v3-core/contracts/protocol/libraries/configuration/ReserveConfiguration.sol";
 import {WadRayMath} from "aave-v3-core/contracts/protocol/libraries/math/WadRayMath.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IERC20Metadata, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 contract AaveV3PreliquidationFallbackHandler is Context {
     event PreliquidationDeployed(
@@ -25,16 +28,25 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         uint256 preIF2
     );
 
+    event PreliquidationExecuted(
+        bytes32 indexed id, address preliquidator, address vault, uint256 debtToCover, uint256 collateralToSieze
+    );
+
     // aave  and vault related stuff
     uint256 public constant BPS = 1e4;
     IPoolAddressesProvider public immutable poolAddressesProvider;
     address public immutable vault;
     uint256 public immutable emodeCategory; // preliquidation module is supposed to be used in only one emode category
+    uint8 public immutable interestRateMode;
+    uint8 public immutable oracleDecimals;
 
     // fallback handler related stuff
     bytes32 public immutable id;
     address public immutable lendReserve;
+    uint256 public immutable lendReserveDecimals;
     address public immutable borrowReserve;
+    uint256 public immutable borrowReserveDecimals;
+    uint256 public immutable Lltv;
     uint256 public immutable preLltv;
     uint256 public immutable preCF1;
     uint256 public immutable preCF2;
@@ -44,19 +56,26 @@ contract AaveV3PreliquidationFallbackHandler is Context {
     constructor(
         address poolAddressesProvider_,
         address vault_,
-        DataTypes.AaveV3PreliquidationParams memory preLiquidationParams_
+        uint8 interestRateMode_,
+        uint8 oracleDecimals_,
+        DataTypes.AaveV3PreliquidationParamsInit memory preLiquidationParams_
     ) {
         vault = vault_;
         poolAddressesProvider = IPoolAddressesProvider(poolAddressesProvider_);
         IPool pool = IPool(IPoolAddressesProvider(poolAddressesProvider_).getPool());
         emodeCategory = pool.getUserEMode(vault_);
+        interestRateMode = interestRateMode_;
+        oracleDecimals = oracleDecimals_;
 
-        _validatePreLiquidationParams(preLiquidationParams_, pool, emodeCategory);
+        uint256 effectiveLltv = _validatePreLiquidationParams(preLiquidationParams_, pool, emodeCategory);
 
         lendReserve = preLiquidationParams_.lendReserve;
+        lendReserveDecimals = IERC20Metadata(lendReserve).decimals();
         borrowReserve = preLiquidationParams_.borrowReserve;
+        borrowReserveDecimals = IERC20Metadata(borrowReserve).decimals();
         id = preLiquidationParams_.id;
 
+        Lltv = effectiveLltv;
         preLltv = preLiquidationParams_.preLltv;
         preCF1 = preLiquidationParams_.preCF1;
         preCF2 = preLiquidationParams_.preCF2;
@@ -69,10 +88,73 @@ contract AaveV3PreliquidationFallbackHandler is Context {
     function preliquidate(bytes32 id_, DataTypes.CallType, DataTypes.AaveV3ExecutePreliquidationParams memory params)
         public
     {
-        // make sure params.user = vault
-        // make sure vault is in the same emode as stored
-        // make sure id is correct
-        // TODO: Implement
+        IPool pool = IPool(poolAddressesProvider.getPool());
+        IAaveOracle oracle = IAaveOracle(poolAddressesProvider.getPriceOracle());
+        IPoolDataProvider poolDataProvider = IPoolDataProvider(poolAddressesProvider.getPoolDataProvider());
+
+        // initial validations
+        require(id_ == id, Errors.PRELIQUIDATION_INVALID_ID);
+        require(params.user == vault, Errors.PRELIQUIDATION_INVALID_USER);
+        require(pool.getUserEMode(vault) == emodeCategory, Errors.AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY);
+
+        // get collateral tokens and it's USD value
+        // get debt tokens and it's USD value
+        (
+            ,
+            uint256 collateralUsdWAD,
+            uint256 collateralPriceUSD,
+            uint256 borrowTokens,
+            uint256 borrowUsdWAD,
+            uint256 borrowPriceUSD
+        ) = _getPositions(poolDataProvider, oracle, vault);
+
+        // make sure borrowUSD <= collateralUSD * Lltv : bad debt
+        require(borrowUsdWAD <= WadRayMath.wadMul(collateralUsdWAD, Lltv), Errors.PRELIQUIDATION_POSSIBLE_BAD_DEBT);
+
+        // make sure borrowUSD > collateralUSD * preLltv : not in preliquidation state
+        require(
+            borrowUsdWAD > WadRayMath.wadMul(collateralUsdWAD, preLltv),
+            Errors.PRELIQUIDATION_NOT_IN_PRELIQUIDATION_STATE
+        );
+
+        // calculate the current ltv : borrowedUSD / collateralUSD
+        uint256 currentLtv = WadRayMath.wadDiv(borrowUsdWAD, collateralUsdWAD);
+
+        // calculate the current quotient : (ltv - preLltv) / (Lltv - preLltv)
+        uint256 currentQuotient = WadRayMath.wadDiv(currentLtv - preLltv, Lltv - preLltv);
+
+        // calculate the current incentive factor : currentQuotient * (preIF2 - preIF1) + preIF1
+        uint256 currentIncentiveFactor = WadRayMath.wadMul(currentQuotient, preIF2 - preIF1) + preIF1;
+
+        // calculate the current close factor : currentQuotient * (preCF2 - preCF1) + preCF1
+        uint256 currentCloseFactor = WadRayMath.wadMul(currentQuotient, preCF2 - preCF1) + preCF1;
+
+        // calculate how much collateral to sieze : (debtCoverUSD / collateralPriceUSD) * incentiveFactor
+        uint256 maxDebtToCover = (borrowTokens * currentCloseFactor) / WadRayMath.WAD; // in tokens
+        uint256 debtToCover = Math.min(params.debtToCover, maxDebtToCover);
+        uint256 debtCoverUSD = (debtToCover * borrowPriceUSD) / (10 ** borrowReserveDecimals); // in oracle decimals
+
+        uint256 collateralToSieze = (
+            ((debtCoverUSD * 10 ** lendReserveDecimals) / collateralPriceUSD) * currentIncentiveFactor
+        ) / WadRayMath.WAD; // in tokens
+
+        // transfer debt tokens to self
+        SafeERC20.safeTransferFrom(IERC20(borrowReserve), _msgSender(), address(this), debtToCover);
+
+        // approve debt tokens to pool
+        SafeERC20.forceApprove(IERC20(borrowReserve), address(pool), debtToCover);
+
+        // repay the debt
+        pool.repay(borrowReserve, debtToCover, interestRateMode, address(this));
+
+        // withdraw the collateral
+        uint256 collateralWithdrawn = pool.withdraw(lendReserve, collateralToSieze, address(this));
+
+        // transfer collateral to msg.sender ie. preliquidator
+        SafeERC20.safeTransfer(IERC20(lendReserve), _msgSender(), collateralWithdrawn);
+
+        // emit event
+        emit PreliquidationExecuted(id, params.user, vault, debtToCover, collateralToSieze);
     }
 
     function preliquidationParams(bytes32, DataTypes.CallType)
@@ -81,9 +163,9 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         returns (DataTypes.AaveV3PreliquidationParams memory)
     {
         return DataTypes.AaveV3PreliquidationParams({
-            id: id,
             lendReserve: lendReserve,
             borrowReserve: borrowReserve,
+            Lltv: Lltv,
             preLltv: preLltv,
             preCF1: preCF1,
             preCF2: preCF2,
@@ -93,10 +175,10 @@ contract AaveV3PreliquidationFallbackHandler is Context {
     }
 
     function _validatePreLiquidationParams(
-        DataTypes.AaveV3PreliquidationParams memory preLiquidationParams_,
+        DataTypes.AaveV3PreliquidationParamsInit memory preLiquidationParams_,
         IPool pool,
         uint256 _emodeCategory
-    ) internal view {
+    ) internal view returns (uint256) {
         uint256 emodeLltv = 0;
         if (_emodeCategory != 0) {
             AaveDataTypes.EModeCategory memory emodeCategoryData = pool.getEModeCategoryData(uint8(_emodeCategory));
@@ -129,5 +211,30 @@ contract AaveV3PreliquidationFallbackHandler is Context {
             preLiquidationParams_.preIF2 <= WadRayMath.wadDiv(WadRayMath.WAD, effectiveLltv),
             Errors.PRELIQUIDATION_LIF_TOO_HIGH
         );
+
+        return effectiveLltv;
+    }
+
+    function _getPositions(IPoolDataProvider poolDataProvider, IAaveOracle oracle, address vault_)
+        internal
+        view
+        returns (
+            uint256 collateralTokens,
+            uint256 collateralUSD,
+            uint256 collateralPriceUSD,
+            uint256 borrowTokens,
+            uint256 borrowUSD,
+            uint256 borrowPriceUSD
+        )
+    {
+        (collateralTokens,,,,,,,,) = poolDataProvider.getUserReserveData(lendReserve, vault_);
+        collateralPriceUSD = oracle.getAssetPrice(lendReserve);
+
+        (,, borrowTokens,,,,,,) = poolDataProvider.getUserReserveData(borrowReserve, vault_);
+        borrowPriceUSD = oracle.getAssetPrice(borrowReserve);
+
+        collateralUSD =
+            (collateralTokens * collateralPriceUSD * WadRayMath.WAD) / (10 ** (lendReserveDecimals + oracleDecimals)); // in WAD
+        borrowUSD = (borrowTokens * borrowPriceUSD * WadRayMath.WAD) / (10 ** (borrowReserveDecimals + oracleDecimals)); // in WAD
     }
 }
