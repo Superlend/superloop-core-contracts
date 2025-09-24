@@ -86,5 +86,7 @@ contract HyperbeatStakingModuleTest is TestBase {
         superloop.operate(moduleExecutionData);
 
         uint256 finalBalanceKHype = IERC20(BE_HYPE).balanceOf(address(superloop));
+
+        assertApproxEqAbs(finalBalanceKHype, currentBalanceKHype + 100 * WHYPE_SCALE, 5 * WHYPE_SCALE);
     }
 }

@@ -190,9 +190,9 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
 
     function _handleFallback() internal returns (bytes memory) {
         /**
-         * 4 => selector
-         *     32 => encodedId
-         *     32 => callType
+         *  4 => selector
+         *  32 => encodedId
+         *  32 => callType
          */
         if (msg.data.length < 68) {
             revert(Errors.INVALID_FALLBACK_DATA);

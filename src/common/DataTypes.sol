@@ -304,4 +304,38 @@ library DataTypes {
         INSTANT,
         REQUESTED
     }
+
+    /**
+     * @notice Structure for Aave V3 preliquidation parameters
+     * @param collateralAsset The address of the collateral asset
+     * @param debtAsset The address of the debt asset
+     * @param user The address of the user
+     * @param debtToCover The amount of debt to cover
+     */
+    struct AaveV3PreliquidationParams {
+        address collateralAsset;
+        address debtAsset;
+        address user;
+        uint256 debtToCover;
+    }
+
+    /**
+     * @notice Structure for Aave V3 preliquidation initialization parameters
+     * @param lendReserve The address of the lend reserve
+     * @param borrowReserve The address of the borrow reserve
+     * @param preLltv The preliquidation ltv
+     * @param preLCF1 The preliquidation c1
+     * @param preLCF2 The preliquidation c2
+     * @param preLIF1 The preliquidation i1
+     * @param preLIF2 The preliquidation i2
+     */
+    struct AaveV3PreliquidationInitParams {
+        address lendReserve;
+        address borrowReserve;
+        uint256 preLltv;
+        uint256 preLCF1;
+        uint256 preLCF2;
+        uint256 preLIF1;
+        uint256 preLIF2;
+    }
 }

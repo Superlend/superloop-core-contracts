@@ -58,4 +58,16 @@ library Errors {
     string public constant DEPOSIT_MANAGER_NOT_WHITELISTED = "49"; // deposit manager is not whitelisted
     string public constant FALLBACK_HANDLER_NOT_FOUND = "50"; // fallback handler not found
     string public constant INVALID_FALLBACK_DATA = "51"; // invalid fallback data
+
+    // Preliquidation
+    string public constant PRELIQUIDATION_PRELTV_TOO_HIGH = "52"; // preltv is too high
+    string public constant PRELIQUIDATION_LCF_DECREASING = "53"; // lcf is decreasing
+    string public constant PRELIQUIDATION_LCF_TOO_HIGH = "54"; // lcf is too high
+    string public constant PRELIQUIDATION_LIF_TOO_LOW = "55"; // lif is too low
+    string public constant PRELIQUIDATION_LIF_DECREASING = "56"; // lif is decreasing
+    string public constant PRELIQUIDATION_LIF_TOO_HIGH = "57"; // lif is too high
+
+    // Aave V3 Preliquidation
+    string public constant AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY = "58"; // reserve is not in the correct emode category
+    string public constant AAVE_V3_PRELIQUIDATION_STORAGE_OCCUPIED = "59"; // storage is occupied
 }
