@@ -38,6 +38,7 @@ library DataTypes {
     struct DepositRequestData {
         uint256 amount;
         uint256 amountProcessed; // amoutn remaining => amount - amountProcessed
+        uint256 sharesMinted;
         address user;
         RequestProcessingState state;
     }

@@ -385,15 +385,20 @@ abstract contract IntegrationBase is TestBase {
 
         uint256 exchangeRateBefore = superloop.convertToAssets(ONE_SHARE);
 
+        uint256 user1SharesBefore = superloop.balanceOf(user1);
+        uint256 user2SharesBefore = superloop.balanceOf(user2);
+        uint256 user3SharesBefore = superloop.balanceOf(user3);
+
         vm.prank(admin);
         superloop.operate(finalExecutionData);
 
         if (!depositAll) {
             // user 1 and user user 2 should get shares
             // user 3 should not get shares
-            assertTrue(superloop.balanceOf(user1) > 0);
-            assertTrue(superloop.balanceOf(user2) > 0);
-            assertTrue(superloop.balanceOf(user3) == 0);
+
+            uint256 user1SharesAfter = superloop.balanceOf(user1);
+            uint256 user2SharesAfter = superloop.balanceOf(user2);
+            uint256 user3SharesAfter = superloop.balanceOf(user3);
 
             // deposit manager should have 150 xtz now
             assertEq(IERC20(XTZ).balanceOf(address(depositManager)), 150 * XTZ_SCALE);
@@ -416,6 +421,10 @@ abstract contract IntegrationBase is TestBase {
             // deposit request 3 should be unprocessed
             DataTypes.DepositRequestData memory depositRequest3 = depositManager.depositRequest(3);
             assertEq(uint256(depositRequest3.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
+
+            assertEq(user1SharesAfter - user1SharesBefore, depositRequest1.sharesMinted);
+            assertEq(user2SharesAfter - user2SharesBefore, depositRequest2.sharesMinted);
+            assertEq(user3SharesAfter - user3SharesBefore, depositRequest3.sharesMinted);
 
             // exchange rate before should equal to exchange rate after
             uint256 exchangeRateAfter = superloop.convertToAssets(ONE_SHARE);

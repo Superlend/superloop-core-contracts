@@ -33,12 +33,13 @@ library DepositManagerStorage {
         uint256 id,
         uint256 amount,
         uint256 amountProcessed,
+        uint256 sharesMinted,
         address user,
         DataTypes.RequestProcessingState state
     ) internal {
         DepositManagerState storage $ = getDepositManagerStorage();
 
-        $.depositRequest[id] = DataTypes.DepositRequestData(amount, amountProcessed, user, state);
+        $.depositRequest[id] = DataTypes.DepositRequestData(amount, amountProcessed, sharesMinted, user, state);
     }
 
     function setNextDepositRequestId() internal {

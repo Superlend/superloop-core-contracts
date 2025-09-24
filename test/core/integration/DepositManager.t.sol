@@ -63,8 +63,9 @@ contract DepositManagerTest is IntegrationBase {
         superloop.operate(finalExecutionData);
 
         // user 1 should get shares
+        DataTypes.DepositRequestData memory depositRequest1 = depositManager.depositRequest(1);
         uint256 user1Shares = superloop.balanceOf(user1);
-        assertTrue(user1Shares > 0);
+        assertEq(user1Shares, depositRequest1.sharesMinted);
 
         // deposit maanger should not have any xtz now, resolution ptr must have increased, pendingDepsotAmout should be 0
         assertEq(IERC20(XTZ).balanceOf(address(depositManager)), 0);
@@ -128,14 +129,17 @@ contract DepositManagerTest is IntegrationBase {
             _resolveDepositRequestsCall(XTZ, depositAmount_secondBatch, abi.encode(intermediateExecutionData));
 
         uint256 exchangeRateBefore = superloop.convertToAssets(ONE_SHARE);
+        DataTypes.DepositRequestData memory depositRequest2_before = depositManager.depositRequest(2);
 
         vm.prank(admin);
         superloop.operate(finalExecutionData);
 
         uint256 exchangeRateAfter = superloop.convertToAssets(ONE_SHARE);
+        DataTypes.DepositRequestData memory depositRequest2_after = depositManager.depositRequest(2);
 
         assertApproxEqAbs(exchangeRateBefore, exchangeRateAfter, 1000); // 1000 is the precision
 
+        assertTrue(depositRequest2_after.sharesMinted > depositRequest2_before.sharesMinted);
         // deposit request 2 should be fully processed, deposit request 3 should be partially processed
         assertTrue(superloop.balanceOf(user3) > 0);
 

@@ -128,6 +128,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
                 Math.mulDiv(amountToIngestInCurrentRequest, totalNewSharesToMint, data.amount, Math.Rounding.Floor);
 
             if (sharesToMint != 0) {
+                $.depositRequest[currentId].sharesMinted = currentRequest.sharesMinted + sharesToMint;
                 ISuperloop(cache.vault).mintShares(currentRequest.user, sharesToMint);
             }
 
@@ -184,7 +185,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
 
         uint256 id = cache.nextDepositRequestId;
 
-        DepositManagerStorage.setDepositRequest(id, amount, 0, user, DataTypes.RequestProcessingState.UNPROCESSED);
+        DepositManagerStorage.setDepositRequest(id, amount, 0, 0, user, DataTypes.RequestProcessingState.UNPROCESSED);
         DepositManagerStorage.setUserDepositRequest(user, id);
         DepositManagerStorage.setNextDepositRequestId();
         DepositManagerStorage.setTotalPendingDeposits(cache.totalPendingDeposits + amount);
