@@ -94,8 +94,9 @@ contract AaveV3PreliquidationFallbackHandler is Context {
 
         // initial validations
         require(id_ == id, Errors.PRELIQUIDATION_INVALID_ID);
-        require(params.user == vault, Errors.PRELIQUIDATION_INVALID_USER);
+        require(params.user == vault && address(this) == params.user, Errors.PRELIQUIDATION_INVALID_USER);
         require(pool.getUserEMode(vault) == emodeCategory, Errors.AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY);
+        address user = params.user;
 
         // get collateral tokens and it's USD value
         // get debt tokens and it's USD value
@@ -106,7 +107,7 @@ contract AaveV3PreliquidationFallbackHandler is Context {
             uint256 borrowTokens,
             uint256 borrowUsdWAD,
             uint256 borrowPriceUSD
-        ) = _getPositions(poolDataProvider, oracle, vault);
+        ) = _getPositions(poolDataProvider, oracle, user);
 
         // make sure borrowUSD <= collateralUSD * Lltv : bad debt
         require(borrowUsdWAD <= WadRayMath.wadMul(collateralUsdWAD, Lltv), Errors.PRELIQUIDATION_POSSIBLE_BAD_DEBT);
@@ -154,7 +155,7 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         SafeERC20.safeTransfer(IERC20(lendReserve), _msgSender(), collateralWithdrawn);
 
         // emit event
-        emit PreliquidationExecuted(id, params.user, vault, debtToCover, collateralToSieze);
+        emit PreliquidationExecuted(id, params.user, user, debtToCover, collateralToSieze);
     }
 
     function preliquidationParams(bytes32, DataTypes.CallType)
@@ -215,7 +216,7 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         return effectiveLltv;
     }
 
-    function _getPositions(IPoolDataProvider poolDataProvider, IAaveOracle oracle, address vault_)
+    function _getPositions(IPoolDataProvider poolDataProvider, IAaveOracle oracle, address user_)
         internal
         view
         returns (
@@ -227,10 +228,10 @@ contract AaveV3PreliquidationFallbackHandler is Context {
             uint256 borrowPriceUSD
         )
     {
-        (collateralTokens,,,,,,,,) = poolDataProvider.getUserReserveData(lendReserve, vault_);
+        (collateralTokens,,,,,,,,) = poolDataProvider.getUserReserveData(lendReserve, user_);
         collateralPriceUSD = oracle.getAssetPrice(lendReserve);
 
-        (,, borrowTokens,,,,,,) = poolDataProvider.getUserReserveData(borrowReserve, vault_);
+        (,, borrowTokens,,,,,,) = poolDataProvider.getUserReserveData(borrowReserve, user_);
         borrowPriceUSD = oracle.getAssetPrice(borrowReserve);
 
         collateralUSD =
