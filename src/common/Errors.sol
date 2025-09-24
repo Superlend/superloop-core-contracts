@@ -52,7 +52,7 @@ library Errors {
     string public constant DEPOSIT_REQUEST_NOT_FOUND = "43"; // deposit request not found
     string public constant CANNOT_CLAIM_ZERO_AMOUNT = "44"; // cannot claim zero amount
     string public constant CALLER_NOT_WITHDRAW_MANAGER = "45"; // the caller of function is not withdraw manager
-    string public constant CALLER_NOT_VAULT_OPERATOR = "46"; // the caller of function is not vault operator
+    string public constant CALLER_NOT_VAULT_OPERATOR_OR_VAULT_ADMIN = "46"; // the caller of function is not vault operator
     string public constant VAULT_PAUSED = "47"; // vault is paused
     string public constant VAULT_FROZEN = "48"; // vault is frozen
     string public constant DEPOSIT_MANAGER_NOT_WHITELISTED = "49"; // deposit manager is not whitelisted

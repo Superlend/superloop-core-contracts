@@ -42,7 +42,6 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
                 preIF2: PRE_IF2
             })
         );
-
     }
 
     function test_preliquidationParams() public view {
@@ -265,7 +264,6 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
 
         uint256 collateralSeized = stxtzBalanceAfter - stxtzBalanceBefore;
 
-        
         assertTrue(collateralSeized < 40 * 10 ** 6);
         assertTrue(xtzBalanceBefore - xtzBalanceAfter < 40 * 10 ** 18);
     }

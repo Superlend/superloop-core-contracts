@@ -100,6 +100,12 @@ interface ISuperloop is IERC4626 {
     function setVaultAdmin(address vaultAdmin_) external;
 
     /**
+     * @notice Sets the vault operator address
+     * @param vaultOperator_ The address of the vault operator
+     */
+    function setVaultOperator(address vaultOperator_) external;
+
+    /**
      * @notice Sets the treasury address
      * @param treasury_ The address of the treasury
      */

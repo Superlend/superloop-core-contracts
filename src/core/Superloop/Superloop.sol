@@ -20,7 +20,6 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {SuperloopActions} from "./SuperloopActions.sol";
 import {SuperloopVault} from "./SuperloopVault.sol";
 import {SuperloopBase} from "./SuperloopBase.sol";
-import {console} from "forge-std/Test.sol";
 
 /**
  * @title Superloop
@@ -90,7 +89,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
     function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData)
         external
         whenNotFrozen
-        onlyVaultOperator
+        onlyVaultOperatorOrVaultAdmin
     {
         _operate(moduleExecutionData);
     }
@@ -99,7 +98,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
      * @notice Skims excess tokens from the vault (restricted to vault admin)
      * @param asset_ The address of the asset to skim (cannot be the vault's primary asset)
      */
-    function skim(address asset_) public whenNotFrozen onlyVaultOperator {
+    function skim(address asset_) public whenNotFrozen onlyVaultOperatorOrVaultAdmin {
         require(asset_ != asset(), Errors.INVALID_SKIM_ASSET);
         uint256 balance = IERC20(asset_).balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(asset_), SuperloopStorage.getSuperloopEssentialRolesStorage().treasury, balance);
@@ -195,7 +194,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
          *  32 => callType
          */
         if (msg.data.length < 68) {
-            revert(Errors.INVALID_FALLBACK_DATA);
+            return abi.encode(false);
         }
 
         (bytes32 encodedId, DataTypes.CallType callType) = abi.decode(msg.data[4:4 + 64], (bytes32, DataTypes.CallType));
@@ -213,13 +212,16 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         return abi.encode(true);
     }
 
-    modifier onlyVaultOperator() {
-        _onlyVaultOperator();
+    modifier onlyVaultOperatorOrVaultAdmin() {
+        _onlyVaultOperatorOrVaultAdmin();
         _;
     }
 
-    function _onlyVaultOperator() internal view {
+    function _onlyVaultOperatorOrVaultAdmin() internal view {
         SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
-        require($.vaultOperator == _msgSender(), Errors.CALLER_NOT_VAULT_OPERATOR);
+        require(
+            $.vaultOperator == _msgSender() || $.vaultAdmin == _msgSender(),
+            Errors.CALLER_NOT_VAULT_OPERATOR_OR_VAULT_ADMIN
+        );
     }
 }

@@ -12,6 +12,7 @@ import {AaveV3ActionModule} from "../modules/aave/AaveV3ActionModule.sol";
 import {UniversalDexModule} from "../modules/dex/UniversalDexModule.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
+import {ISuperloopLegacy} from "./ISuperloopLegacy.sol";
 
 /**
  * @title MigrationHelper
@@ -123,7 +124,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         uint256 batches
     ) external onlyOwner nonReentrant returns (bool) {
         // Ensure withdraw manager has no balance to prevent conflicts
-        address blackListedUser = ISuperloop(oldVault).withdrawManager();
+        address blackListedUser = ISuperloopLegacy(oldVault).withdrawManagerModule();
         uint256 blackListedUserBalance = ISuperloop(oldVault).balanceOf(blackListedUser);
         if (blackListedUserBalance > 0) {
             revert("withdraw manager must be empty");
@@ -268,8 +269,12 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         uint256 lendBalanceBatch = lendBalance / batches;
         for (uint256 i = 0; i < batches; i++) {
             if (i == batches - 1) {
-                borrowBalanceBatch = borrowBalance;
-                lendBalanceBatch = lendBalance;
+                (uint256 lendBalanceRemainingActual,,,,,,,,) = poolDataProvider.getUserReserveData(lendAsset, oldVault);
+                (,, uint256 borrowBalanceRemainingActual,,,,,,) =
+                    poolDataProvider.getUserReserveData(borrowAsset, oldVault);
+
+                borrowBalanceBatch = borrowBalanceRemainingActual;
+                lendBalanceBatch = lendBalanceRemainingActual;
             }
 
             // Encode migration parameters for the flash loan callback
