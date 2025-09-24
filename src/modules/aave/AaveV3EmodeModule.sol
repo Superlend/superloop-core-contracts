@@ -8,6 +8,12 @@ import {SuperloopStorage} from "../../core/lib/SuperloopStorage.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 
+/**
+ * @title AaveV3EmodeModule
+ * @author Superlend
+ * @notice Module for executing Aave V3 eMode operations
+ * @dev Provides eMode category setting functionality for Aave V3 integration
+ */
 contract AaveV3EmodeModule is Context {
     event EModeCategorySet(address indexed user, uint8 emodeCategory);
 

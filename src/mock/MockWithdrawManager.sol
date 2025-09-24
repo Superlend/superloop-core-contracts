@@ -12,6 +12,12 @@ import {Errors} from "../common/Errors.sol";
 import {DataTypes} from "../common/DataTypes.sol";
 import {Storages} from "../common/Storages.sol";
 
+/**
+ * @title MockWithdrawManager
+ * @author Superlend
+ * @notice Mock withdraw manager for testing purposes
+ * @dev Provides basic withdraw manager functionality for testing (currently minimal implementation)
+ */
 contract MockWithdrawManager {
     // // Mock-specific storage
     // mapping(uint256 => uint256) private withdrawRequestTimestamps;

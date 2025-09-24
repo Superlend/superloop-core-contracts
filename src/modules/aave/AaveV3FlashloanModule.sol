@@ -10,6 +10,12 @@ import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * @title AaveV3FlashloanModule
+ * @author Superlend
+ * @notice Module for executing Aave V3 flashloan operations
+ * @dev Provides flashloan functionality with callback execution support
+ */
 contract AaveV3FlashloanModule is Context {
     event FlashloanExecuted(address indexed asset, uint256 amount, address indexed borrower, uint16 referralCode);
 

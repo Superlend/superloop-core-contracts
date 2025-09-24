@@ -2,6 +2,12 @@
 
 pragma solidity ^0.8.13;
 
+/**
+ * @title IRouter
+ * @author Superlend
+ * @notice Mock router interface for testing purposes
+ * @dev Provides interface for DEX router operations with exact input/output single swaps
+ */
 interface IRouter {
     struct ExactInputSingleParams {
         address tokenIn;

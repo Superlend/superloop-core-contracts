@@ -6,6 +6,12 @@ import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 
+/**
+ * @title WithdrawManagerBase
+ * @author Superlend
+ * @notice Base contract providing withdrawal request management functionality
+ * @dev Handles withdrawal request storage, retrieval, and state management with support for multiple queue types
+ */
 abstract contract WithdrawManagerBase is Context {
     function vault() public view returns (address) {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();

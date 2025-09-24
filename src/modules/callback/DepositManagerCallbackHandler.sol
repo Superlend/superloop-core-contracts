@@ -3,6 +3,12 @@ pragma solidity ^0.8.13;
 
 import {DataTypes} from "../../common/DataTypes.sol";
 
+/**
+ * @title DepositManagerCallbackHandler
+ * @author Superlend
+ * @notice Callback handler for deposit manager operations
+ * @dev Handles deposit callbacks and processes callback data
+ */
 contract DepositManagerCallbackHandler {
     function executeDeposit(uint256, bytes calldata params)
         external

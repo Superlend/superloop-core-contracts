@@ -16,6 +16,12 @@ import {Errors} from "../../common/Errors.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {IDepositManagerCallbackHandler} from "../../interfaces/IDepositManagerCallbackHandler.sol";
 
+/**
+ * @title DepositManager
+ * @author Superlend
+ * @notice Manages deposit requests for Superloop vaults with queuing and processing capabilities
+ * @dev Handles deposit request lifecycle from creation to resolution with exchange rate preservation
+ */
 contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, DepositManagerBase {
     event DepositRequested(address indexed user, uint256 amount, uint256 requestId);
     event DepositRequestCancelled(uint256 indexed requestId, address indexed user, uint256 amountRefunded);

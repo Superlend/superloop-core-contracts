@@ -5,6 +5,12 @@ pragma solidity ^0.8.13;
 import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
 import {Errors} from "../../common/Errors.sol";
 
+/**
+ * @title SuperloopBase
+ * @author Superlend
+ * @notice Base contract providing configuration and management functionality for Superloop vaults
+ * @dev Handles vault settings, module registration, role management, and privileged address control
+ */
 abstract contract SuperloopBase {
     event SupplyCapUpdated(uint256 oldCap, uint256 newCap);
     event SuperloopModuleRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);

@@ -7,6 +7,12 @@ import {Errors} from "../../common/Errors.sol";
 import {SuperloopStorage} from "../../core/lib/SuperloopStorage.sol";
 import {IWETH9} from "../../interfaces/IWETH9.sol";
 
+/**
+ * @title UnwrapModule
+ * @author Superlend
+ * @notice Module for unwrapping WETH to ETH
+ * @dev Provides WETH to ETH conversion functionality within execution context
+ */
 contract UnwrapModule is Context {
     event Unwrapped(address indexed asset, uint256 amount, address caller);
 

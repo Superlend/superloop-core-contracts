@@ -5,6 +5,12 @@ import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {AaveV3ActionModule} from "./AaveV3ActionModule.sol";
 
+/**
+ * @title AaveV3WithdrawModule
+ * @author Superlend
+ * @notice Module for executing Aave V3 withdraw operations
+ * @dev Extends AaveV3ActionModule to provide asset withdrawal functionality
+ */
 contract AaveV3WithdrawModule is AaveV3ActionModule {
     event AssetWithdrawn(address indexed asset, uint256 amount, address indexed withdrawer);
 

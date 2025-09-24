@@ -7,6 +7,12 @@ import {AaveV3ActionModule} from "./AaveV3ActionModule.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
+/**
+ * @title AaveV3RepayModule
+ * @author Superlend
+ * @notice Module for executing Aave V3 repay operations
+ * @dev Extends AaveV3ActionModule to provide debt repayment functionality
+ */
 contract AaveV3RepayModule is AaveV3ActionModule {
     event AssetRepaid(address indexed asset, uint256 amount, address indexed repayer);
 

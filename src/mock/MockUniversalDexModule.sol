@@ -3,6 +3,12 @@ pragma solidity ^0.8.13;
 
 import {DataTypes} from "../common/DataTypes.sol";
 
+/**
+ * @title MockUniversalDexModule
+ * @author Superlend
+ * @notice Mock universal DEX module for testing purposes
+ * @dev Provides configurable mock swap functionality for testing
+ */
 contract MockUniversalDexModule {
     uint256 public mockAmountOut;
     bool public shouldRevert;

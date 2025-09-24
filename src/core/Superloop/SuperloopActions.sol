@@ -7,6 +7,12 @@ import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
 import {Errors} from "../../common/Errors.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
+/**
+ * @title SuperloopActions
+ * @author Superlend
+ * @notice Abstract contract providing module execution functionality for Superloop vaults
+ * @dev Handles execution of registered modules with support for both CALL and DELEGATECALL operations
+ */
 abstract contract SuperloopActions {
     function _operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) internal {
         SuperloopStorage.beginExecutionContext();

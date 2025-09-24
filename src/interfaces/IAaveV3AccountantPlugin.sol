@@ -2,6 +2,12 @@
 
 pragma solidity ^0.8.13;
 
+/**
+ * @title IAaveV3AccountantPlugin
+ * @author Superlend
+ * @notice Interface for Aave V3 accountant plugin operations
+ * @dev Handles asset management and configuration for Aave V3 integration
+ */
 interface IAaveV3AccountantPlugin {
     /**
      * @notice Gets the total assets managed by the accountant

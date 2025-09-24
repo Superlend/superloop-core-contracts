@@ -6,6 +6,12 @@ import {DepositManagerStorage} from "../lib/DepositManagerStorage.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 
+/**
+ * @title DepositManagerBase
+ * @author Superlend
+ * @notice Base contract providing deposit request management functionality
+ * @dev Handles deposit request storage, retrieval, and state management
+ */
 abstract contract DepositManagerBase is Context {
     function vault() public view returns (address) {
         DepositManagerStorage.DepositManagerState storage $ = DepositManagerStorage.getDepositManagerStorage();

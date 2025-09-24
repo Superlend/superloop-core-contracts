@@ -18,6 +18,12 @@ import {IWithdrawManagerCallbackHandler} from "../../interfaces/IWithdrawManager
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {console} from "forge-std/console.sol";
 
+/**
+ * @title WithdrawManager
+ * @author Superlend
+ * @notice Manages withdrawal requests for Superloop vaults with multiple queue types and processing capabilities
+ * @dev Handles withdrawal request lifecycle from creation to resolution with support for different priority levels
+ */
 contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, WithdrawManagerBase {
     event WithdrawRequested(
         address indexed user, uint256 shares, uint256 requestId, DataTypes.WithdrawRequestType requestType
