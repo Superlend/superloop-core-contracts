@@ -312,7 +312,7 @@ library DataTypes {
      * @param user The address of the user
      * @param debtToCover The amount of debt to cover
      */
-    struct AaveV3PreliquidationParams {
+    struct AaveV3ExecutePreliquidationParams {
         address collateralAsset;
         address debtAsset;
         address user;
@@ -321,21 +321,23 @@ library DataTypes {
 
     /**
      * @notice Structure for Aave V3 preliquidation initialization parameters
+     * @param id The id of the preliquidation contract, used to make sure fallback handler is configured correctly
      * @param lendReserve The address of the lend reserve
      * @param borrowReserve The address of the borrow reserve
      * @param preLltv The preliquidation ltv
-     * @param preLCF1 The preliquidation c1
-     * @param preLCF2 The preliquidation c2
-     * @param preLIF1 The preliquidation i1
-     * @param preLIF2 The preliquidation i2
+     * @param preCF1 The preliquidation c1
+     * @param preCF2 The preliquidation c2
+     * @param preIF1 The preliquidation i1
+     * @param preIF2 The preliquidation i2
      */
-    struct AaveV3PreliquidationInitParams {
+    struct AaveV3PreliquidationParams {
+        bytes32 id;
         address lendReserve;
         address borrowReserve;
         uint256 preLltv;
-        uint256 preLCF1;
-        uint256 preLCF2;
-        uint256 preLIF1;
-        uint256 preLIF2;
+        uint256 preCF1;
+        uint256 preCF2;
+        uint256 preIF1;
+        uint256 preIF2;
     }
 }

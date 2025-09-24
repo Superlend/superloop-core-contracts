@@ -14,6 +14,17 @@ import {WadRayMath} from "aave-v3-core/contracts/protocol/libraries/math/WadRayM
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 
 contract AaveV3PreliquidationFallbackHandler is Context {
+    event PreliquidationDeployed(
+        bytes32 indexed id,
+        address lendReserve,
+        address borrowReserve,
+        uint256 preLltv,
+        uint256 preCF1,
+        uint256 preCF2,
+        uint256 preIF1,
+        uint256 preIF2
+    );
+
     // aave  and vault related stuff
     uint256 public constant BPS = 1e4;
     IPoolAddressesProvider public immutable poolAddressesProvider;
@@ -21,6 +32,7 @@ contract AaveV3PreliquidationFallbackHandler is Context {
     uint256 public immutable emodeCategory; // preliquidation module is supposed to be used in only one emode category
 
     // fallback handler related stuff
+    bytes32 public immutable id;
     address public immutable lendReserve;
     address public immutable borrowReserve;
     uint256 public immutable preLltv;
@@ -32,7 +44,7 @@ contract AaveV3PreliquidationFallbackHandler is Context {
     constructor(
         address poolAddressesProvider_,
         address vault_,
-        DataTypes.AaveV3PreliquidationInitParams memory preLiquidationParams_
+        DataTypes.AaveV3PreliquidationParams memory preLiquidationParams_
     ) {
         vault = vault_;
         poolAddressesProvider = IPoolAddressesProvider(poolAddressesProvider_);
@@ -43,22 +55,45 @@ contract AaveV3PreliquidationFallbackHandler is Context {
 
         lendReserve = preLiquidationParams_.lendReserve;
         borrowReserve = preLiquidationParams_.borrowReserve;
+        id = preLiquidationParams_.id;
 
         preLltv = preLiquidationParams_.preLltv;
-        preCF1 = preLiquidationParams_.preLCF1;
-        preCF2 = preLiquidationParams_.preLCF2;
-        preIF1 = preLiquidationParams_.preLIF1;
-        preIF2 = preLiquidationParams_.preLIF2;
+        preCF1 = preLiquidationParams_.preCF1;
+        preCF2 = preLiquidationParams_.preCF2;
+        preIF1 = preLiquidationParams_.preIF1;
+        preIF2 = preLiquidationParams_.preIF2;
+
+        emit PreliquidationDeployed(id, lendReserve, borrowReserve, preLltv, preCF1, preCF2, preIF1, preIF2);
     }
 
-    function preliquidate(bytes32, DataTypes.CallType, DataTypes.AaveV3PreliquidationParams memory params) public {
+    function preliquidate(bytes32 id_, DataTypes.CallType, DataTypes.AaveV3ExecutePreliquidationParams memory params)
+        public
+    {
         // make sure params.user = vault
         // make sure vault is in the same emode as stored
+        // make sure id is correct
         // TODO: Implement
     }
 
+    function preliquidationParams(bytes32, DataTypes.CallType)
+        external
+        view
+        returns (DataTypes.AaveV3PreliquidationParams memory)
+    {
+        return DataTypes.AaveV3PreliquidationParams({
+            id: id,
+            lendReserve: lendReserve,
+            borrowReserve: borrowReserve,
+            preLltv: preLltv,
+            preCF1: preCF1,
+            preCF2: preCF2,
+            preIF1: preIF1,
+            preIF2: preIF2
+        });
+    }
+
     function _validatePreLiquidationParams(
-        DataTypes.AaveV3PreliquidationInitParams memory preLiquidationParams_,
+        DataTypes.AaveV3PreliquidationParams memory preLiquidationParams_,
         IPool pool,
         uint256 _emodeCategory
     ) internal view {
@@ -86,12 +121,12 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         }
 
         require(preLiquidationParams_.preLltv < effectiveLltv, Errors.PRELIQUIDATION_PRELTV_TOO_HIGH);
-        require(preLiquidationParams_.preLCF1 <= preLiquidationParams_.preLCF2, Errors.PRELIQUIDATION_LCF_DECREASING);
-        require(preLiquidationParams_.preLCF1 <= WadRayMath.WAD, Errors.PRELIQUIDATION_LCF_TOO_HIGH);
-        require(WadRayMath.WAD <= preLiquidationParams_.preLIF1, Errors.PRELIQUIDATION_LIF_TOO_LOW);
-        require(preLiquidationParams_.preLIF1 <= preLiquidationParams_.preLIF2, Errors.PRELIQUIDATION_LIF_DECREASING);
+        require(preLiquidationParams_.preCF1 <= preLiquidationParams_.preCF2, Errors.PRELIQUIDATION_LCF_DECREASING);
+        require(preLiquidationParams_.preCF1 <= WadRayMath.WAD, Errors.PRELIQUIDATION_LCF_TOO_HIGH);
+        require(WadRayMath.WAD <= preLiquidationParams_.preIF1, Errors.PRELIQUIDATION_LIF_TOO_LOW);
+        require(preLiquidationParams_.preIF1 <= preLiquidationParams_.preIF2, Errors.PRELIQUIDATION_LIF_DECREASING);
         require(
-            preLiquidationParams_.preLIF2 <= WadRayMath.wadDiv(WadRayMath.WAD, effectiveLltv),
+            preLiquidationParams_.preIF2 <= WadRayMath.wadDiv(WadRayMath.WAD, effectiveLltv),
             Errors.PRELIQUIDATION_LIF_TOO_HIGH
         );
     }
