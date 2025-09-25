@@ -3,24 +3,33 @@
 pragma solidity ^0.8.13;
 
 import {Test, console} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
 import {Superloop} from "../../src/core/Superloop/Superloop.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
 import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegistry.sol";
-import {AaveV3FlashloanModule} from "../../src/modules/AaveV3FlashloanModule.sol";
-import {AaveV3CallbackHandler} from "../../src/modules/AaveV3CallbackHandler.sol";
-import {AaveV3EmodeModule} from "../../src/modules/AaveV3EmodeModule.sol";
-import {AaveV3SupplyModule} from "../../src/modules/AaveV3SupplyModule.sol";
-import {AaveV3WithdrawModule} from "../../src/modules/AaveV3WithdrawModule.sol";
-import {AaveV3BorrowModule} from "../../src/modules/AaveV3BorrowModule.sol";
-import {AaveV3RepayModule} from "../../src/modules/AaveV3RepayModule.sol";
+import {AaveV3FlashloanModule} from "../../src/modules/aave/AaveV3FlashloanModule.sol";
+import {AaveV3CallbackHandler} from "../../src/modules/callback/AaveV3CallbackHandler.sol";
+import {AaveV3EmodeModule} from "../../src/modules/aave/AaveV3EmodeModule.sol";
+import {AaveV3SupplyModule} from "../../src/modules/aave/AaveV3SupplyModule.sol";
+import {AaveV3WithdrawModule} from "../../src/modules/aave/AaveV3WithdrawModule.sol";
+import {AaveV3BorrowModule} from "../../src/modules/aave/AaveV3BorrowModule.sol";
+import {AaveV3RepayModule} from "../../src/modules/aave/AaveV3RepayModule.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IPool} from "aave-v3-core/contracts/interfaces/IPool.sol";
-import {UniversalDexModule} from "../../src/modules/UniversalDexModule.sol";
-import {AccountantAaveV3} from "../../src/core/Accountant/AccountantAaveV3.sol";
+import {UniversalDexModule} from "../../src/modules/dex/UniversalDexModule.sol";
+import {AccountantAaveV3} from "../../src/core/Accountant/aaveV3Accountant/AccountantAaveV3.sol";
 import {WithdrawManager} from "../../src/core/WithdrawManager/WithdrawManager.sol";
+import {DepositManager} from "../../src/core/DepositManager/DepositManager.sol";
+import {DepositManagerCallbackHandler} from "../../src/modules/callback/DepositManagerCallbackHandler.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
 import {TransparentUpgradeableProxy} from
     "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {UniversalAccountant} from "../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
+import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
+import {WithdrawManagerCallbackHandler} from "../../src/modules/callback/WithdrawManagerCallbackHandler.sol";
+import {UnwrapModule} from "../../src/modules/helper/UnwrapModule.sol";
+import {WrapModule} from "../../src/modules/helper/WrapModule.sol";
+import {AaveV3PreliquidationFallbackHandler} from "../../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
 
 contract TestBase is Test {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -42,12 +51,25 @@ contract TestBase is Test {
     address public constant POOL_CONFIGURATOR = 0x30F6880Bb1cF780a49eB4Ef64E64585780AAe060;
     address public constant POOL_ADMIN = 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
 
+    uint256 public constant WAD = 10 ** 18;
+    uint256 public constant BPS = 10000;
+    bytes32 id = bytes32("1");
+    uint256 public constant PRE_LLTV = (5000 * WAD) / BPS;
+    uint256 public constant PRE_CF1 = (2000 * WAD) / BPS;
+    uint256 public constant PRE_CF2 = (4000 * WAD) / BPS;
+    uint256 public constant PRE_IF1 = ((BPS + 50) * WAD) / BPS;
+    uint256 public constant PRE_IF2 = ((80 + BPS) * WAD) / BPS;
+    uint256 public LLTV = (9600 * WAD) / BPS;
+
     address public admin;
     address public treasury;
 
     SuperloopModuleRegistry public moduleRegistry;
     Superloop public superloop;
     AaveV3FlashloanModule public flashloanModule;
+    DepositManagerCallbackHandler public depositManagerCallbackHandler;
+    WithdrawManagerCallbackHandler public withdrawManagerCallbackHandler;
+    AaveV3PreliquidationFallbackHandler public preliquidationFallbackHandler;
     AaveV3CallbackHandler public callbackHandler;
     AaveV3SupplyModule public supplyModule;
     AaveV3WithdrawModule public withdrawModule;
@@ -55,7 +77,12 @@ contract TestBase is Test {
     AaveV3RepayModule public repayModule;
     UniversalDexModule public dexModule;
     AccountantAaveV3 public accountantAaveV3;
+    UniversalAccountant public accountant;
     WithdrawManager public withdrawManager;
+    UnwrapModule public unwrapModule;
+    WrapModule public wrapModule;
+
+    DepositManager public depositManager;
 
     address public mockModule;
     AaveV3EmodeModule public emodeModule;
@@ -108,6 +135,14 @@ contract TestBase is Test {
         moduleRegistry.setModule("AaveV3RepayModule", address(repayModule));
         dexModule = new UniversalDexModule();
         moduleRegistry.setModule("UniversalDexModule", address(dexModule));
+        depositManagerCallbackHandler = new DepositManagerCallbackHandler();
+        moduleRegistry.setModule("DepositManagerCallbackHandler", address(depositManagerCallbackHandler));
+        withdrawManagerCallbackHandler = new WithdrawManagerCallbackHandler();
+        moduleRegistry.setModule("WithdrawManagerCallbackHandler", address(withdrawManagerCallbackHandler));
+        unwrapModule = new UnwrapModule(XTZ);
+        moduleRegistry.setModule("UnwrapModule", address(unwrapModule));
+        wrapModule = new WrapModule(XTZ);
+        moduleRegistry.setModule("WrapModule", address(wrapModule));
 
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");
@@ -117,6 +152,8 @@ contract TestBase is Test {
         vm.label(address(borrowModule), "borrowModule");
         vm.label(address(repayModule), "repayModule");
         vm.label(address(dexModule), "dexModule");
+        vm.label(address(depositManagerCallbackHandler), "depositManagerCallbackHandler");
+        vm.label(address(withdrawManagerCallbackHandler), "withdrawManagerCallbackHandler");
     }
 
     function _deployAccountant(address vault) internal {
@@ -125,36 +162,73 @@ contract TestBase is Test {
         address[] memory borrowAssets = new address[](1);
         borrowAssets[0] = XTZ;
 
-        DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
+        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
+            .AaveV3AccountantPluginModuleInitData({
             poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
             lendAssets: lendAssets,
-            borrowAssets: borrowAssets,
+            borrowAssets: borrowAssets
+        });
+        address accountantPlugin = address(new AaveV3AccountantPlugin(accountantPluginInitData));
+
+        address[] memory registeredAccountants = new address[](1);
+        registeredAccountants[0] = accountantPlugin;
+
+        // deploy accountant
+        DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
+            registeredAccountants: registeredAccountants,
             performanceFee: uint16(PERFORMANCE_FEE),
-            vault: vault
+            vault: address(vault)
         });
 
-        AccountantAaveV3 accountantAaveV3Implementation = new AccountantAaveV3();
-        ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
-
+        address accountantImplementation = address(new UniversalAccountant());
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-            address(accountantAaveV3Implementation),
-            address(proxyAdmin),
-            abi.encodeWithSelector(AccountantAaveV3.initialize.selector, initData)
+            accountantImplementation,
+            address(this),
+            abi.encodeWithSelector(UniversalAccountant.initialize.selector, initData)
         );
 
-        accountantAaveV3 = AccountantAaveV3(address(proxy));
+        accountant = UniversalAccountant(address(proxy));
+    }
+
+    function _deployDepositManager(address vault) internal {
+        DepositManager depositManagerImplementation = new DepositManager();
+        TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
+            address(depositManagerImplementation),
+            address(this),
+            abi.encodeWithSelector(DepositManager.initialize.selector, vault)
+        );
+
+        depositManager = DepositManager(address(proxy));
     }
 
     function _deployWithdrawManager(address vault) internal {
         WithdrawManager withdrawManagerImplementation = new WithdrawManager();
-        ProxyAdmin proxyAdmin = new ProxyAdmin(address(this));
-
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(withdrawManagerImplementation),
-            address(proxyAdmin),
+            address(this),
             abi.encodeWithSelector(WithdrawManager.initialize.selector, vault)
         );
-
         withdrawManager = WithdrawManager(address(proxy));
+    }
+
+    function _deployPreliquidationFallbackHandler(address vault) internal {
+        preliquidationFallbackHandler = new AaveV3PreliquidationFallbackHandler(
+            AAVE_V3_POOL_ADDRESSES_PROVIDER,
+            vault,
+            2,
+            8,
+            DataTypes.AaveV3PreliquidationParamsInit({
+                id: id,
+                lendReserve: ST_XTZ,
+                borrowReserve: XTZ,
+                preLltv: PRE_LLTV,
+                preCF1: PRE_CF1,
+                preCF2: PRE_CF2,
+                preIF1: PRE_IF1,
+                preIF2: PRE_IF2
+            })
+        );
+        moduleRegistry.setModule("AaveV3PreliquidationFallbackHandler", address(preliquidationFallbackHandler));
+        vm.label(address(preliquidationFallbackHandler), "preliquidationFallbackHandler");
     }
 }

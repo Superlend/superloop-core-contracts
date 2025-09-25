@@ -15,17 +15,26 @@ library SuperloopStorage {
     uint8 public constant DECIMALS_OFFSET = 2;
 
     /**
+     * @notice Maximum BPS value
+     */
+    uint256 public constant MAX_BPS_VALUE = 10000; // 100%
+
+    /**
      * @notice Structure for storing Superloop vault state
      * @param supplyCap The maximum supply cap for the vault
      * @param superloopModuleRegistry The address of the module registry
      * @param registeredModules Mapping from module address to registration status
      * @param callbackHandlers Mapping from callback key to handler address
+     * @param cashReserve The amount of cash reserve for the vault. Represented in BPS
+     * @param fallbackHandlers Mapping from fallback key to handler address
      */
     struct SuperloopState {
         uint256 supplyCap;
         address superloopModuleRegistry;
+        uint256 cashReserve;
         mapping(address => bool) registeredModules;
         mapping(bytes32 => address) callbackHandlers;
+        mapping(bytes32 => address) fallbackHandlers;
     }
 
     /**
@@ -75,6 +84,15 @@ library SuperloopStorage {
     }
 
     /**
+     * @notice Sets the cash reserve for the vault
+     * @param cashReserve_ The new cash reserve value
+     */
+    function setCashReserve(uint256 cashReserve_) internal {
+        SuperloopState storage $ = getSuperloopStorage();
+        $.cashReserve = cashReserve_;
+    }
+
+    /**
      * @notice Sets a callback handler for a specific key
      * @param key The key identifier for the callback handler
      * @param handler_ The address of the callback handler
@@ -85,16 +103,28 @@ library SuperloopStorage {
     }
 
     /**
+     * @notice Sets a fallback handler for a specific key
+     * @param key The key identifier for the fallback handler
+     * @param handler_ The address of the fallback handler
+     */
+    function setFallbackHandler(bytes32 key, address handler_) internal {
+        SuperloopState storage $ = getSuperloopStorage();
+        $.fallbackHandlers[key] = handler_;
+    }
+
+    /**
      * @notice Structure for storing Superloop essential roles
-     * @param accountantModule The address of the accountant module
-     * @param withdrawManagerModule The address of the withdraw manager module
+     * @param accountant The address of the accountant module
+     * @param withdrawManager The address of the withdraw manager module
      * @param vaultAdmin The address of the vault admin
      * @param treasury The address of the treasury
      * @param privilegedAddresses Mapping from address to privileged status
      */
     struct SuperloopEssentialRoles {
-        address accountantModule;
-        address withdrawManagerModule;
+        address accountant;
+        address withdrawManager;
+        address depositManager;
+        address vaultOperator;
         address vaultAdmin;
         address treasury;
         mapping(address => bool) privilegedAddresses;
@@ -123,7 +153,7 @@ library SuperloopStorage {
      */
     function setAccountantModule(address accountantModule_) internal {
         SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
-        $.accountantModule = accountantModule_;
+        $.accountant = accountantModule_;
     }
 
     /**
@@ -132,7 +162,16 @@ library SuperloopStorage {
      */
     function setWithdrawManagerModule(address withdrawManagerModule_) internal {
         SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
-        $.withdrawManagerModule = withdrawManagerModule_;
+        $.withdrawManager = withdrawManagerModule_;
+    }
+
+    /**
+     * @notice Sets the deposit manager module address
+     * @param depositManagerModule_ The address of the deposit manager module
+     */
+    function setDepositManager(address depositManagerModule_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.depositManager = depositManagerModule_;
     }
 
     /**
@@ -151,6 +190,15 @@ library SuperloopStorage {
     function setTreasury(address treasury_) internal {
         SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
         $.treasury = treasury_;
+    }
+
+    /**
+     * @notice Sets the vault operator address
+     * @param vaultOperator_ The address of the vault operator
+     */
+    function setVaultOperator(address vaultOperator_) internal {
+        SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
+        $.vaultOperator = vaultOperator_;
     }
 
     /**

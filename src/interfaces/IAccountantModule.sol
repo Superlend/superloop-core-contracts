@@ -35,24 +35,6 @@ interface IAccountantModule {
     function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_, uint256 totalSupply) external;
 
     /**
-     * @notice Sets the pool addresses provider
-     * @param poolAddressesProvider_ The address of the pool addresses provider
-     */
-    function setPoolAddressesProvider(address poolAddressesProvider_) external;
-
-    /**
-     * @notice Sets the lend assets configuration
-     * @param lendAssets_ Array of lend asset addresses
-     */
-    function setLendAssets(address[] memory lendAssets_) external;
-
-    /**
-     * @notice Sets the borrow assets configuration
-     * @param borrowAssets_ Array of borrow asset addresses
-     */
-    function setBorrowAssets(address[] memory borrowAssets_) external;
-
-    /**
      * @notice Sets the performance fee percentage
      * @param performanceFee_ The new performance fee percentage
      */
@@ -63,24 +45,6 @@ interface IAccountantModule {
      * @param vault_ The address of the vault
      */
     function setVault(address vault_) external;
-
-    /**
-     * @notice Gets the pool addresses provider
-     * @return The address of the pool addresses provider
-     */
-    function poolAddressesProvider() external view returns (address);
-
-    /**
-     * @notice Gets the lend assets configuration
-     * @return Array of lend asset addresses
-     */
-    function lendAssets() external view returns (address[] memory);
-
-    /**
-     * @notice Gets the borrow assets configuration
-     * @return Array of borrow asset addresses
-     */
-    function borrowAssets() external view returns (address[] memory);
 
     /**
      * @notice Gets the performance fee percentage

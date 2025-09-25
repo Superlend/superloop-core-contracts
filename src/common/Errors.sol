@@ -41,4 +41,36 @@ library Errors {
     string public constant TOKEN_NOT_WHITELISTED = "32"; // token is not whitelisted
     string public constant INSTANT_WITHDRAW_NOT_ENABLED = "33"; // instant withdraw is not enabled
     string public constant WITHDRAW_REQUEST_UNCLAIMED = "34"; // withdraw request is unclaimed
+    string public constant INVALID_CASH_RESERVE = "35"; // invalid cash reserve
+    string public constant INSUFFICIENT_CASH_SHORTFALL = "36"; // insufficient cash shortfall
+    string public constant DEPOSIT_REQUEST_ACTIVE = "37"; // deposit request is active
+    string public constant DEPOSIT_REQUEST_ALREADY_CANCELLED = "38"; // deposit request already cancelled
+    string public constant CALLER_NOT_DEPOSIT_REQUEST_OWNER = "39"; // the caller of function is not the owner of the deposit request
+    string public constant DEPOSIT_REQUEST_ALREADY_PROCESSED = "40"; // deposit request already processed
+    string public constant INVALID_ASSET = "41"; // invalid asset
+    string public constant CALLER_NOT_DEPOSIT_MANAGER = "42"; // the caller of function is not deposit manager
+    string public constant DEPOSIT_REQUEST_NOT_FOUND = "43"; // deposit request not found
+    string public constant CANNOT_CLAIM_ZERO_AMOUNT = "44"; // cannot claim zero amount
+    string public constant CALLER_NOT_WITHDRAW_MANAGER = "45"; // the caller of function is not withdraw manager
+    string public constant CALLER_NOT_VAULT_OPERATOR_OR_VAULT_ADMIN = "46"; // the caller of function is not vault operator
+    string public constant VAULT_PAUSED = "47"; // vault is paused
+    string public constant VAULT_FROZEN = "48"; // vault is frozen
+    string public constant DEPOSIT_MANAGER_NOT_WHITELISTED = "49"; // deposit manager is not whitelisted
+    string public constant FALLBACK_HANDLER_NOT_FOUND = "50"; // fallback handler not found
+    string public constant INVALID_FALLBACK_DATA = "51"; // invalid fallback data
+
+    // Preliquidation
+    string public constant PRELIQUIDATION_PRELTV_TOO_HIGH = "52"; // preltv is too high
+    string public constant PRELIQUIDATION_LCF_DECREASING = "53"; // lcf is decreasing
+    string public constant PRELIQUIDATION_LCF_TOO_HIGH = "54"; // lcf is too high
+    string public constant PRELIQUIDATION_LIF_TOO_LOW = "55"; // lif is too low
+    string public constant PRELIQUIDATION_LIF_DECREASING = "56"; // lif is decreasing
+    string public constant PRELIQUIDATION_LIF_TOO_HIGH = "57"; // lif is too high
+    string public constant PRELIQUIDATION_INVALID_ID = "58"; // id is invalid
+    string public constant PRELIQUIDATION_INVALID_USER = "59"; // user is invalid
+    string public constant PRELIQUIDATION_POSSIBLE_BAD_DEBT = "60"; // possible bad debt
+    string public constant PRELIQUIDATION_NOT_IN_PRELIQUIDATION_STATE = "61"; // not in preliquidation state
+
+    // Aave V3 Preliquidation
+    string public constant AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY = "62"; // reserve is not in the correct emode category
 }

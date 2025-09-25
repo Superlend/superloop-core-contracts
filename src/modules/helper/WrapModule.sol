@@ -1,0 +1,41 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.13;
+
+import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
+import {Errors} from "../../common/Errors.sol";
+import {SuperloopStorage} from "../../core/lib/SuperloopStorage.sol";
+import {IWETH9} from "../../interfaces/IWETH9.sol";
+
+/**
+ * @title WrapModule
+ * @author Superlend
+ * @notice Module for wrapping ETH to WETH
+ * @dev Provides ETH to WETH conversion functionality within execution context
+ */
+contract WrapModule is Context {
+    event Wrapped(address indexed asset, uint256 amount, address caller);
+
+    address public immutable underlyingToken;
+
+    constructor(address _underlyingToken) {
+        underlyingToken = _underlyingToken;
+    }
+
+    function execute(DataTypes.AaveV3ActionParams memory params) external onlyExecutionContext {
+        require(params.asset == underlyingToken, Errors.INVALID_ASSET);
+
+        IWETH9(params.asset).deposit{value: params.amount}();
+
+        emit Wrapped(params.asset, params.amount, _msgSender());
+    }
+
+    modifier onlyExecutionContext() {
+        require(_isExecutionContext(), Errors.NOT_IN_EXECUTION_CONTEXT);
+        _;
+    }
+
+    function _isExecutionContext() internal view returns (bool) {
+        return SuperloopStorage.isInExecutionContext();
+    }
+}

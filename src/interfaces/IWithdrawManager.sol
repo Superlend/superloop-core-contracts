@@ -48,7 +48,7 @@ interface IWithdrawManager {
      * @param id The unique identifier of the withdrawal request
      * @return The current state of the withdrawal request
      */
-    function getWithdrawRequestState(uint256 id) external view returns (DataTypes.WithdrawRequestState);
+    function getWithdrawRequestState(uint256 id) external view returns (DataTypes.WithdrawRequestStateLegacy);
 
     /**
      * @notice Gets the address of the associated vault
@@ -79,14 +79,17 @@ interface IWithdrawManager {
      * @param id The unique identifier of the withdrawal request
      * @return The withdrawal request data
      */
-    function withdrawRequest(uint256 id) external view returns (DataTypes.WithdrawRequestData memory);
+    function withdrawRequest(uint256 id) external view returns (DataTypes.WithdrawRequestDataLegacy memory);
 
     /**
      * @notice Gets the data for multiple withdrawal requests
      * @param ids Array of withdrawal request IDs
      * @return Array of withdrawal request data
      */
-    function withdrawRequests(uint256[] memory ids) external view returns (DataTypes.WithdrawRequestData[] memory);
+    function withdrawRequests(uint256[] memory ids)
+        external
+        view
+        returns (DataTypes.WithdrawRequestDataLegacy[] memory);
 
     /**
      * @notice Gets the withdrawal request ID for a specific user

@@ -31,6 +31,31 @@ interface ISuperloop is IERC4626 {
     function skim(address asset_) external;
 
     /**
+     * @notice Gets the pause state of the vault
+     * @return The pause state of the vault
+     */
+    function paused() external view returns (bool);
+
+    /**
+     * @notice Realizes the performance fee
+     */
+    function realizePerformanceFee() external;
+
+    /**
+     * @notice Mints shares for an address
+     * @param to The address to mint shares for
+     * @param amount The amount of shares to mint
+     */
+    function mintShares(address to, uint256 amount) external;
+
+    /**
+     * @notice Burns shares and claims assets for an address
+     * @param shares The amount of shares to burn
+     * @param assets The amount of assets to claim
+     */
+    function burnSharesAndClaimAssets(uint256 shares, uint256 assets) external;
+
+    /**
      * @notice Sets the supply cap for the vault
      * @param supplyCap_ The new supply cap value
      */
@@ -75,6 +100,12 @@ interface ISuperloop is IERC4626 {
     function setVaultAdmin(address vaultAdmin_) external;
 
     /**
+     * @notice Sets the vault operator address
+     * @param vaultOperator_ The address of the vault operator
+     */
+    function setVaultOperator(address vaultOperator_) external;
+
+    /**
      * @notice Sets the treasury address
      * @param treasury_ The address of the treasury
      */
@@ -117,13 +148,13 @@ interface ISuperloop is IERC4626 {
      * @notice Gets the accountant module address
      * @return The address of the accountant module
      */
-    function accountantModule() external view returns (address);
+    function accountant() external view returns (address);
 
     /**
      * @notice Gets the withdraw manager module address
      * @return The address of the withdraw manager module
      */
-    function withdrawManagerModule() external view returns (address);
+    function withdrawManager() external view returns (address);
 
     /**
      * @notice Gets the vault admin address

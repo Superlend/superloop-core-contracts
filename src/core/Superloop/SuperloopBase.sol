@@ -5,6 +5,12 @@ pragma solidity ^0.8.13;
 import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
 import {Errors} from "../../common/Errors.sol";
 
+/**
+ * @title SuperloopBase
+ * @author Superlend
+ * @notice Base contract providing configuration and management functionality for Superloop vaults
+ * @dev Handles vault settings, module registration, role management, and privileged address control
+ */
 abstract contract SuperloopBase {
     event SupplyCapUpdated(uint256 oldCap, uint256 newCap);
     event SuperloopModuleRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
@@ -12,9 +18,13 @@ abstract contract SuperloopBase {
     event CallbackHandlerUpdated(bytes32 indexed key, address indexed oldHandler, address indexed newHandler);
     event AccountantModuleUpdated(address indexed oldModule, address indexed newModule);
     event WithdrawManagerModuleUpdated(address indexed oldModule, address indexed newModule);
+    event DepositManagerModuleUpdated(address indexed oldModule, address indexed newModule);
     event VaultAdminUpdated(address indexed oldAdmin, address indexed newAdmin);
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
     event PrivilegedAddressUpdated(address indexed privilegedAddress, bool oldStatus, bool newStatus);
+    event CashReserveUpdated(uint256 oldReserve, uint256 newReserve);
+    event FallbackHandlerUpdated(bytes32 indexed key, address indexed oldHandler, address indexed newHandler);
+    event VaultOperatorUpdated(address indexed oldOperator, address indexed newOperator);
 
     function setSupplyCap(uint256 supplyCap_) external onlyVaultAdmin {
         uint256 oldCap = SuperloopStorage.getSuperloopStorage().supplyCap;
@@ -34,50 +44,81 @@ abstract contract SuperloopBase {
         emit RegisteredModuleUpdated(module_, oldStatus, registered_);
     }
 
+    function setCashReserve(uint256 cashReserve_) external onlyVaultAdmin {
+        if (cashReserve_ > SuperloopStorage.MAX_BPS_VALUE) {
+            revert(Errors.INVALID_CASH_RESERVE);
+        }
+
+        uint256 oldReserve = SuperloopStorage.getSuperloopStorage().cashReserve;
+        SuperloopStorage.setCashReserve(cashReserve_);
+        emit CashReserveUpdated(oldReserve, cashReserve_);
+    }
+
     function setCallbackHandler(bytes32 key, address handler_) external onlyVaultAdmin {
         address oldHandler = SuperloopStorage.getSuperloopStorage().callbackHandlers[key];
         SuperloopStorage.setCallbackHandler(key, handler_);
         emit CallbackHandlerUpdated(key, oldHandler, handler_);
     }
 
+    function setFallbackHandler(bytes32 key, address handler_) external onlyVaultAdmin {
+        address oldHandler = SuperloopStorage.getSuperloopStorage().fallbackHandlers[key];
+        SuperloopStorage.setFallbackHandler(key, handler_);
+        emit FallbackHandlerUpdated(key, oldHandler, handler_);
+    }
+
     function setAccountantModule(address accountantModule_) external onlyVaultAdmin {
-        address oldModule = SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule;
+        address oldModule = SuperloopStorage.getSuperloopEssentialRolesStorage().accountant;
         SuperloopStorage.setAccountantModule(accountantModule_);
         emit AccountantModuleUpdated(oldModule, accountantModule_);
     }
 
     function setWithdrawManagerModule(address withdrawManagerModule_) external onlyVaultAdmin {
-        address currentWithdrawManagerModule =
-            SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManagerModule;
+        address currentWithdrawManagerModule = SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManager;
 
-        SuperloopStorage.setPrivilegedAddress(currentWithdrawManagerModule, false);
+        _setPrivilegedAddress(currentWithdrawManagerModule, false);
         SuperloopStorage.setWithdrawManagerModule(withdrawManagerModule_);
-        SuperloopStorage.setPrivilegedAddress(withdrawManagerModule_, true);
+        _setPrivilegedAddress(withdrawManagerModule_, true);
         emit WithdrawManagerModuleUpdated(currentWithdrawManagerModule, withdrawManagerModule_);
+    }
+
+    function setDepositManagerModule(address depositManagerModule_) external onlyVaultAdmin {
+        address currentDepositManagerModule = SuperloopStorage.getSuperloopEssentialRolesStorage().depositManager;
+
+        _setPrivilegedAddress(currentDepositManagerModule, false);
+        SuperloopStorage.setDepositManager(depositManagerModule_);
+        _setPrivilegedAddress(depositManagerModule_, true);
+        emit DepositManagerModuleUpdated(currentDepositManagerModule, depositManagerModule_);
     }
 
     function setVaultAdmin(address vaultAdmin_) external onlyVaultAdmin {
         address currentVaultAdmin = SuperloopStorage.getSuperloopEssentialRolesStorage().vaultAdmin;
 
-        SuperloopStorage.setPrivilegedAddress(currentVaultAdmin, false);
+        _setPrivilegedAddress(currentVaultAdmin, false);
         SuperloopStorage.setVaultAdmin(vaultAdmin_);
-        SuperloopStorage.setPrivilegedAddress(vaultAdmin_, true);
+        _setPrivilegedAddress(vaultAdmin_, true);
         emit VaultAdminUpdated(currentVaultAdmin, vaultAdmin_);
+    }
+
+    function setVaultOperator(address vaultOperator_) external onlyVaultAdmin {
+        address currentVaultOperator = SuperloopStorage.getSuperloopEssentialRolesStorage().vaultOperator;
+
+        _setPrivilegedAddress(currentVaultOperator, false);
+        SuperloopStorage.setVaultOperator(vaultOperator_);
+        _setPrivilegedAddress(vaultOperator_, true);
+        emit VaultOperatorUpdated(currentVaultOperator, vaultOperator_);
     }
 
     function setTreasury(address treasury_) external onlyVaultAdmin {
         address currentTreasury = SuperloopStorage.getSuperloopEssentialRolesStorage().treasury;
 
-        SuperloopStorage.setPrivilegedAddress(currentTreasury, false);
+        _setPrivilegedAddress(currentTreasury, false);
         SuperloopStorage.setTreasury(treasury_);
-        SuperloopStorage.setPrivilegedAddress(treasury_, true);
+        _setPrivilegedAddress(treasury_, true);
         emit TreasuryUpdated(currentTreasury, treasury_);
     }
 
     function setPrivilegedAddress(address privilegedAddress_, bool isPrivileged_) external onlyVaultAdmin {
-        bool oldStatus = SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[privilegedAddress_];
-        SuperloopStorage.setPrivilegedAddress(privilegedAddress_, isPrivileged_);
-        emit PrivilegedAddressUpdated(privilegedAddress_, oldStatus, isPrivileged_);
+        _setPrivilegedAddress(privilegedAddress_, isPrivileged_);
     }
 
     function supplyCap() external view returns (uint256) {
@@ -96,12 +137,20 @@ abstract contract SuperloopBase {
         return SuperloopStorage.getSuperloopStorage().callbackHandlers[key];
     }
 
-    function accountantModule() external view returns (address) {
-        return SuperloopStorage.getSuperloopEssentialRolesStorage().accountantModule;
+    function fallbackHandler(bytes32 key) external view returns (address) {
+        return SuperloopStorage.getSuperloopStorage().fallbackHandlers[key];
     }
 
-    function withdrawManagerModule() external view returns (address) {
-        return SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManagerModule;
+    function cashReserve() external view returns (uint256) {
+        return SuperloopStorage.getSuperloopStorage().cashReserve;
+    }
+
+    function accountant() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().accountant;
+    }
+
+    function withdrawManager() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().withdrawManager;
     }
 
     function vaultAdmin() external view returns (address) {
@@ -114,6 +163,20 @@ abstract contract SuperloopBase {
 
     function privilegedAddress(address address_) external view returns (bool) {
         return SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[address_];
+    }
+
+    function depositManagerModule() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().depositManager;
+    }
+
+    function vaultOperator() external view returns (address) {
+        return SuperloopStorage.getSuperloopEssentialRolesStorage().vaultOperator;
+    }
+
+    function _setPrivilegedAddress(address address_, bool isPrivileged_) internal {
+        bool oldStatus = SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[address_];
+        SuperloopStorage.setPrivilegedAddress(address_, isPrivileged_);
+        emit PrivilegedAddressUpdated(address_, oldStatus, isPrivileged_);
     }
 
     modifier onlyVaultAdmin() {

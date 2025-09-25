@@ -8,11 +8,8 @@ library WithdrawManagerStorage {
     struct WithdrawManagerState {
         address vault;
         address asset;
-        uint256 nextWithdrawRequestId;
-        uint256 resolvedWithdrawRequestId;
-        address instantWithdrawModule;
-        mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
-        mapping(address => uint256) userWithdrawRequestId;
+        uint8 vaultDecimalOffset;
+        mapping(DataTypes.WithdrawRequestType => DataTypes.WithdrawQueue) queues;
     }
 
     /**
@@ -28,27 +25,42 @@ library WithdrawManagerStorage {
         }
     }
 
-    function setWithdrawRequest(address user, uint256 shares, uint256 amount, uint256 id, bool claimed, bool cancelled)
+    function setWithdrawRequest(
+        DataTypes.WithdrawRequestType requestType,
+        uint256 id,
+        uint256 shares,
+        uint256 sharesProcessed,
+        uint256 amountClaimable,
+        uint256 amountClaimed,
+        address user,
+        DataTypes.RequestProcessingState state
+    ) internal {
+        WithdrawManagerState storage $ = getWithdrawManagerStorage();
+
+        $.queues[requestType].withdrawRequest[id] =
+            DataTypes.WithdrawRequestData(shares, sharesProcessed, amountClaimable, amountClaimed, user, state);
+    }
+
+    function setNextWithdrawRequestId(DataTypes.WithdrawRequestType requestType) internal {
+        WithdrawManagerState storage $ = getWithdrawManagerStorage();
+        $.queues[requestType].nextWithdrawRequestId = $.queues[requestType].nextWithdrawRequestId + 1;
+    }
+
+    function setUserWithdrawRequest(DataTypes.WithdrawRequestType requestType, address user, uint256 id) internal {
+        WithdrawManagerState storage $ = getWithdrawManagerStorage();
+        $.queues[requestType].userWithdrawRequestId[user] = id;
+    }
+
+    function setResolutionIdPointer(DataTypes.WithdrawRequestType requestType, uint256 resolutionIdPointer) internal {
+        WithdrawManagerState storage $ = getWithdrawManagerStorage();
+        $.queues[requestType].resolutionIdPointer = resolutionIdPointer;
+    }
+
+    function setTotalPendingWithdraws(DataTypes.WithdrawRequestType requestType, uint256 totalPendingWithdraws)
         internal
     {
         WithdrawManagerState storage $ = getWithdrawManagerStorage();
-
-        $.withdrawRequest[id] = DataTypes.WithdrawRequestData(shares, amount, user, claimed, cancelled);
-    }
-
-    function setNextWithdrawRequestId() internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.nextWithdrawRequestId = $.nextWithdrawRequestId + 1;
-    }
-
-    function setUserWithdrawRequest(address user, uint256 id) internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.userWithdrawRequestId[user] = id;
-    }
-
-    function setResolvedWithdrawRequestId(uint256 id) internal {
-        WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.resolvedWithdrawRequestId = id;
+        $.queues[requestType].totalPendingWithdraws = totalPendingWithdraws;
     }
 
     function setVault(address __vault) internal {
@@ -61,8 +73,8 @@ library WithdrawManagerStorage {
         $.asset = __asset;
     }
 
-    function setInstantWithdrawModule(address __instantWithdrawModule) internal {
+    function setDecimalOffset(uint8 __decimalOffset) internal {
         WithdrawManagerState storage $ = getWithdrawManagerStorage();
-        $.instantWithdrawModule = __instantWithdrawModule;
+        $.vaultDecimalOffset = __decimalOffset;
     }
 }

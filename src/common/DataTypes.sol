@@ -19,6 +19,67 @@ library DataTypes {
         address moduleAddress;
     }
 
+    struct ExchangeRateSnapshot {
+        uint256 totalSupplyBefore;
+        uint256 totalSupplyAfter;
+        uint256 totalAssetsBefore;
+        uint256 totalAssetsAfter;
+    }
+
+    enum RequestProcessingState {
+        NOT_EXIST,
+        UNPROCESSED,
+        PARTIALLY_PROCESSED, // partially processed means that the deposit request has been partially processed
+        PARTIALLY_CANCELLED, // partially cancelled means that the deposit request has been partially cancelled
+        FULLY_PROCESSED,
+        CANCELLED
+    }
+
+    struct DepositRequestData {
+        uint256 amount;
+        uint256 amountProcessed; // amoutn remaining => amount - amountProcessed
+        uint256 sharesMinted;
+        address user;
+        RequestProcessingState state;
+    }
+
+    struct ResolveDepositRequestsData {
+        address asset;
+        uint256 amount;
+        bytes callbackExecutionData;
+    }
+
+    enum WithdrawRequestType {
+        GENERAL, // general queue
+        DEFERRED, // low slippage queue
+        PRIORITY, // medium slippage queue
+        INSTANT // high slippage queue
+
+    }
+
+    struct WithdrawQueue {
+        uint256 nextWithdrawRequestId;
+        uint256 resolutionIdPointer;
+        mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
+        mapping(address => uint256) userWithdrawRequestId;
+        uint256 totalPendingWithdraws;
+    }
+
+    struct WithdrawRequestData {
+        uint256 shares;
+        uint256 sharesProcessed;
+        uint256 amountClaimable;
+        uint256 amountClaimed;
+        address user;
+        RequestProcessingState state;
+    }
+
+    struct ResolveWithdrawRequestsData {
+        uint256 shares;
+        WithdrawRequestType requestType;
+        bytes callbackExecutionData;
+    }
+
     /**
      * @notice Structure for storing withdrawal request information
      * @param shares The number of shares requested for withdrawal
@@ -27,7 +88,7 @@ library DataTypes {
      * @param claimed Whether the withdrawal has been claimed
      * @param cancelled Whether the withdrawal request has been cancelled
      */
-    struct WithdrawRequestData {
+    struct WithdrawRequestDataLegacy {
         uint256 shares;
         uint256 amount;
         address user;
@@ -38,7 +99,7 @@ library DataTypes {
     /**
      * @notice Enumeration of possible withdrawal request states
      */
-    enum WithdrawRequestState {
+    enum WithdrawRequestStateLegacy {
         NOT_EXIST, // Request does not exist
         CLAIMED, // Request has been claimed
         UNPROCESSED, // Request is pending processing
@@ -55,10 +116,12 @@ library DataTypes {
      * @param supplyCap The maximum supply cap for the vault
      * @param superloopModuleRegistry The address of the module registry
      * @param modules Array of module addresses to register
-     * @param accountantModule The address of the accountant module
-     * @param withdrawManagerModule The address of the withdraw manager module
+     * @param cashReserve The amount of cash reserve for the vault. Represented in BPS
+     * @param accountant The address of the accountant module
+     * @param withdrawManager The address of the withdraw manager module
      * @param vaultAdmin The address of the vault admin
      * @param treasury The address of the treasury
+     * @param vaultOperator The address of the vault operator
      */
     struct VaultInitData {
         // vault specific
@@ -69,11 +132,14 @@ library DataTypes {
         uint256 supplyCap;
         address superloopModuleRegistry;
         address[] modules;
+        uint256 cashReserve;
         // essential roles
-        address accountantModule;
-        address withdrawManagerModule;
+        address accountant;
+        address withdrawManager;
+        address depositManager;
         address vaultAdmin;
         address treasury;
+        address vaultOperator;
     }
 
     /**
@@ -199,5 +265,98 @@ library DataTypes {
     struct AaveV3ActionParams {
         address asset;
         uint256 amount;
+    }
+
+    /**
+     * @notice Structure for Aave V3 accountant module initialization
+     * @param registeredAccountants Array of registered accountant addresses
+     * @param performanceFee The performance fee percentage
+     * @param vault The address of the associated vault
+     */
+    struct UniversalAccountantModuleInitData {
+        address[] registeredAccountants;
+        uint16 performanceFee;
+        address vault;
+    }
+
+    /**
+     * @notice Structure for Aave V3 accountant plugin module initialization
+     * @param poolAddressesProvider The Aave pool addresses provider
+     * @param lendAssets Array of assets available for lending
+     * @param borrowAssets Array of assets available for borrowing
+     */
+    struct AaveV3AccountantPluginModuleInitData {
+        address poolAddressesProvider;
+        address[] lendAssets;
+        address[] borrowAssets;
+    }
+
+    /**
+     * @notice Structure for stake parameters
+     * @param assets The amount of assets to stake
+     * @param data Any additional data to pass to the stake module
+     */
+    struct StakeParams {
+        uint256 assets;
+        bytes data;
+    }
+
+    enum DepositType {
+        INSTANT,
+        REQUESTED
+    }
+
+    /**
+     * @notice Structure for Aave V3 preliquidation parameters
+     * @param user The address of the user
+     * @param debtToCover The amount of debt to cover
+     */
+    struct AaveV3ExecutePreliquidationParams {
+        address user;
+        uint256 debtToCover;
+    }
+
+    /**
+     * @notice Structure for Aave V3 preliquidation initialization parameters
+     * @param id The id of the preliquidation contract, used to make sure fallback handler is configured correctly
+     * @param lendReserve The address of the lend reserve
+     * @param borrowReserve The address of the borrow reserve
+     * @param preLltv The preliquidation ltv
+     * @param preCF1 The preliquidation c1
+     * @param preCF2 The preliquidation c2
+     * @param preIF1 The preliquidation i1
+     * @param preIF2 The preliquidation i2
+     */
+    struct AaveV3PreliquidationParamsInit {
+        bytes32 id;
+        address lendReserve;
+        address borrowReserve;
+        uint256 preLltv;
+        uint256 preCF1;
+        uint256 preCF2;
+        uint256 preIF1;
+        uint256 preIF2;
+    }
+
+    /**
+     * @notice Structure for Aave V3 preliquidation parameters
+     * @param lendReserve The address of the lend reserve
+     * @param borrowReserve The address of the borrow reserve
+     * @param Lltv The ltv
+     * @param preLltv The preliquidation ltv
+     * @param preCF1 The preliquidation c1
+     * @param preCF2 The preliquidation c2
+     * @param preIF1 The preliquidation i1
+     * @param preIF2 The preliquidation i2
+     */
+    struct AaveV3PreliquidationParams {
+        address lendReserve;
+        address borrowReserve;
+        uint256 Lltv;
+        uint256 preLltv;
+        uint256 preCF1;
+        uint256 preCF2;
+        uint256 preIF1;
+        uint256 preIF2;
     }
 }

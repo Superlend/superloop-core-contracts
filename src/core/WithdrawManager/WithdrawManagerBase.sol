@@ -3,79 +3,127 @@
 pragma solidity ^0.8.13;
 
 import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
-import {ISuperloop} from "../../interfaces/ISuperloop.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
-import {Errors} from "../../common/Errors.sol";
-import {IWithdrawManager} from "../../interfaces/IWithdrawManager.sol";
 
-abstract contract WithdrawManagerBase is Context, IWithdrawManager {
-    event InstantWithdrawModuleUpdated(address indexed oldModule, address indexed newModule);
-
-    function setInstantWithdrawModule(address instantWithdrawModule_) external onlyVaultAdmin {
-        address oldModule = WithdrawManagerStorage.getWithdrawManagerStorage().instantWithdrawModule;
-        WithdrawManagerStorage.setInstantWithdrawModule(instantWithdrawModule_);
-        emit InstantWithdrawModuleUpdated(oldModule, instantWithdrawModule_);
-    }
-
-    function vault() public view override returns (address) {
+/**
+ * @title WithdrawManagerBase
+ * @author Superlend
+ * @notice Base contract providing withdrawal request management functionality
+ * @dev Handles withdrawal request storage, retrieval, and state management with support for multiple queue types
+ */
+abstract contract WithdrawManagerBase is Context {
+    function vault() public view returns (address) {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         return $.vault;
     }
 
-    function asset() public view override returns (address) {
+    function asset() public view returns (address) {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         return $.asset;
     }
 
-    function nextWithdrawRequestId() public view override returns (uint256) {
+    function nextWithdrawRequestId(DataTypes.WithdrawRequestType requestType) public view returns (uint256) {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.nextWithdrawRequestId;
+        return $.queues[requestType].nextWithdrawRequestId;
     }
 
-    function resolvedWithdrawRequestId() public view override returns (uint256) {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.resolvedWithdrawRequestId;
-    }
-
-    function withdrawRequest(uint256 id) public view override returns (DataTypes.WithdrawRequestData memory) {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.withdrawRequest[id];
-    }
-
-    function withdrawRequests(uint256[] memory ids)
+    function withdrawRequest(uint256 id, DataTypes.WithdrawRequestType requestType)
         public
         view
-        override
+        returns (DataTypes.WithdrawRequestData memory)
+    {
+        return _withdrawRequest(id, requestType);
+    }
+
+    function withdrawRequests(uint256[] memory ids, DataTypes.WithdrawRequestType requestType)
+        public
+        view
         returns (DataTypes.WithdrawRequestData[] memory)
     {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         DataTypes.WithdrawRequestData[] memory _withdrawRequests = new DataTypes.WithdrawRequestData[](ids.length);
         uint256 length = ids.length;
         for (uint256 i; i < length;) {
-            _withdrawRequests[i] = $.withdrawRequest[ids[i]];
+            _withdrawRequests[i] = _withdrawRequest(ids[i], requestType);
             unchecked {
                 ++i;
             }
         }
-
         return _withdrawRequests;
     }
 
-    function userWithdrawRequestId(address user) public view override returns (uint256) {
-        user = user == address(0) ? msg.sender : user;
+    function userWithdrawRequestId(address user, DataTypes.WithdrawRequestType requestType)
+        public
+        view
+        returns (uint256)
+    {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-
-        return $.userWithdrawRequestId[user];
+        return $.queues[requestType].userWithdrawRequestId[user];
     }
 
-    modifier onlyVaultAdmin() {
-        _onlyVaultAdmin();
-        _;
+    function totalPendingWithdraws(DataTypes.WithdrawRequestType requestType) public view returns (uint256) {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return $.queues[requestType].totalPendingWithdraws;
     }
 
-    function _onlyVaultAdmin() internal view {
-        ISuperloop superloop = ISuperloop(WithdrawManagerStorage.getWithdrawManagerStorage().vault);
-        require(superloop.vaultAdmin() == _msgSender(), Errors.CALLER_NOT_VAULT_ADMIN);
+    function resolutionIdPointer(DataTypes.WithdrawRequestType requestType) public view returns (uint256) {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return $.queues[requestType].resolutionIdPointer;
+    }
+
+    function vaultDecimalOffset() public view returns (uint8) {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return $.vaultDecimalOffset;
+    }
+
+    function _withdrawRequest(uint256 id, DataTypes.WithdrawRequestType requestType)
+        internal
+        view
+        returns (DataTypes.WithdrawRequestData memory)
+    {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        DataTypes.WithdrawRequestData memory __withdrawRequest = $.queues[requestType].withdrawRequest[id];
+        uint256 _resolutionIdPointer = $.queues[requestType].resolutionIdPointer;
+
+        if (id >= _resolutionIdPointer) {
+            return __withdrawRequest;
+        } else if (
+            __withdrawRequest.state == DataTypes.RequestProcessingState.CANCELLED
+                || __withdrawRequest.state == DataTypes.RequestProcessingState.PARTIALLY_CANCELLED
+        ) {
+            return __withdrawRequest;
+        } else {
+            __withdrawRequest.state = DataTypes.RequestProcessingState.FULLY_PROCESSED;
+            __withdrawRequest.sharesProcessed = __withdrawRequest.shares;
+            return __withdrawRequest;
+        }
+    }
+
+    struct WithdrawManagerCache {
+        address vault;
+        address asset;
+        uint8 vaultDecimalOffset;
+        uint256 nextWithdrawRequestId;
+        uint256 resolutionIdPointer;
+        uint256 totalPendingWithdraws;
+    }
+
+    function _createWithdrawManagerCache(DataTypes.WithdrawRequestType requestType)
+        internal
+        view
+        returns (WithdrawManagerCache memory, WithdrawManagerStorage.WithdrawManagerState storage)
+    {
+        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
+        return (
+            WithdrawManagerCache({
+                vault: $.vault,
+                asset: $.asset,
+                vaultDecimalOffset: $.vaultDecimalOffset,
+                nextWithdrawRequestId: $.queues[requestType].nextWithdrawRequestId,
+                resolutionIdPointer: $.queues[requestType].resolutionIdPointer,
+                totalPendingWithdraws: $.queues[requestType].totalPendingWithdraws
+            }),
+            $
+        );
     }
 }

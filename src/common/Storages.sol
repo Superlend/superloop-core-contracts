@@ -25,7 +25,7 @@ library Storages {
         address asset;
         uint256 nextWithdrawRequestId;
         uint256 resolvedWithdrawRequestId;
-        mapping(uint256 => DataTypes.WithdrawRequestData) withdrawRequest;
+        mapping(uint256 => DataTypes.WithdrawRequestDataLegacy) withdrawRequest;
         mapping(address => uint256) userWithdrawRequestId;
     }
 

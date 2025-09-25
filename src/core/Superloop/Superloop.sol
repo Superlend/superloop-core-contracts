@@ -67,20 +67,30 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
             SuperloopStorage.setRegisteredModule(data.modules[i], true);
         }
 
-        SuperloopStorage.setAccountantModule(data.accountantModule);
-        SuperloopStorage.setWithdrawManagerModule(data.withdrawManagerModule);
+        SuperloopStorage.setAccountantModule(data.accountant);
+        SuperloopStorage.setWithdrawManagerModule(data.withdrawManager);
+        SuperloopStorage.setDepositManager(data.depositManager);
         SuperloopStorage.setVaultAdmin(data.vaultAdmin);
         SuperloopStorage.setTreasury(data.treasury);
+        SuperloopStorage.setCashReserve(data.cashReserve);
+        SuperloopStorage.setVaultOperator(data.vaultOperator);
+
         SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
         SuperloopStorage.setPrivilegedAddress(data.treasury, true);
-        SuperloopStorage.setPrivilegedAddress(data.withdrawManagerModule, true);
+        SuperloopStorage.setPrivilegedAddress(data.withdrawManager, true);
+        SuperloopStorage.setPrivilegedAddress(data.depositManager, true);
+        SuperloopStorage.setPrivilegedAddress(data.vaultOperator, true);
     }
 
     /**
      * @notice Executes module operations (restricted to privileged addresses)
      * @param moduleExecutionData Array of module execution data
      */
-    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyPrivileged {
+    function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData)
+        external
+        whenNotFrozen
+        onlyVaultOperatorOrVaultAdmin
+    {
         _operate(moduleExecutionData);
     }
 
@@ -88,12 +98,40 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
      * @notice Skims excess tokens from the vault (restricted to vault admin)
      * @param asset_ The address of the asset to skim (cannot be the vault's primary asset)
      */
-    function skim(address asset_) public onlyVaultAdmin {
+    function skim(address asset_) public whenNotFrozen onlyVaultOperatorOrVaultAdmin {
         require(asset_ != asset(), Errors.INVALID_SKIM_ASSET);
         uint256 balance = IERC20(asset_).balanceOf(address(this));
         SafeERC20.safeTransfer(IERC20(asset_), SuperloopStorage.getSuperloopEssentialRolesStorage().treasury, balance);
 
         emit AssetSkimmed(asset_, balance, SuperloopStorage.getSuperloopEssentialRolesStorage().treasury);
+    }
+
+    /**
+     * @notice Pauses or unpauses the vault
+     * @param isPaused_ The boolean value to set the pause state to
+     */
+    function setPause(bool isPaused_) external onlyVaultAdmin {
+        if (isPaused_) {
+            _pause();
+        } else {
+            _unpause();
+        }
+    }
+
+    /**
+     * @notice Freezes or unfreezes the vault
+     * @param isFrozen_ The boolean value to set the freeze state to
+     */
+    function setFrozen(bool isFrozen_) external onlyVaultAdmin {
+        if (isFrozen_) {
+            _freeze();
+        } else {
+            _unfreeze();
+        }
+    }
+
+    function realizePerformanceFee() external {
+        _realizePerformanceFee();
     }
 
     /**
@@ -104,9 +142,19 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         if (SuperloopStorage.isInExecutionContext()) {
             return _handleCallback();
         } else {
-            _onlyPrivileged();
-            return _handleCallback();
+            return _handleFallback();
         }
+    }
+
+    /**
+     * @notice Receives ETH sent to the vault
+     * @dev This function allows the vault to receive and operate with ETH
+     *      - WETH wrapping operations via WrapModule
+     *      - Unwrap operations via UnwrapModule     *
+     */
+    receive() external payable {
+        // ETH is accepted but should be managed through modules
+        // This allows for WETH wrapping, unwrapping and other ETH-based operations
     }
 
     /**
@@ -132,8 +180,54 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
             Superloop(payable(address(this))).operateSelf(moduleExecutionData);
         }
 
-        SafeERC20.forceApprove(IERC20(calls.asset), calls.addressToApprove, calls.amountToApprove);
+        if (calls.amountToApprove > 0) {
+            SafeERC20.forceApprove(IERC20(calls.asset), calls.addressToApprove, calls.amountToApprove);
+        }
 
         return abi.encode(success);
+    }
+
+    function _handleFallback() internal returns (bytes memory) {
+        /**
+         *  4 => selector
+         *  32 => encodedId
+         *  32 => callType
+         */
+        if (msg.data.length < 68) {
+            return abi.encode(false);
+        }
+
+        (bytes32 encodedId, DataTypes.CallType callType) = abi.decode(msg.data[4:4 + 64], (bytes32, DataTypes.CallType));
+        bytes32 key = keccak256(abi.encodePacked(msg.sig, encodedId, callType));
+        address handler = SuperloopStorage.getSuperloopStorage().fallbackHandlers[key];
+        require(handler != address(0), Errors.FALLBACK_HANDLER_NOT_FOUND);
+
+        bytes memory returnData = abi.encode(true);
+        if (callType == DataTypes.CallType.CALL) {
+            bytes memory _returnData = Address.functionCall(handler, msg.data);
+            if (_returnData.length > 0) {
+                returnData = _returnData;
+            }
+        } else {
+            bytes memory _returnData = Address.functionDelegateCall(handler, msg.data);
+            if (_returnData.length > 0) {
+                returnData = _returnData;
+            }
+        }
+
+        return returnData;
+    }
+
+    modifier onlyVaultOperatorOrVaultAdmin() {
+        _onlyVaultOperatorOrVaultAdmin();
+        _;
+    }
+
+    function _onlyVaultOperatorOrVaultAdmin() internal view {
+        SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
+        require(
+            $.vaultOperator == _msgSender() || $.vaultAdmin == _msgSender(),
+            Errors.CALLER_NOT_VAULT_OPERATOR_OR_VAULT_ADMIN
+        );
     }
 }

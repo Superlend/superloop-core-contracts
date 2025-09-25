@@ -2,25 +2,45 @@
 
 pragma solidity ^0.8.13;
 
-import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
+import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
+import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
+import {DataTypes} from "../../common/DataTypes.sol";
 import {ReentrancyGuardUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/interfaces/IERC20.sol";
-import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
-import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Errors} from "../../common/Errors.sol";
-import {DataTypes} from "../../common/DataTypes.sol";
-import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
-import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
+import {ISuperloop} from "../../interfaces/ISuperloop.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import {Errors} from "../../common/Errors.sol";
+import {SafeERC20, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IWithdrawManagerCallbackHandler} from "../../interfaces/IWithdrawManagerCallbackHandler.sol";
+import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
+import {console} from "forge-std/console.sol";
 
+/**
+ * @title WithdrawManager
+ * @author Superlend
+ * @notice Manages withdrawal requests for Superloop vaults with multiple queue types and processing capabilities
+ * @dev Handles withdrawal request lifecycle from creation to resolution with support for different priority levels
+ */
 contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, WithdrawManagerBase {
-    event WithdrawRequested(address indexed user, uint256 shares, uint256 requestId);
-    event WithdrawRequestCancelled(uint256 indexed requestId, address indexed user);
-    event WithdrawRequestsResolved(uint256 resolvedIdLimit);
-    event WithdrawRequestResolved(uint256 indexed requestId, address indexed user, uint256 amount);
-    event InstantWithdrawExecuted(address indexed user, uint256 shares, uint256 amount);
+    event WithdrawRequested(
+        address indexed user, uint256 shares, uint256 requestId, DataTypes.WithdrawRequestType requestType
+    );
+    event WithdrawRequestCancelled(
+        uint256 indexed requestId,
+        address indexed user,
+        uint256 sharesRefunded,
+        uint256 assetsClaimed,
+        DataTypes.WithdrawRequestType requestType
+    );
+    event WithdrawRequestClaimed(
+        address indexed user,
+        uint256 indexed requestId,
+        DataTypes.WithdrawRequestType requestType,
+        uint256 assetsClaimed
+    );
 
     constructor() {
         _disableInitializers();
@@ -32,207 +52,307 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     }
 
     function __SuperloopWithdrawManager_init(address _vault) internal onlyInitializing {
+        address asset = ISuperloop(_vault).asset();
+        uint8 decimalOffset = ISuperloop(_vault).decimals() - IERC20Metadata(asset).decimals();
+
         WithdrawManagerStorage.setVault(_vault);
-        WithdrawManagerStorage.setAsset(IERC4626(_vault).asset());
-        WithdrawManagerStorage.setNextWithdrawRequestId();
+        WithdrawManagerStorage.setAsset(asset);
+        WithdrawManagerStorage.setDecimalOffset(decimalOffset);
+        WithdrawManagerStorage.setNextWithdrawRequestId(DataTypes.WithdrawRequestType.GENERAL);
+        WithdrawManagerStorage.setNextWithdrawRequestId(DataTypes.WithdrawRequestType.INSTANT);
+        WithdrawManagerStorage.setNextWithdrawRequestId(DataTypes.WithdrawRequestType.PRIORITY);
+        WithdrawManagerStorage.setNextWithdrawRequestId(DataTypes.WithdrawRequestType.DEFERRED);
     }
 
-    function requestWithdraw(uint256 shares) external override {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        _validateWithdrawRequest($, _msgSender(), shares);
-        _registerWithdrawRequest($, _msgSender(), shares);
-
-        emit WithdrawRequested(_msgSender(), shares, $.nextWithdrawRequestId - 1);
-    }
-
-    function cancelWithdrawRequest(uint256 id) external override nonReentrant {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        _validateCancelWithdrawRequest($, id);
-        _handleCancelWithdrawRequest($, id);
-
-        emit WithdrawRequestCancelled(id, _msgSender());
-    }
-
-    function resolveWithdrawRequests(uint256 resolvedIdLimit) external override onlyVault {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        _validateResolveWithdrawRequests($, resolvedIdLimit);
-        _handleResolveWithdrawRequests($, resolvedIdLimit);
-
-        emit WithdrawRequestsResolved(resolvedIdLimit);
-    }
-
-    function withdraw() external override nonReentrant {
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        uint256 id = _validateWithdraw($);
-        _handleWithdraw($, id);
-
-        emit WithdrawRequestResolved(id, _msgSender(), $.withdrawRequest[id].amount);
-    }
-
-    function withdrawInstant(uint256 shares, bytes memory instantWithdrawData)
+    function requestWithdraw(uint256 shares, DataTypes.WithdrawRequestType requestType)
         external
         nonReentrant
-        returns (uint256)
+        whenNotPaused
     {
-        require(shares > 0, Errors.INVALID_AMOUNT);
+        (WithdrawManagerCache memory cache, WithdrawManagerStorage.WithdrawManagerState storage $) =
+            _createWithdrawManagerCache(requestType);
+        ISuperloop(cache.vault).realizePerformanceFee();
 
-        WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        address instantWithdrawModule = $.instantWithdrawModule;
+        _validateWithdrawRequest(cache, $, _msgSender(), shares, requestType);
+        _registerWithdrawRequest(cache, $, _msgSender(), shares, requestType);
 
-        if (instantWithdrawModule == address(0)) {
-            revert(Errors.INSTANT_WITHDRAW_NOT_ENABLED);
-        }
-
-        Address.functionCall(instantWithdrawModule, instantWithdrawData);
-
-        SafeERC20.safeTransferFrom(IERC20($.vault), _msgSender(), address(this), shares);
-        uint256 amount = IERC4626($.vault).redeem(shares, _msgSender(), address(this));
-
-        emit InstantWithdrawExecuted(_msgSender(), shares, amount);
-        return amount;
+        emit WithdrawRequested(_msgSender(), shares, $.queues[requestType].nextWithdrawRequestId - 1, requestType);
     }
 
-    function getWithdrawRequestState(uint256 id) public view override returns (DataTypes.WithdrawRequestState) {
+    function cancelWithdrawRequest(uint256 id, DataTypes.WithdrawRequestType requestType)
+        external
+        nonReentrant
+        whenNotPaused
+    {
+        (WithdrawManagerCache memory cache, WithdrawManagerStorage.WithdrawManagerState storage $) =
+            _createWithdrawManagerCache(requestType);
+        DataTypes.WithdrawRequestData memory _withdrawRequest = _withdrawRequest(id, requestType);
+
+        _validateCancelWithdrawRequest(_withdrawRequest);
+        (uint256 sharesToRefund, uint256 amountToClaim) =
+            _handleCancelWithdrawRequest(cache, $, id, requestType, _withdrawRequest);
+
+        emit WithdrawRequestCancelled(id, _msgSender(), sharesToRefund, amountToClaim, requestType);
+    }
+
+    function withdraw(DataTypes.WithdrawRequestType requestType) external nonReentrant whenNotPaused {
+        (WithdrawManagerCache memory cache, WithdrawManagerStorage.WithdrawManagerState storage $) =
+            _createWithdrawManagerCache(requestType);
+
+        (uint256 id, DataTypes.WithdrawRequestData memory _withdrawRequest) = _validateWithdraw($, requestType);
+        uint256 amountToClaim = _handleWithdraw(cache, $, id, _withdrawRequest, requestType);
+
+        emit WithdrawRequestClaimed(_msgSender(), id, requestType, amountToClaim);
+    }
+
+    function resolveWithdrawRequests(DataTypes.ResolveWithdrawRequestsData memory data) external onlyVault {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
-        uint256 resolvedId = $.resolvedWithdrawRequestId;
 
-        if (_withdrawRequest.user == address(0)) {
-            return DataTypes.WithdrawRequestState.NOT_EXIST;
+        // validations
+        _validateResolveWithdrawRequests($, data);
+
+        address vaultCached = $.vault;
+        // take a snapshot of the current exchange rate
+        DataTypes.ExchangeRateSnapshot memory snapshot = _createExchangeRateSnapshot(vaultCached, $.vaultDecimalOffset);
+
+        // encode the data to be used in the callback
+        bytes memory callbackExecutionData = abi.encode(
+            DataTypes.CallbackData({
+                asset: vaultCached, // this variable is not needed for withdraws, hence vault address is used
+                addressToApprove: address(0),
+                amountToApprove: 0,
+                executionData: data.callbackExecutionData
+            })
+        );
+
+        // call 'executeWithdraw' function on the vault
+        IWithdrawManagerCallbackHandler(vaultCached).executeWithdraw(data.shares, callbackExecutionData);
+
+        // update the snapshot
+        snapshot.totalSupplyAfter = snapshot.totalSupplyBefore - data.shares;
+        snapshot.totalAssetsAfter = ISuperloop(vaultCached).totalAssets();
+
+        // calculate how much assets I can get for the shares I am burning
+        uint256 totalAssetsToClaim = _calculateAssetsToClaim(snapshot);
+
+        // decrease the  call vault
+        DataTypes.WithdrawQueue storage queue = $.queues[data.requestType];
+        queue.totalPendingWithdraws -= data.shares;
+        ISuperloop(vaultCached).burnSharesAndClaimAssets(data.shares, totalAssetsToClaim);
+
+        uint256 sharesBurnt = data.shares;
+        uint256 currentId = queue.resolutionIdPointer;
+        while (sharesBurnt > 0) {
+            DataTypes.WithdrawRequestData memory currentRequest = _withdrawRequest(currentId, data.requestType);
+            if (
+                currentRequest.state == DataTypes.RequestProcessingState.CANCELLED
+                    || currentRequest.state == DataTypes.RequestProcessingState.PARTIALLY_CANCELLED
+            ) {
+                unchecked {
+                    ++currentId;
+                }
+                continue;
+            }
+
+            uint256 sharesAvailableInCurrentRequest = currentRequest.shares - currentRequest.sharesProcessed;
+            uint256 sharesToBurnInCurrentRequest =
+                sharesBurnt > sharesAvailableInCurrentRequest ? sharesAvailableInCurrentRequest : sharesBurnt;
+
+            uint256 assetsToClaim =
+                Math.mulDiv(sharesToBurnInCurrentRequest, totalAssetsToClaim, data.shares, Math.Rounding.Floor);
+            queue.withdrawRequest[currentId].amountClaimable = currentRequest.amountClaimable + assetsToClaim;
+
+            sharesBurnt -= sharesToBurnInCurrentRequest;
+
+            if (currentRequest.sharesProcessed + sharesToBurnInCurrentRequest != currentRequest.shares) {
+                queue.withdrawRequest[currentId].state = DataTypes.RequestProcessingState.PARTIALLY_PROCESSED;
+                queue.withdrawRequest[currentId].sharesProcessed =
+                    currentRequest.sharesProcessed + sharesToBurnInCurrentRequest;
+            } else {
+                unchecked {
+                    ++currentId;
+                }
+            }
         }
 
-        if (_withdrawRequest.claimed) {
-            return DataTypes.WithdrawRequestState.CLAIMED;
-        }
+        queue.resolutionIdPointer = currentId;
+    }
 
-        if (_withdrawRequest.cancelled) {
-            return DataTypes.WithdrawRequestState.CANCELLED;
-        }
+    function _validateCancelWithdrawRequest(DataTypes.WithdrawRequestData memory _withdrawRequest) internal view {
+        bool doesExist = _withdrawRequest.shares > 0;
+        if (!doesExist) revert(Errors.WITHDRAW_REQUEST_NOT_FOUND);
 
-        if (id > resolvedId) return DataTypes.WithdrawRequestState.UNPROCESSED;
+        bool isCancelled = _withdrawRequest.state == DataTypes.RequestProcessingState.CANCELLED
+            || _withdrawRequest.state == DataTypes.RequestProcessingState.PARTIALLY_CANCELLED;
+        if (isCancelled) revert(Errors.INVALID_WITHDRAW_REQUEST_STATE);
 
-        return DataTypes.WithdrawRequestState.CLAIMABLE;
+        bool isProcessed = _withdrawRequest.state == DataTypes.RequestProcessingState.FULLY_PROCESSED;
+        if (isProcessed) revert(Errors.INVALID_WITHDRAW_REQUEST_STATE);
+
+        require(_withdrawRequest.user == _msgSender(), Errors.CALLER_NOT_WITHDRAW_REQUEST_OWNER);
     }
 
     function _validateWithdrawRequest(
+        WithdrawManagerCache memory cache,
         WithdrawManagerStorage.WithdrawManagerState storage $,
         address user,
-        uint256 shares
+        uint256 shares,
+        DataTypes.WithdrawRequestType requestType
     ) internal view {
-        require(shares > 0, Errors.INVALID_AMOUNT);
-        uint256 id = $.userWithdrawRequestId[user];
-        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
+        require(shares > 0, Errors.INVALID_SHARES_AMOUNT);
 
-        // if id != 0, means user has a withdraw request because when cancelled or claimed, the id is set to 0
+        // expected withdraw amount > 0
+        uint256 expectedWithdrawAmount = ISuperloop(cache.vault).convertToAssets(shares);
+        require(expectedWithdrawAmount > 0, Errors.INVALID_AMOUNT);
+
+        uint256 id = $.queues[requestType].userWithdrawRequestId[user];
+        DataTypes.WithdrawRequestData memory _withdrawRequest = _withdrawRequest(id, requestType);
+
         if (id != 0) {
-            // if user has an active withdraw request, ie. it's not yet resolved or cancelled, revert
-            bool isActive = id > $.resolvedWithdrawRequestId && !_withdrawRequest.cancelled;
-            if (isActive) revert(Errors.WITHDRAW_REQUEST_ACTIVE);
+            // should not have a pending request
+            bool isPending = _withdrawRequest.state == DataTypes.RequestProcessingState.UNPROCESSED;
+            bool isUnderProcess = _withdrawRequest.state == DataTypes.RequestProcessingState.PARTIALLY_PROCESSED;
+            if (isPending || isUnderProcess) {
+                revert(Errors.WITHDRAW_REQUEST_ACTIVE);
+            }
 
-            // if user has an unclaimed withdraw request, ie. it's resolved but not claimed, revert
-            bool isUnclaimed = id <= $.resolvedWithdrawRequestId && !_withdrawRequest.claimed;
-            if (isUnclaimed) revert(Errors.WITHDRAW_REQUEST_UNCLAIMED);
+            // should not have an unclaimed request
+            bool isUnclaimed = _withdrawRequest.amountClaimable > 0;
+            if (isUnclaimed) {
+                revert(Errors.WITHDRAW_REQUEST_UNCLAIMED);
+            }
         }
+    }
+
+    function _validateWithdraw(
+        WithdrawManagerStorage.WithdrawManagerState storage $,
+        DataTypes.WithdrawRequestType requestType
+    ) internal view returns (uint256, DataTypes.WithdrawRequestData memory) {
+        uint256 id = $.queues[requestType].userWithdrawRequestId[_msgSender()];
+        require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
+        DataTypes.WithdrawRequestData memory _withdrawRequest = _withdrawRequest(id, requestType);
+        require(_withdrawRequest.user == _msgSender(), Errors.CALLER_NOT_WITHDRAW_REQUEST_OWNER);
+        bool isClaimable = _withdrawRequest.amountClaimable > 0;
+        bool isProcessed = _withdrawRequest.state == DataTypes.RequestProcessingState.FULLY_PROCESSED;
+        bool isPending = _withdrawRequest.state == DataTypes.RequestProcessingState.UNPROCESSED;
+
+        if (!isClaimable) {
+            if (isProcessed) {
+                revert(Errors.WITHDRAW_REQUEST_ALREADY_CLAIMED);
+            } else if (isPending) {
+                revert(Errors.WITHDRAW_REQUEST_ACTIVE);
+            } else {
+                revert(Errors.CANNOT_CLAIM_ZERO_AMOUNT); // not handling cancelled states because when requets are cancelled, they are automatically refunded, hence claim amount = 0
+            }
+        }
+
+        return (id, _withdrawRequest);
     }
 
     function _validateResolveWithdrawRequests(
         WithdrawManagerStorage.WithdrawManagerState storage $,
-        uint256 resolvedIdLimit
+        DataTypes.ResolveWithdrawRequestsData memory data
     ) internal view {
-        // this id needs to be less than the nextWithdrawRequestId
-        require(resolvedIdLimit < $.nextWithdrawRequestId, Errors.INVALID_WITHDRAW_RESOLVED_START_ID_LIMIT);
-
-        // this id needs to be greater than the resolvedWithdrawRequestId
-        require(resolvedIdLimit > $.resolvedWithdrawRequestId, Errors.INVALID_WITHDRAW_RESOLVED_END_ID_LIMIT);
+        require(data.shares > 0, Errors.INVALID_SHARES_AMOUNT);
+        require(data.shares <= $.queues[data.requestType].totalPendingWithdraws, Errors.INVALID_SHARES_AMOUNT);
     }
 
-    function _validateWithdraw(WithdrawManagerStorage.WithdrawManagerState storage $)
-        internal
-        view
-        virtual
-        returns (uint256)
-    {
-        uint256 id = $.userWithdrawRequestId[_msgSender()];
-        require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
-        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
+    function _handleWithdraw(
+        WithdrawManagerCache memory cache,
+        WithdrawManagerStorage.WithdrawManagerState storage $,
+        uint256 id,
+        DataTypes.WithdrawRequestData memory _withdrawRequest,
+        DataTypes.WithdrawRequestType requestType
+    ) internal returns (uint256) {
+        uint256 amountToClaim = _withdrawRequest.amountClaimable;
 
-        require(
-            _withdrawRequest.user == _msgSender() && _withdrawRequest.claimed == false,
-            Errors.WITHDRAW_REQUEST_ALREADY_CLAIMED
-        );
-        require($.resolvedWithdrawRequestId >= id, Errors.WITHDRAW_REQUEST_NOT_RESOLVED);
+        // State changes
+        DataTypes.WithdrawQueue storage queue = $.queues[requestType];
+        queue.withdrawRequest[id].amountClaimable = 0;
+        queue.withdrawRequest[id].amountClaimed += amountToClaim;
 
-        return id;
-    }
+        // send tokens
+        if (amountToClaim > 0) {
+            SafeERC20.safeTransfer(IERC20(cache.asset), _withdrawRequest.user, amountToClaim);
+        }
 
-    function _validateCancelWithdrawRequest(WithdrawManagerStorage.WithdrawManagerState storage $, uint256 id)
-        internal
-        view
-    {
-        require(id > 0, Errors.WITHDRAW_REQUEST_NOT_FOUND);
-        require(id > $.resolvedWithdrawRequestId, Errors.INVALID_WITHDRAW_REQUEST_STATE);
-
-        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
-        require(_withdrawRequest.user == _msgSender(), Errors.CALLER_NOT_WITHDRAW_REQUEST_OWNER);
+        return amountToClaim;
     }
 
     function _registerWithdrawRequest(
+        WithdrawManagerCache memory cache,
         WithdrawManagerStorage.WithdrawManagerState storage $,
         address user,
-        uint256 shares
+        uint256 shares,
+        DataTypes.WithdrawRequestType requestType
     ) internal {
-        SafeERC20.safeTransferFrom(IERC20($.vault), user, address(this), shares);
+        SafeERC20.safeTransferFrom(IERC20(cache.vault), user, address(this), shares);
 
-        uint256 withdrawReqId = $.nextWithdrawRequestId;
-
-        WithdrawManagerStorage.setWithdrawRequest(user, shares, 0, withdrawReqId, false, false);
-        WithdrawManagerStorage.setUserWithdrawRequest(user, withdrawReqId);
-        WithdrawManagerStorage.setNextWithdrawRequestId();
+        DataTypes.WithdrawQueue storage queue = $.queues[requestType];
+        uint256 id = cache.nextWithdrawRequestId;
+        WithdrawManagerStorage.setWithdrawRequest(
+            requestType, id, shares, 0, 0, 0, user, DataTypes.RequestProcessingState.UNPROCESSED
+        );
+        WithdrawManagerStorage.setUserWithdrawRequest(requestType, user, id);
+        WithdrawManagerStorage.setNextWithdrawRequestId(requestType);
+        WithdrawManagerStorage.setTotalPendingWithdraws(requestType, queue.totalPendingWithdraws + shares);
     }
 
-    function _handleResolveWithdrawRequests(
+    function _handleCancelWithdrawRequest(
+        WithdrawManagerCache memory cache,
         WithdrawManagerStorage.WithdrawManagerState storage $,
-        uint256 resolvedIdLimit
-    ) internal {
-        // for each of the withdarw request from current resolved window to resolvedIdLimit
-        // sum the shares and call the withdraw function on the vault
-        uint256 totalShares = 0;
-        uint256 totalAssetsDistributed = 0;
-        for (uint256 id = $.resolvedWithdrawRequestId + 1; id <= resolvedIdLimit; id++) {
-            if ($.withdrawRequest[id].cancelled) continue;
-            totalShares += $.withdrawRequest[id].shares;
-            uint256 amount = IERC4626($.vault).previewRedeem($.withdrawRequest[id].shares);
-            $.withdrawRequest[id].amount = amount;
-            totalAssetsDistributed += amount;
+        uint256 id,
+        DataTypes.WithdrawRequestType requestType,
+        DataTypes.WithdrawRequestData memory _withdrawRequest
+    ) internal returns (uint256, uint256) {
+        uint256 shares = _withdrawRequest.shares;
+        uint256 sharesProcessed = _withdrawRequest.sharesProcessed;
+        uint256 sharesToRefund = shares - sharesProcessed;
+        uint256 amountToClaim = _withdrawRequest.amountClaimable;
+
+        // State changes
+        DataTypes.WithdrawQueue storage queue = $.queues[requestType];
+        WithdrawManagerStorage.setUserWithdrawRequest(requestType, _withdrawRequest.user, 0);
+        WithdrawManagerStorage.setTotalPendingWithdraws(requestType, cache.totalPendingWithdraws - sharesToRefund);
+
+        queue.withdrawRequest[id].state = sharesToRefund == shares
+            ? DataTypes.RequestProcessingState.CANCELLED
+            : DataTypes.RequestProcessingState.PARTIALLY_CANCELLED;
+        queue.withdrawRequest[id].amountClaimable = 0;
+        queue.withdrawRequest[id].amountClaimed += amountToClaim;
+
+        // Send the shares and tokens back
+        if (sharesToRefund > 0) {
+            SafeERC20.safeTransfer(IERC20(cache.vault), _withdrawRequest.user, sharesToRefund);
         }
-        // call the redeem function on the vault
-        uint256 totalAssetsRedeemed = IERC4626($.vault).redeem(totalShares, address(this), address(this));
-
-        require(totalAssetsRedeemed >= totalAssetsDistributed, Errors.INVALID_ASSETS_DISTRIBUTED);
-
-        // if redeemed more than distributed, return the difference to the vault
-        if (totalAssetsRedeemed > totalAssetsDistributed) {
-            SafeERC20.safeTransfer(IERC20($.asset), _msgSender(), totalAssetsRedeemed - totalAssetsDistributed);
+        if (amountToClaim > 0) {
+            SafeERC20.safeTransfer(IERC20(cache.asset), _withdrawRequest.user, amountToClaim);
         }
 
-        WithdrawManagerStorage.setResolvedWithdrawRequestId(resolvedIdLimit);
+        return (sharesToRefund, amountToClaim);
     }
 
-    function _handleWithdraw(WithdrawManagerStorage.WithdrawManagerState storage $, uint256 id) internal {
-        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
-        $.withdrawRequest[id].claimed = true;
-        WithdrawManagerStorage.setUserWithdrawRequest(_withdrawRequest.user, 0);
-
-        SafeERC20.safeTransfer(IERC20($.asset), _msgSender(), _withdrawRequest.amount);
+    function _createExchangeRateSnapshot(address vault, uint8 decimalOffset)
+        internal
+        view
+        returns (DataTypes.ExchangeRateSnapshot memory)
+    {
+        uint256 totalSupplyBefore = ISuperloop(vault).totalSupply() + 10 ** decimalOffset;
+        uint256 totalAssetsBefore = ISuperloop(vault).totalAssets() + 1;
+        return DataTypes.ExchangeRateSnapshot({
+            totalSupplyBefore: totalSupplyBefore,
+            totalSupplyAfter: 0,
+            totalAssetsBefore: totalAssetsBefore,
+            totalAssetsAfter: 0
+        });
     }
 
-    function _handleCancelWithdrawRequest(WithdrawManagerStorage.WithdrawManagerState storage $, uint256 id) internal {
-        DataTypes.WithdrawRequestData memory _withdrawRequest = $.withdrawRequest[id];
-
-        $.withdrawRequest[id].cancelled = true;
-        WithdrawManagerStorage.setUserWithdrawRequest(_withdrawRequest.user, 0);
-
-        SafeERC20.safeTransfer(IERC20($.vault), _withdrawRequest.user, _withdrawRequest.shares);
+    function _calculateAssetsToClaim(DataTypes.ExchangeRateSnapshot memory snapshot) internal pure returns (uint256) {
+        uint256 totalAssetsAfterExpected = Math.mulDiv(
+            snapshot.totalAssetsBefore, snapshot.totalSupplyAfter, snapshot.totalSupplyBefore, Math.Rounding.Floor
+        );
+        uint256 totalAssetsToClaim = snapshot.totalAssetsAfter - totalAssetsAfterExpected; // not adding underflow check because even at 100% slippage, the total assets to claim will be positive
+        return totalAssetsToClaim;
     }
 
     modifier onlyVault() {
@@ -243,5 +363,14 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     function _onlyVault() internal view {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
         require(_msgSender() == $.vault, Errors.CALLER_NOT_VAULT);
+    }
+
+    modifier whenNotPaused() {
+        _requireNotPaused();
+        _;
+    }
+
+    function _requireNotPaused() internal view {
+        require(!ISuperloop(vault()).paused(), Errors.VAULT_PAUSED);
     }
 }
