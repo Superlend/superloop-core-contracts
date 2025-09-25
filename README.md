@@ -16,7 +16,7 @@
 
 ## Overview
 
-**Superloop** is a sophisticated DeFi yield vault protocol that implements ERC4626 standards with advanced modular architecture for automated yield generation and leverage strategies. The protocol enables users to deposit assets and earn optimized yields through Aave V3 integration and automated rebalancing strategies.
+**Superloop V2** is a sophisticated DeFi yield vault protocol that implements ERC4626 standards with advanced modular architecture for automated yield generation and leverage strategies. The protocol enables users to deposit assets and earn optimized yields through Aave V3 integration and automated rebalancing strategies.
 
 ### Key Features
 
@@ -26,6 +26,13 @@
 - **Flashloan Integration**: Efficient position management through flashloans
 - **Performance Fee System**: Sustainable fee structure for protocol maintenance
 - **Risk Management**: Supply caps, withdrawal queuing, and privileged controls
+- **Cash Reserve System**: Enables instant deposits for small amounts
+- **Queue-Based Deposits**: Fair and efficient deposit processing system
+- **Isolated Withdrawal Queues**: Multiple withdrawal priority levels (General, Priority, Deferred, Instant)
+- **Exchange Rate Protection**: Non-socialized entry/exit costs through exchange rate reset mechanism
+- **Fallback Handlers**: Whitelisted arbitrary code execution for advanced operations
+- **Enhanced Security**: Pausable and freezable system with role-based access control
+- **Vault Operator Role**: Dedicated role for strategy execution separate from admin functions
 
 ### Protocol Benefits
 
@@ -34,14 +41,19 @@
 - **Composability**: Modular design enables easy integration with new protocols
 - **Risk Control**: Multiple layers of risk management and safety mechanisms
 - **Transparency**: Clear fee structure and position tracking
+- **Fair Access**: Queue-based systems ensure equitable processing for all users
+- **Cost Protection**: Exchange rate reset mechanism prevents cost socialization
+- **Flexible Withdrawals**: Multiple withdrawal options with different priority levels
+- **Enhanced Security**: Multi-layered pause/freeze mechanisms for emergency situations
+- **Operational Efficiency**: Dedicated operator role for streamlined strategy execution
 
 ## Architecture
 
 ### High-Level Architecture Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                        Superloop Protocol                       │
+│                    Superloop V2 Protocol                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────┐ │
@@ -50,6 +62,7 @@
 │  │ • Depositors    │◄──►│ • Superloop      │◄──►│ • Aave V3   │ │
 │  │ • Withdrawals   │    │ • Accountant     │    │ • DEX       │ │
 │  │ • Transfers     │    │ • WithdrawMgr    │    │ • Flashloan │ │
+│  │ • Queue Mgmt    │    │ • DepositMgr     │    │ • Fallback  │ │
 │  └─────────────────┘    └──────────────────┘    └─────────────┘ │
 │                                                                 │
 │  ┌─────────────────┐    ┌──────────────────┐    ┌─────────────┐ │
@@ -59,6 +72,8 @@
 │  │ • Module        │    │ • State          │    │ • Aave V3   │ │
 │  │   Registry      │    │   Management     │    │ • Uniswap   │ │
 │  │ • Whitelisting  │    │ • Access Control │    │ • Other DEX │ │
+│  │ • Fallback      │    │ • Cash Reserve   │    │ • Oracles   │ │
+│  │   Handlers      │    │ • Pause/Freeze   │    │             │ │
 │  └─────────────────┘    └──────────────────┘    └─────────────┘ │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -66,23 +81,26 @@
 
 ### Core Contract Relationships
 
-```
-Superloop (Main Vault)
-├── AccountantAaveV3 (Asset Tracking)
-├── WithdrawManager (Withdrawal Handling)
+```text
+Superloop V2 (Main Vault)
+├── UniversalAccountant (Asset Tracking)
+├── WithdrawManager (Multi-Queue Withdrawal Handling)
+├── DepositManager (Queue-Based Deposit Processing)
 ├── ModuleRegistry (Module Management)
 ├── AaveV3 Modules (Lending/Borrowing)
 ├── UniversalDexModule (Trading)
-└── FlashloanModule (Position Management)
+├── FlashloanModule (Position Management)
+├── FallbackHandlers (Arbitrary Code Execution)
+└── VaultRouter (Enhanced User Interface)
 ```
 
 ## Core Components
 
-### 1. Superloop (Main Vault)
+### 1. Superloop V2 (Main Vault)
 
 **File**: `src/core/Superloop/Superloop.sol`
 
-The main vault contract that implements ERC4626 standards and orchestrates all operations.
+The main vault contract that implements ERC4626 standards and orchestrates all operations with enhanced V2 features.
 
 #### Key Functions
 
@@ -90,11 +108,21 @@ The main vault contract that implements ERC4626 standards and orchestrates all o
 // Initialize the vault with configuration
 function initialize(DataTypes.VaultInitData memory data) public initializer
 
-// Execute module operations (admin only)
-function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) external onlyVaultAdmin
+// Execute module operations (vault operator or admin)
+function operate(DataTypes.ModuleExecutionData[] memory moduleExecutionData) 
+    external whenNotFrozen onlyVaultOperatorOrVaultAdmin
 
-// Handle callback operations
+// Handle callback and fallback operations
 fallback(bytes calldata) external returns (bytes memory)
+
+// Pause/unpause the vault
+function setPause(bool isPaused_) external onlyVaultAdmin
+
+// Freeze/unfreeze the vault
+function setFrozen(bool isFrozen_) external onlyVaultAdmin
+
+// Realize performance fees
+function realizePerformanceFee() external
 ```
 
 #### Storage Structure
@@ -103,16 +131,25 @@ fallback(bytes calldata) external returns (bytes memory)
 struct SuperloopState {
     uint256 supplyCap;                    // Maximum vault capacity
     address superloopModuleRegistry;      // Module registry address
+    uint256 cashReserve;                  // Cash reserve percentage (BPS)
     mapping(address => bool) registeredModules;  // Whitelisted modules
     mapping(bytes32 => address) callbackHandlers; // Flashloan callbacks
+    mapping(bytes32 => address) fallbackHandlers; // Fallback handlers
 }
 ```
 
-### 2. AccountantAaveV3
+#### V2 Enhancements
 
-**File**: `src/core/Accountant/AccountantAaveV3.sol`
+- **Cash Reserve System**: Maintains a percentage of assets as cash for instant deposits
+- **Fallback Handlers**: Supports whitelisted arbitrary code execution
+- **Enhanced Pause/Freeze**: Two-tier emergency controls (pause for users, freeze for all operations)
+- **Vault Operator Role**: Dedicated role for strategy execution separate from admin functions
 
-Tracks total assets across all Aave V3 positions and calculates performance fees.
+### 2. UniversalAccountant
+
+**File**: `src/core/Accountant/universalAccountant/UniversalAccountant.sol`
+
+Tracks total assets across all positions and calculates performance fees with enhanced V2 capabilities.
 
 #### Key Functions
 
@@ -152,45 +189,87 @@ for (uint256 i; i < borrowAssets.length; i++) {
 return (positiveBalance - negativeBalance) / baseAssetPrice;
 ```
 
-### 3. WithdrawManager
+### 3. DepositManager
+
+**File**: `src/core/DepositManager/DepositManager.sol`
+
+Manages deposit requests with queue-based system and exchange rate protection.
+
+#### Key Functions
+
+```solidity
+// Request deposit (queued)
+function requestDeposit(uint256 amount, address onBehalfOf) external nonReentrant whenNotPaused
+
+// Cancel deposit request
+function cancelDepositRequest(uint256 id) external nonReentrant whenNotPaused
+
+// Resolve deposit requests (vault admin)
+function resolveDepositRequests(DataTypes.ResolveDepositRequestsData memory data) external onlyVault
+```
+
+#### Deposit States
+
+```solidity
+enum RequestProcessingState {
+    UNPROCESSED,        // Request is pending processing
+    PARTIALLY_PROCESSED, // Request is partially processed
+    PROCESSED,          // Request has been fully processed
+    CANCELLED           // Request has been cancelled
+}
+```
+
+#### V2 Features
+
+- **Queue-Based Processing**: Fair and efficient deposit processing
+- **Exchange Rate Protection**: Prevents cost socialization through exchange rate snapshots
+- **Partial Processing**: Supports partial fulfillment of large deposits
+- **Cancellation Support**: Users can cancel pending deposits
+
+### 4. WithdrawManager
 
 **File**: `src/core/WithdrawManager/WithdrawManager.sol`
 
-Manages withdrawal requests with queuing system for large withdrawals.
+Manages withdrawal requests with multiple isolated queues and priority levels.
 
-#### Withdrawal States
+#### Withdrawal Request Types
 
 ```solidity
-enum WithdrawRequestStateLegacy {
-    NOT_EXIST,      // Request does not exist
-    CLAIMED,        // Request has been claimed
-    UNPROCESSED,    // Request is pending processing
-    CLAIMABLE,      // Request is ready to be claimed
-    CANCELLED       // Request has been cancelled
+enum WithdrawRequestType {
+    GENERAL,    // Standard withdrawal queue
+    PRIORITY,   // High-priority withdrawal queue
+    DEFERRED,   // Deferred withdrawal queue
+    INSTANT     // Instant withdrawal (if enabled)
 }
 ```
 
 #### Key Functions
 
 ```solidity
-// Request withdrawal (queued)
-function requestWithdraw(uint256 shares) external
+// Request withdrawal with specific type
+function requestWithdraw(uint256 shares, DataTypes.WithdrawRequestType requestType) 
+    external nonReentrant whenNotPaused
 
 // Cancel withdrawal request
-function cancelWithdrawRequest(uint256 id) external nonReentrant
+function cancelWithdrawRequest(uint256 id, DataTypes.WithdrawRequestType requestType) 
+    external nonReentrant whenNotPaused
 
 // Resolve withdrawal requests (vault admin)
-function resolveWithdrawRequests(uint256 resolvedIdLimit) external onlyVault
+function resolveWithdrawRequests(DataTypes.ResolveWithdrawRequestsData memory data) 
+    external onlyVault
 
 // Claim resolved withdrawal
-function withdraw() external nonReentrant
-
-// Instant withdrawal (if enabled)
-function withdrawInstant(uint256 shares, bytes memory instantWithdrawData) 
-    external nonReentrant returns (uint256)
+function withdraw(DataTypes.WithdrawRequestType requestType) external nonReentrant whenNotPaused
 ```
 
-### 4. ModuleRegistry
+#### V2 Features
+
+- **Isolated Queues**: Separate processing queues for different withdrawal types
+- **Priority Levels**: Multiple priority levels for withdrawal processing
+- **Exchange Rate Protection**: Prevents cost socialization through exchange rate snapshots
+- **Enhanced Cancellation**: Support for cancelling withdrawals across all queue types
+
+### 5. ModuleRegistry
 
 **File**: `src/core/ModuleRegistry/ModuleRegistry.sol`
 
@@ -199,6 +278,29 @@ Manages whitelisting of approved modules for security.
 ```solidity
 // Set module in registry (owner only)
 function setModule(string memory name, address module) external onlyOwner
+```
+
+### 6. Fallback Handlers
+
+**File**: `src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol`
+
+Enables whitelisted arbitrary code execution for advanced operations.
+
+#### Key Features
+
+- **Whitelisted Execution**: Only approved handlers can execute arbitrary code
+- **Call Type Support**: Supports both CALL and DELEGATECALL operations
+- **Security Controls**: Handler registration and validation mechanisms
+- **Use Cases**: Preliquidation, emergency operations, and advanced strategies
+
+#### Example Usage
+
+```solidity
+// Register fallback handler
+vault.setFallbackHandler(key, handlerAddress);
+
+// Execute via fallback
+handler.preliquidate(id, callType, data);
 ```
 
 ## Module System
@@ -272,34 +374,54 @@ function execute(DataTypes.AaveV3FlashloanParams memory params)
 
 #### 1. Depositing Assets
 
+**Instant Deposits** (for small amounts within cash reserve):
 ```solidity
 // Approve tokens
 IERC20(asset).approve(vaultAddress, amount);
 
-// Deposit assets
+// Instant deposit (if within cash reserve)
 uint256 shares = vault.deposit(amount, receiver);
 
 // Or mint shares directly
 uint256 assets = vault.mint(shares, receiver);
 ```
 
-#### 2. Withdrawing Assets
-
-**Standard Withdrawal**:
+**Queue-Based Deposits** (for larger amounts):
 ```solidity
-// Request withdrawal (queued)
-vault.requestWithdraw(shares);
+// Request deposit through deposit manager
+depositManager.requestDeposit(amount, receiver);
 
-// Check status
-WithdrawRequestStateLegacy state = withdrawManager.getWithdrawRequestState(requestId);
+// Check deposit status
+DataTypes.DepositRequestData memory request = depositManager.depositRequest(requestId);
 
-// Claim when ready
-withdrawManager.withdraw();
+// Cancel if needed
+depositManager.cancelDepositRequest(requestId);
 ```
 
-**Instant Withdrawal** (if enabled):
+#### 2. Withdrawing Assets
+
+**Multi-Queue Withdrawals**:
 ```solidity
-uint256 amount = withdrawManager.withdrawInstant(shares, instantWithdrawData);
+// Request withdrawal with specific type
+withdrawManager.requestWithdraw(shares, DataTypes.WithdrawRequestType.GENERAL);
+
+// Priority withdrawal
+withdrawManager.requestWithdraw(shares, DataTypes.WithdrawRequestType.PRIORITY);
+
+// Deferred withdrawal
+withdrawManager.requestWithdraw(shares, DataTypes.WithdrawRequestType.DEFERRED);
+
+// Instant withdrawal (if enabled)
+withdrawManager.requestWithdraw(shares, DataTypes.WithdrawRequestType.INSTANT);
+
+// Check status
+DataTypes.WithdrawRequestData memory request = withdrawManager.withdrawRequest(requestId, requestType);
+
+// Claim when ready
+withdrawManager.withdraw(requestType);
+
+// Cancel if needed
+withdrawManager.cancelWithdrawRequest(requestId, requestType);
 ```
 
 #### 3. Checking Positions
@@ -316,7 +438,7 @@ uint256 previewShares = vault.previewDeposit(assets);
 uint256 previewAssets = vault.previewRedeem(shares);
 ```
 
-### For Vault Admins
+### For Vault Operators
 
 #### 1. Strategy Execution
 
@@ -338,21 +460,74 @@ moduleExecutionData[1] = DataTypes.ModuleExecutionData({
     data: abi.encodeWithSelector(borrowModule.execute.selector, borrowParams)
 });
 
-// Execute strategy
+// Execute strategy (vault operator or admin)
 vault.operate(moduleExecutionData);
 ```
 
-#### 2. Risk Management
+### For Vault Admins
+
+#### 1. Emergency Controls
+
+```solidity
+// Pause user operations
+vault.setPause(true);
+
+// Freeze all operations (including vault operator)
+vault.setFrozen(true);
+
+// Unpause/unfreeze
+vault.setPause(false);
+vault.setFrozen(false);
+```
+
+#### 2. Queue Management
+
+```solidity
+// Resolve deposit requests
+DataTypes.ResolveDepositRequestsData memory depositData = DataTypes.ResolveDepositRequestsData({
+    asset: assetAddress,
+    amount: totalAmount,
+    callbackExecutionData: abi.encode(moduleExecutionData)
+});
+depositManager.resolveDepositRequests(depositData);
+
+// Resolve withdrawal requests
+DataTypes.ResolveWithdrawRequestsData memory withdrawData = DataTypes.ResolveWithdrawRequestsData({
+    requestType: DataTypes.WithdrawRequestType.GENERAL,
+    amountToResolve: totalAmount,
+    callbackExecutionData: abi.encode(moduleExecutionData)
+});
+withdrawManager.resolveWithdrawRequests(withdrawData);
+```
+
+#### 3. Risk Management
 
 ```solidity
 // Set supply cap
 vault.setSupplyCap(newCap);
 
+// Set cash reserve percentage
+vault.setCashReserve(newCashReserveBPS);
+
 // Add privileged addresses
 vault.setPrivilegedAddress(address, true);
 
+// Set vault operator
+vault.setVaultOperator(operatorAddress);
+
 // Skim excess tokens
 vault.skim(tokenAddress);
+```
+
+#### 4. Fallback Handler Management
+
+```solidity
+// Register fallback handler
+bytes32 key = keccak256(abi.encodePacked(selector, encodedId, callType));
+vault.setFallbackHandler(key, handlerAddress);
+
+// Remove fallback handler
+vault.setFallbackHandler(key, address(0));
 ```
 
 ## Developer Guide
@@ -476,6 +651,15 @@ modifier onlyVaultAdmin() {
     _;
 }
 
+// Vault Operator or Admin
+modifier onlyVaultOperatorOrVaultAdmin() {
+    require(
+        $.vaultOperator == _msgSender() || $.vaultAdmin == _msgSender(),
+        Errors.CALLER_NOT_VAULT_OPERATOR_OR_VAULT_ADMIN
+    );
+    _;
+}
+
 // Privileged Addresses
 modifier onlyPrivileged() {
     require(privilegedAddresses[msg.sender], Errors.CALLER_NOT_PRIVILEGED);
@@ -535,6 +719,74 @@ require(handler != address(0), Errors.CALLBACK_HANDLER_NOT_FOUND);
 require(SuperloopStorage.isInExecutionContext(), Errors.NOT_IN_EXECUTION_CONTEXT);
 ```
 
+### V2 Security Enhancements
+
+#### 1. Pause and Freeze Mechanisms
+
+```solidity
+// Pause user operations
+modifier whenNotPaused() {
+    _requireNotPaused();
+    _;
+}
+
+// Freeze all operations (including vault operator)
+modifier whenNotFrozen() {
+    _requireNotFrozen();
+    _;
+}
+
+// Two-tier emergency controls
+function setPause(bool isPaused_) external onlyVaultAdmin
+function setFrozen(bool isFrozen_) external onlyVaultAdmin
+```
+
+#### 2. Fallback Handler Security
+
+```solidity
+// Fallback handler verification
+address handler = fallbackHandlers[keccak256(abi.encodePacked(msg.sig, encodedId, callType))];
+require(handler != address(0), Errors.FALLBACK_HANDLER_NOT_FOUND);
+
+// Call type validation
+if (callType == DataTypes.CallType.CALL) {
+    Address.functionCall(handler, msg.data);
+} else {
+    Address.functionDelegateCall(handler, msg.data);
+}
+```
+
+#### 3. Cash Reserve Protection
+
+```solidity
+// Cash reserve validation for instant deposits
+uint256 cashReserveShortfall = _getCashReserveShortfall();
+require(assets <= cashReserveShortfall, Errors.INSUFFICIENT_CASH_SHORTFALL);
+
+// Calculate expected vs actual cash reserve
+uint256 cashReserveExpected = Math.mulDiv(
+    totalAssets(),
+    cashReserve,
+    MAX_BPS_VALUE,
+    Math.Rounding.Floor
+);
+```
+
+#### 4. Exchange Rate Protection
+
+```solidity
+// Exchange rate snapshot for cost protection
+struct ExchangeRateSnapshot {
+    uint256 totalSupplyBefore;
+    uint256 totalSupplyAfter;
+    uint256 totalAssetsBefore;
+    uint256 totalAssetsAfter;
+}
+
+// Calculate shares to maintain exchange rate
+uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot, decimalOffset);
+```
+
 ## Audit Considerations
 
 ### Critical Areas for Review
@@ -545,6 +797,8 @@ require(SuperloopStorage.isInExecutionContext(), Errors.NOT_IN_EXECUTION_CONTEXT
 - **Execution context**: Verify proper context management
 - **Callback handling**: Review flashloan callback security
 - **Delegate calls**: Audit delegate call usage and storage conflicts
+- **Fallback handlers**: Review whitelisted arbitrary code execution security
+- **Vault operator role**: Verify separation of concerns between admin and operator
 
 #### 2. Asset Management
 
@@ -552,36 +806,49 @@ require(SuperloopStorage.isInExecutionContext(), Errors.NOT_IN_EXECUTION_CONTEXT
 - **Performance fee calculation**: Check for precision loss and edge cases
 - **Exchange rate manipulation**: Review potential manipulation vectors
 - **Slippage protection**: Ensure proper slippage controls in swaps
+- **Cash reserve management**: Verify cash reserve calculations and instant deposit limits
+- **Exchange rate protection**: Review exchange rate snapshot mechanism for cost protection
 
-#### 3. Withdrawal System
+#### 3. Queue Management Systems
 
-- **Queue management**: Verify withdrawal request ordering
-- **State transitions**: Check for invalid state transitions
-- **Instant withdrawal**: Review instant withdrawal security
-- **Cancellation logic**: Ensure proper cancellation handling
+- **Deposit queue management**: Verify deposit request ordering and processing
+- **Withdrawal queue isolation**: Ensure proper isolation between different withdrawal types
+- **State transitions**: Check for invalid state transitions across all queue types
+- **Partial processing**: Review partial fulfillment logic for both deposits and withdrawals
+- **Cancellation logic**: Ensure proper cancellation handling across all queue types
+- **Exchange rate snapshots**: Verify exchange rate protection during queue processing
 
 #### 4. Access Control
 
 - **Admin privileges**: Review admin function access
+- **Vault operator privileges**: Verify vault operator role separation and permissions
 - **Privileged addresses**: Check privileged address management
 - **Module registration**: Verify module registration security
-- **Emergency controls**: Review emergency pause mechanisms
+- **Fallback handler registration**: Review fallback handler whitelisting and security
+- **Emergency controls**: Review two-tier pause/freeze mechanisms
 
 ### Known Limitations
 
-1. **Centralization Risk**: Vault admin has significant control over strategy execution
-2. **Oracle Dependencies**: Relies on Aave V3 price oracles for asset valuation
+1. **Centralization Risk**: Vault admin and operator have significant control over strategy execution
+2. **Oracle Dependencies**: Relies on external price oracles for asset valuation
 3. **Liquidation Risk**: Leverage strategies carry liquidation risk
 4. **Gas Costs**: Complex operations may have high gas costs
 5. **Slippage**: Large trades may experience significant slippage
+6. **Queue Processing**: Large deposits/withdrawals may experience delays in queue processing
+7. **Cash Reserve Limits**: Instant deposits are limited by cash reserve availability
+8. **Fallback Handler Risk**: Whitelisted arbitrary code execution introduces additional attack vectors
 
 ### Recommendations
 
-1. **Multi-sig Admin**: Implement multi-signature for admin functions
-2. **Circuit Breakers**: Add emergency pause mechanisms
+1. **Multi-sig Admin**: Implement multi-signature for admin and operator functions
+2. **Circuit Breakers**: Leverage existing pause/freeze mechanisms effectively
 3. **Gradual Upgrades**: Implement timelock for critical parameter changes
 4. **Insurance**: Consider insurance mechanisms for user funds
 5. **Monitoring**: Implement comprehensive monitoring and alerting
+6. **Queue Monitoring**: Monitor queue depths and processing times
+7. **Cash Reserve Management**: Regularly review and adjust cash reserve percentages
+8. **Fallback Handler Audits**: Regular security audits of whitelisted fallback handlers
+9. **Role Separation**: Maintain clear separation between admin and operator responsibilities
 
 ## Integration Examples
 
@@ -773,6 +1040,53 @@ forge verify-contract <CONTRACT_ADDRESS> <CONTRACT_NAME> --chain-id 1 --ethersca
 ```
 
 ---
+
+## V2 Migration Guide
+
+### Key Changes from V1 to V2
+
+#### 1. Cash Reserve System
+- **New Feature**: Instant deposits for small amounts within cash reserve
+- **Benefit**: Improved user experience for small deposits
+- **Implementation**: `_getCashReserveShortfall()` function validates instant deposit limits
+
+#### 2. Queue-Based Deposit Management
+- **New Feature**: Fair and efficient deposit processing system
+- **Benefit**: Prevents large deposits from affecting exchange rates
+- **Implementation**: `DepositManager` contract with request queuing
+
+#### 3. Enhanced Withdrawal System
+- **New Feature**: Multiple isolated withdrawal queues with priority levels
+- **Benefit**: Flexible withdrawal options for different user needs
+- **Implementation**: `WithdrawManager` with `WithdrawRequestType` enum
+
+#### 4. Exchange Rate Protection
+- **New Feature**: Non-socialized entry/exit costs through exchange rate reset mechanism
+- **Benefit**: Fair cost distribution and protection against manipulation
+- **Implementation**: `ExchangeRateSnapshot` mechanism in both managers
+
+#### 5. Fallback Handler System
+- **New Feature**: Whitelisted arbitrary code execution for advanced operations
+- **Benefit**: Enhanced composability and emergency operation capabilities
+- **Implementation**: `fallback()` function with handler validation
+
+#### 6. Enhanced Security Controls
+- **New Feature**: Two-tier pause/freeze system with role separation
+- **Benefit**: Granular emergency controls and operational security
+- **Implementation**: `PausableUpgradeableEnhanced` with vault operator role
+
+#### 7. Vault Operator Role
+- **New Feature**: Dedicated role for strategy execution separate from admin functions
+- **Benefit**: Improved operational security and role separation
+- **Implementation**: `onlyVaultOperatorOrVaultAdmin` modifier
+
+### Migration Considerations
+
+1. **User Experience**: V2 provides better user experience with instant deposits and flexible withdrawals
+2. **Security**: Enhanced security with multiple layers of protection and role separation
+3. **Fairness**: Queue-based systems ensure fair processing for all users
+4. **Cost Protection**: Exchange rate protection prevents cost socialization
+5. **Composability**: Fallback handlers enable advanced integrations and emergency operations
 
 ## License
 
