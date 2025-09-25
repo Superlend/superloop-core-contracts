@@ -284,8 +284,8 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
             // Take flash loan of the borrowed asset amount
             POOL.flashLoanSimple(address(this), borrowAsset, borrowBalanceBatch, callbackData, 0);
 
-            borrowBalance -= borrowBalanceBatch;
-            lendBalance -= lendBalanceBatch;
+            borrowBalance = borrowBalance >= borrowBalanceBatch ? borrowBalance - borrowBalanceBatch : 0;
+            lendBalance = lendBalance >= lendBalanceBatch ? lendBalance - lendBalanceBatch : 0;
         }
     }
 

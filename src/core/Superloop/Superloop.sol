@@ -199,17 +199,23 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
 
         (bytes32 encodedId, DataTypes.CallType callType) = abi.decode(msg.data[4:4 + 64], (bytes32, DataTypes.CallType));
         bytes32 key = keccak256(abi.encodePacked(msg.sig, encodedId, callType));
-
         address handler = SuperloopStorage.getSuperloopStorage().fallbackHandlers[key];
         require(handler != address(0), Errors.FALLBACK_HANDLER_NOT_FOUND);
 
+        bytes memory returnData = abi.encode(true);
         if (callType == DataTypes.CallType.CALL) {
-            Address.functionCall(handler, msg.data);
+            bytes memory _returnData = Address.functionCall(handler, msg.data);
+            if (_returnData.length > 0) {
+                returnData = _returnData;
+            }
         } else {
-            Address.functionDelegateCall(handler, msg.data);
+            bytes memory _returnData = Address.functionDelegateCall(handler, msg.data);
+            if (_returnData.length > 0) {
+                returnData = _returnData;
+            }
         }
 
-        return abi.encode(true);
+        return returnData;
     }
 
     modifier onlyVaultOperatorOrVaultAdmin() {

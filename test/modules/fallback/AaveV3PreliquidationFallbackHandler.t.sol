@@ -13,19 +13,11 @@ import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAdd
 
 contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     AaveV3PreliquidationFallbackHandler public preliquidation;
-    uint256 public constant WAD = 10 ** 18;
-    uint256 public constant BPS = 10000;
-    bytes32 id;
-    uint256 public constant PRE_LLTV = (5000 * WAD) / BPS;
-    uint256 public constant PRE_CF1 = (2000 * WAD) / BPS;
-    uint256 public constant PRE_CF2 = (4000 * WAD) / BPS;
-    uint256 public constant PRE_IF1 = ((BPS + 50) * WAD) / BPS;
-    uint256 public constant PRE_IF2 = ((80 + BPS) * WAD) / BPS;
-    uint256 public constant LLTV = (7800 * WAD) / BPS;
 
     function setUp() public override {
         super.setUp();
         id = bytes32("1");
+        LLTV = (7800 * WAD) / BPS;
         preliquidation = new AaveV3PreliquidationFallbackHandler(
             AAVE_V3_POOL_ADDRESSES_PROVIDER,
             0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f,

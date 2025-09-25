@@ -225,6 +225,8 @@ contract MigrationTest is IntegrationBase {
         uint256 batches = 4;
         migrationHelper.migrate(oldVault, address(superloop), users, ST_XTZ, XTZ, batches);
 
+        console.log("migration complete");
+
         uint256 endGas = gasleft();
         uint256 gasUsed = startGas - endGas;
         console.log("gas used", gasUsed);

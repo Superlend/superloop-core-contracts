@@ -29,6 +29,7 @@ import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/AaveV3Account
 import {WithdrawManagerCallbackHandler} from "../../src/modules/callback/WithdrawManagerCallbackHandler.sol";
 import {UnwrapModule} from "../../src/modules/helper/UnwrapModule.sol";
 import {WrapModule} from "../../src/modules/helper/WrapModule.sol";
+import {AaveV3PreliquidationFallbackHandler} from "../../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
 
 contract TestBase is Test {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
@@ -50,6 +51,16 @@ contract TestBase is Test {
     address public constant POOL_CONFIGURATOR = 0x30F6880Bb1cF780a49eB4Ef64E64585780AAe060;
     address public constant POOL_ADMIN = 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
 
+    uint256 public constant WAD = 10 ** 18;
+    uint256 public constant BPS = 10000;
+    bytes32 id = bytes32("1");
+    uint256 public constant PRE_LLTV = (5000 * WAD) / BPS;
+    uint256 public constant PRE_CF1 = (2000 * WAD) / BPS;
+    uint256 public constant PRE_CF2 = (4000 * WAD) / BPS;
+    uint256 public constant PRE_IF1 = ((BPS + 50) * WAD) / BPS;
+    uint256 public constant PRE_IF2 = ((80 + BPS) * WAD) / BPS;
+    uint256 public LLTV = (9600 * WAD) / BPS;
+
     address public admin;
     address public treasury;
 
@@ -58,6 +69,7 @@ contract TestBase is Test {
     AaveV3FlashloanModule public flashloanModule;
     DepositManagerCallbackHandler public depositManagerCallbackHandler;
     WithdrawManagerCallbackHandler public withdrawManagerCallbackHandler;
+    AaveV3PreliquidationFallbackHandler public preliquidationFallbackHandler;
     AaveV3CallbackHandler public callbackHandler;
     AaveV3SupplyModule public supplyModule;
     AaveV3WithdrawModule public withdrawModule;
@@ -197,5 +209,26 @@ contract TestBase is Test {
             abi.encodeWithSelector(WithdrawManager.initialize.selector, vault)
         );
         withdrawManager = WithdrawManager(address(proxy));
+    }
+
+    function _deployPreliquidationFallbackHandler(address vault) internal {
+        preliquidationFallbackHandler = new AaveV3PreliquidationFallbackHandler(
+            AAVE_V3_POOL_ADDRESSES_PROVIDER,
+            vault,
+            2,
+            8,
+            DataTypes.AaveV3PreliquidationParamsInit({
+                id: id,
+                lendReserve: ST_XTZ,
+                borrowReserve: XTZ,
+                preLltv: PRE_LLTV,
+                preCF1: PRE_CF1,
+                preCF2: PRE_CF2,
+                preIF1: PRE_IF1,
+                preIF2: PRE_IF2
+            })
+        );
+        moduleRegistry.setModule("AaveV3PreliquidationFallbackHandler", address(preliquidationFallbackHandler));
+        vm.label(address(preliquidationFallbackHandler), "preliquidationFallbackHandler");
     }
 }

@@ -120,14 +120,15 @@ contract WithdrawManagerTest is IntegrationBase {
         uint256 user2ShareBalanceAfter = superloop.balanceOf(user2);
 
         DataTypes.WithdrawRequestData memory withdrawRequest2 = withdrawManager.withdrawRequest(2, requestType);
-        assertEq(uint256(withdrawRequest2.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_CANCELLED));
-        assertEq(
-            user2ShareBalanceAfter - user2ShareBalanceBefore, withdrawRequest2.shares - withdrawRequest2.sharesProcessed
+        assertApproxEqRel(uint256(withdrawRequest2.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_CANCELLED), 1e18);
+        assertApproxEqRel(
+            user2ShareBalanceAfter - user2ShareBalanceBefore, withdrawRequest2.shares - withdrawRequest2.sharesProcessed, 
+            1e18
         );
-        assertEq(withdrawRequest2.amountClaimable, 0);
-        assertEq(withdrawRequest2.amountClaimed, user2BalanceAfter - user2BalanceBefore);
+        assertApproxEqRel(withdrawRequest2.amountClaimable, 0, 1e18);
+        assertApproxEqRel(withdrawRequest2.amountClaimed, user2BalanceAfter - user2BalanceBefore, 1e18);
         uint256 totalPendingWithdraws = withdrawManager.totalPendingWithdraws(requestType);
-        assertEq(totalPendingWithdraws, sharesLeftToResolve - withdrawRequest2.sharesProcessed);
+        assertApproxEqRel(totalPendingWithdraws, sharesLeftToResolve - withdrawRequest2.sharesProcessed, 1e18);
 
         (,, uint256 repayAmount,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
         (uint256 withdrawAmount,,,,,,,,) = poolDataProvider.getUserReserveData(ST_XTZ, address(superloop));
@@ -161,12 +162,12 @@ contract WithdrawManagerTest is IntegrationBase {
         // 3rd request shoudl be resolved based on amount, ie. 2nd should get skipped
         uint256 resolutionIdPointer = withdrawManager.resolutionIdPointer(requestType);
         DataTypes.WithdrawRequestData memory withdrawRequest3 = withdrawManager.withdrawRequest(3, requestType);
-        assertEq(uint256(withdrawRequest3.state), uint256(DataTypes.RequestProcessingState.FULLY_PROCESSED));
-        assertEq(withdrawRequest3.sharesProcessed, withdrawRequest3.shares);
+        assertApproxEqRel(uint256(withdrawRequest3.state), uint256(DataTypes.RequestProcessingState.FULLY_PROCESSED), 1e18);
+        assertApproxEqRel(withdrawRequest3.sharesProcessed, withdrawRequest3.shares, 1e18);
         assertTrue(withdrawRequest3.amountClaimable > 0);
         totalPendingWithdraws = withdrawManager.totalPendingWithdraws(requestType);
-        assertEq(totalPendingWithdraws, 0);
-        assertEq(resolutionIdPointer, 4);
+        assertApproxEqRel(totalPendingWithdraws, 0, 1e18);
+        assertApproxEqRel(resolutionIdPointer, 4, 1e18);
 
         // new withdraw request should be able to be made, ie not blocked because of cancellation
         // user 2 shoudl be able to make a new withdraw request

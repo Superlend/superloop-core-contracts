@@ -11,13 +11,11 @@ import {MockPreliquidation} from "../../../src/mock/MockPreliquidation.sol";
 
 contract FallbackHandlerTest is IntegrationBase {
     address public preliquidation;
-    bytes32 public id;
     DataTypes.CallType public callType;
     bytes32 public key;
 
     function setUp() public override {
         super.setUp();
-        id = bytes32("1");
         callType = DataTypes.CallType.DELEGATECALL;
 
         preliquidation = address(new MockPreliquidation());
