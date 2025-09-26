@@ -24,6 +24,8 @@ import {DepositManager} from "../src/core/DepositManager/DepositManager.sol";
 import {WithdrawManager} from "../src/core/WithdrawManager/WithdrawManager.sol";
 import {UniversalAccountant} from "../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
 import {AaveV3AccountantPlugin} from "../src/plugins/accountant/AaveV3AccountantPlugin.sol";
+import {AaveV3PreliquidationFallbackHandler} from "../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
+import {VaultRouter} from "../src/helpers/VaultRouter.sol";
 
 contract Deploy is Script {
     address public deployer;
@@ -54,10 +56,13 @@ contract Deploy is Script {
     AaveV3RepayModule public repayModule;
 
     // dex module
-    UniversalDexModule public dexModule = UniversalDexModule(0x38F5efC1267F6103c9b0FE802E1731E245f09Cd0);
+    UniversalDexModule public dexModule;
 
     DepositManagerCallbackHandler public depositManagerCallbackHandler;
     WithdrawManagerCallbackHandler public withdrawManagerCallbackHandler;
+
+    // TODO: Add later
+    AaveV3PreliquidationFallbackHandler public preliquidationFallbackHandler;
 
     address public accountantImplementation;
     address public withdrawManagerImplementation;
@@ -71,9 +76,7 @@ contract Deploy is Script {
     DepositManager public depositManager;
 
     Superloop public superloop;
-
-    // TODO: add vault router later
-    // VaultRouter public vaultRouter;
+    VaultRouter public vaultRouter;
 
     function setUp() public {
         vm.createSelectFork("etherlink");
@@ -82,13 +85,11 @@ contract Deploy is Script {
         deployer = vm.addr(deployerPvtKey);
 
         vaultAdmin = deployer;
-        rebalanceAdmin = deployer;
         treasury = TREASURY;
         vaultOperator = deployer;
 
         console.log("deployer", deployer);
         console.log("vaultAdmin", vaultAdmin);
-        console.log("rebalanceAdmin", rebalanceAdmin);
         console.log("treasury", treasury);
         console.log("vaultOperator", vaultOperator);
     }
@@ -117,8 +118,8 @@ contract Deploy is Script {
         // deploy vault
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
             asset: XTZ,
-            name: "Test Superloop XTZ v3",
-            symbol: "TestsloopXTZv3",
+            name: "Test Superloop XTZ v4",
+            symbol: "TestsloopXTZv4",
             supplyCap: 10000 * 10 ** 18,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
@@ -163,8 +164,7 @@ contract Deploy is Script {
         _setupEmode();
 
         // setup vault router
-        // TODO: add vault router later
-        // _setupVaultRouter();
+        _setupVaultRouter();
 
         // set rebalance admin as priveledged account
         // superloop.setPrivilegedAddress(rebalanceAdmin, true);
@@ -172,16 +172,31 @@ contract Deploy is Script {
         // transfer vault admin role from deployer to vault admin after all the setup is done
         // superloop.setVaultAdmin(vaultAdmin);
 
+        /**
+         * ROLE TRANSFERS : 
+         *     1. Vault admin => safe
+         *     2. Vault proxy admin => safe
+         *     3. Accountant plugin owner => safe
+         *     4. Accountant => safe
+         *     5. Accountant proxy admin => safe
+         *     6. Deposit manager proxy admin => safe
+         *     7. Withdraw manager proxy admin => safe
+         *     8. Module registry owner => safe
+         *     9. Vault operator => rebalance admin
+         *     10. Vault router owner => vault admin
+         */
         _logAddresses();
 
         vm.stopBroadcast();
     }
 
     function deployModules() internal {
-        flashloanModule = new AaveV3FlashloanModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        flashloanModule = AaveV3FlashloanModule(0x653BDa572ca9D64B9f9De3Ade96Ed2Dd17fD55fB);
+        // new AaveV3FlashloanModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3FlashloanModule", address(flashloanModule));
 
-        aaveFlashloanCallbackHandler = new AaveV3CallbackHandler();
+        aaveFlashloanCallbackHandler = AaveV3CallbackHandler(0xbe775b5848D84283098e74a90F259A46f9342573);
+        // new AaveV3CallbackHandler();
         moduleRegistry.setModule("AaveV3CallbackHandler", address(aaveFlashloanCallbackHandler));
 
         depositManagerCallbackHandler = new DepositManagerCallbackHandler();
@@ -190,22 +205,32 @@ contract Deploy is Script {
         withdrawManagerCallbackHandler = new WithdrawManagerCallbackHandler();
         moduleRegistry.setModule("WithdrawManagerCallbackHandler", address(withdrawManagerCallbackHandler));
 
-        emodeModule = new AaveV3EmodeModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        // TODO: add later
+        // preliquidationFallbackHandler = new AaveV3PreliquidationFallbackHandler(
+        //     AAVE_V3_POOL_ADDRESSES_PROVIDER,
+        //     address(superloop),
+        //     2,
+        //     8,
+        //     DataTypes.AaveV3PreliquidationParamsInit({})
+        // );
+        // moduleRegistry.setModule("AaveV3PreliquidationFallbackHandler", address(preliquidationFallbackHandler));
+
+        emodeModule = AaveV3EmodeModule(0x365916932cDCb4C6dcef136A065C4e3F81416BF6);
         moduleRegistry.setModule("AaveV3EmodeModule", address(emodeModule));
 
-        supplyModule = new AaveV3SupplyModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        supplyModule = AaveV3SupplyModule(0x66e82124412C61D7fF90ACFBa82936DD037D737E);
         moduleRegistry.setModule("AaveV3SupplyModule", address(supplyModule));
 
-        withdrawModule = new AaveV3WithdrawModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        withdrawModule = AaveV3WithdrawModule(0x1f5Ba080B9E5705DA47212167cA44611F78DB130);
         moduleRegistry.setModule("AaveV3WithdrawModule", address(withdrawModule));
 
-        borrowModule = new AaveV3BorrowModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        borrowModule = AaveV3BorrowModule(0x3de57294989d12066a94a8A16E977992F3cF8433);
         moduleRegistry.setModule("AaveV3BorrowModule", address(borrowModule));
 
-        repayModule = new AaveV3RepayModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        repayModule = AaveV3RepayModule(0x9AF8cCabC21ff594dA237f9694C4A9C6123480c6);
         moduleRegistry.setModule("AaveV3RepayModule", address(repayModule));
 
-        // dexModule = new UniversalDexModule();
+        dexModule = UniversalDexModule(0x38F5efC1267F6103c9b0FE802E1731E245f09Cd0);
         moduleRegistry.setModule("UniversalDexModule", address(dexModule));
     }
 
@@ -368,31 +393,32 @@ contract Deploy is Script {
         console.log("Superloop Implementation: %s", address(vaultImplementation));
         console.log("--------------------------------");
 
-        // TODO: add vault router later
-        // log vault router along with its implementation and proxy admin
-        // console.log("--------------------------------");
-        // console.log("Vault Router: %s", "--------------------------------");
-        // console.log("--------------------------------");
-        // console.log("Vault Router: %s", address(vaultRouter));
+        console.log("--------------------------------");
+        console.log("Vault Router: %s", "--------------------------------");
+        console.log("--------------------------------");
+        console.log("Vault Router: %s", address(vaultRouter));
     }
 
     function _setupVaultRouter() internal {
-        // address[] memory supportedVaults = new address[](1);
-        // supportedVaults[0] = address(superloop);
+        address[] memory supportedVaults = new address[](1);
+        supportedVaults[0] = address(superloop);
 
-        // address[] memory supportedTokens = new address[](9);
-        // supportedTokens[0] = XTZ;
-        // supportedTokens[1] = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9; // USDC
-        // supportedTokens[2] = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854; // ST_XTZ
-        // supportedTokens[3] = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A; // USDT
-        // supportedTokens[4] = 0xDD629E5241CbC5919847783e6C96B2De4754e438; // mtbill
-        // supportedTokens[5] = 0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4; // mbasis
-        // supportedTokens[6] = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F; // wbtc
-        // supportedTokens[7] = 0xfc24f770F94edBca6D6f885E12d4317320BcB401; // weth
-        // supportedTokens[8] = 0xecAc9C5F704e954931349Da37F60E39f515c11c1; // lbtc
+        address[] memory supportedDepositManagers = new address[](1);
+        supportedDepositManagers[0] = address(depositManager);
 
-        // vaultRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule));
+        address[] memory supportedTokens = new address[](9);
+        supportedTokens[0] = XTZ;
+        supportedTokens[1] = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9; // USDC
+        supportedTokens[2] = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854; // ST_XTZ
+        supportedTokens[3] = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A; // USDT
+        supportedTokens[4] = 0xDD629E5241CbC5919847783e6C96B2De4754e438; // mtbill
+        supportedTokens[5] = 0x2247B5A46BB79421a314aB0f0b67fFd11dd37Ee4; // mbasis
+        supportedTokens[6] = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F; // wbtc
+        supportedTokens[7] = 0xfc24f770F94edBca6D6f885E12d4317320BcB401; // weth
+        supportedTokens[8] = 0xecAc9C5F704e954931349Da37F60E39f515c11c1; // lbtc
 
-        // vaultRouter.transferOwnership(vaultAdmin);
+        vaultRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule), supportedDepositManagers);
+
+        vaultRouter.transferOwnership(vaultAdmin);
     }
 }
