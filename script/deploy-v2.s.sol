@@ -173,7 +173,7 @@ contract Deploy is Script {
         // superloop.setVaultAdmin(vaultAdmin);
 
         /**
-         * ROLE TRANSFERS : 
+         * ROLE TRANSFERS :
          *     1. Vault admin => safe
          *     2. Vault proxy admin => safe
          *     3. Accountant plugin owner => safe
