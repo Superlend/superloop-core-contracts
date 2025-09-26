@@ -121,7 +121,7 @@ contract WithdrawManagerTest is TestBase {
         assertEq(uint256(request.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
 
         // Verify user's withdraw request ID was set
-        uint256 userRequestId = withdrawManager.userWithdrawRequestId(user1, requestType);
+        (, uint256 userRequestId) = withdrawManager.userWithdrawRequest(user1, requestType);
         assertEq(userRequestId, 1);
 
         // Verify shares were transferred to withdraw manager
@@ -238,7 +238,7 @@ contract WithdrawManagerTest is TestBase {
         assertEq(uint256(request.state), uint256(DataTypes.RequestProcessingState.CANCELLED));
 
         // Verify user's withdraw request ID was cleared
-        uint256 userRequestId = withdrawManager.userWithdrawRequestId(user1, requestType);
+        (, uint256 userRequestId) = withdrawManager.userWithdrawRequest(user1, requestType);
         assertEq(userRequestId, 0);
 
         // Verify shares were refunded to user

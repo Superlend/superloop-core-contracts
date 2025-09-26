@@ -52,13 +52,15 @@ abstract contract WithdrawManagerBase is Context {
         return _withdrawRequests;
     }
 
-    function userWithdrawRequestId(address user, DataTypes.WithdrawRequestType requestType)
+    function userWithdrawRequest(address user, DataTypes.WithdrawRequestType requestType)
         public
         view
-        returns (uint256)
+        returns (DataTypes.WithdrawRequestData memory, uint256)
     {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
-        return $.queues[requestType].userWithdrawRequestId[user];
+        user = user == address(0) ? _msgSender() : user;
+        uint256 id = $.queues[requestType].userWithdrawRequestId[user];
+        return (_withdrawRequest(id, requestType), id);
     }
 
     function totalPendingWithdraws(DataTypes.WithdrawRequestType requestType) public view returns (uint256) {
