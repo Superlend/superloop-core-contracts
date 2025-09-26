@@ -33,17 +33,20 @@ contract AaveV3SupplyModule is AaveV3ActionModule {
      * @param params The parameters for the supply operation
      */
     function execute(DataTypes.AaveV3ActionParams memory params) external override onlyExecutionContext {
-        // get the pool
-        IPool pool = IPool(poolAddressesProvider.getPool());
-
         // approve the asset
         uint256 amount =
             params.amount == type(uint256).max ? IERC20(params.asset).balanceOf(address(this)) : params.amount;
-        SafeERC20.forceApprove(IERC20(params.asset), address(pool), amount);
 
-        // supply the asset
-        pool.supply(params.asset, amount, address(this), 0);
+        if (amount != 0) {
+            // get the pool
+            IPool pool = IPool(poolAddressesProvider.getPool());
 
-        emit AssetSupplied(params.asset, amount, address(this));
+            SafeERC20.forceApprove(IERC20(params.asset), address(pool), amount);
+
+            // supply the asset
+            pool.supply(params.asset, amount, address(this), 0);
+
+            emit AssetSupplied(params.asset, amount, address(this));
+        }
     }
 }
