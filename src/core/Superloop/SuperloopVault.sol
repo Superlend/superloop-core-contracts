@@ -213,9 +213,8 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         uint256 assets = IAccountantModule(accountant).getPerformanceFee(totalSupplyCached, exchangeRate, decimals);
 
         // calculate how much shares to dilute ie. mint for the treasury as performance fee
-        uint256 denominator = totalAssetsCached - assets + 1;
-        uint256 numerator = ((totalAssetsCached + 1) * (totalSupplyCached + 10 ** _decimalsOffset()))
-            - ((totalSupplyCached + 10 ** _decimalsOffset()) * denominator);
+        uint256 numerator = (totalSupplyCached + 10 ** _decimalsOffset()) * assets;
+        uint256 denominator = totalAssetsCached + 1 - assets;
 
         if (numerator != 0) {
             shares = numerator / denominator;
