@@ -21,7 +21,7 @@ abstract contract SuperloopBase {
     event DepositManagerModuleUpdated(address indexed oldModule, address indexed newModule);
     event VaultAdminUpdated(address indexed oldAdmin, address indexed newAdmin);
     event TreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
-    event PrivilegedAddressUpdated(address indexed privilegedAddress, bool oldStatus, bool newStatus);
+    event PrivilegedAddressUpdated(address indexed privilegedAddress, uint256 oldStatus, uint256 newStatus);
     event CashReserveUpdated(uint256 oldReserve, uint256 newReserve);
     event FallbackHandlerUpdated(bytes32 indexed key, address indexed oldHandler, address indexed newHandler);
     event VaultOperatorUpdated(address indexed oldOperator, address indexed newOperator);
@@ -162,7 +162,8 @@ abstract contract SuperloopBase {
     }
 
     function privilegedAddress(address address_) external view returns (bool) {
-        return SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[address_];
+        uint256 status = SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[address_];
+        return status > 0;
     }
 
     function depositManagerModule() external view returns (address) {
@@ -174,9 +175,10 @@ abstract contract SuperloopBase {
     }
 
     function _setPrivilegedAddress(address address_, bool isPrivileged_) internal {
-        bool oldStatus = SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[address_];
-        SuperloopStorage.setPrivilegedAddress(address_, isPrivileged_);
-        emit PrivilegedAddressUpdated(address_, oldStatus, isPrivileged_);
+        uint256 oldStatus = SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[address_];
+        uint256 newStatus = isPrivileged_ ? oldStatus + 1 : oldStatus > 0 ? oldStatus - 1 : 0;
+        SuperloopStorage.setPrivilegedAddress(address_, newStatus);
+        emit PrivilegedAddressUpdated(address_, oldStatus, newStatus);
     }
 
     modifier onlyVaultAdmin() {

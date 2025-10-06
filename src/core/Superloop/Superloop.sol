@@ -75,11 +75,11 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setCashReserve(data.cashReserve);
         SuperloopStorage.setVaultOperator(data.vaultOperator);
 
-        SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
-        SuperloopStorage.setPrivilegedAddress(data.treasury, true);
-        SuperloopStorage.setPrivilegedAddress(data.withdrawManager, true);
-        SuperloopStorage.setPrivilegedAddress(data.depositManager, true);
-        SuperloopStorage.setPrivilegedAddress(data.vaultOperator, true);
+        _setPrivilegedAddress(data.vaultAdmin, true);
+        _setPrivilegedAddress(data.treasury, true);
+        _setPrivilegedAddress(data.withdrawManager, true);
+        _setPrivilegedAddress(data.depositManager, true);
+        _setPrivilegedAddress(data.vaultOperator, true);
     }
 
     /**

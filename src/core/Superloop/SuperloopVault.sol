@@ -288,8 +288,8 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     }
 
     function _onlyPrivileged() internal view {
-        SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
-        require($.privilegedAddresses[_msgSender()], Errors.CALLER_NOT_PRIVILEGED);
+        uint256 isPrivileged = SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[_msgSender()];
+        require(isPrivileged > 0, Errors.CALLER_NOT_PRIVILEGED);
     }
 
     modifier onlyWithdrawManager() {

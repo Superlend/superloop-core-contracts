@@ -127,7 +127,7 @@ library SuperloopStorage {
         address vaultOperator;
         address vaultAdmin;
         address treasury;
-        mapping(address => bool) privilegedAddresses;
+        mapping(address => uint256) privilegedAddresses;
     }
 
     /**
@@ -206,7 +206,7 @@ library SuperloopStorage {
      * @param privilegedAddress_ The address to set privileged status for
      * @param isPrivileged_ True to grant privileges, false to revoke
      */
-    function setPrivilegedAddress(address privilegedAddress_, bool isPrivileged_) internal {
+    function setPrivilegedAddress(address privilegedAddress_, uint256 isPrivileged_) internal {
         SuperloopEssentialRoles storage $ = getSuperloopEssentialRolesStorage();
         $.privilegedAddresses[privilegedAddress_] = isPrivileged_;
     }
