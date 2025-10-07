@@ -106,10 +106,13 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     function resolveWithdrawRequests(DataTypes.ResolveWithdrawRequestsData memory data) external onlyVault {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
 
+        address vaultCached = $.vault;
+
+        ISuperloop(vaultCached).realizePerformanceFee();
+
         // validations
         _validateResolveWithdrawRequests($, data);
 
-        address vaultCached = $.vault;
         // take a snapshot of the current exchange rate
         DataTypes.ExchangeRateSnapshot memory snapshot = _createExchangeRateSnapshot(vaultCached, $.vaultDecimalOffset);
 
