@@ -77,6 +77,8 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         (DepositManagerCache memory cache, DepositManagerStorage.DepositManagerState storage $) =
             _createDepositManagerCache();
 
+        ISuperloop(cache.vault).realizePerformanceFee();
+
         // validations
         _validateResolveDepositRequests(cache, data);
 
