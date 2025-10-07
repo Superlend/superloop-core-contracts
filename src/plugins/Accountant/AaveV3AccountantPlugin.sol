@@ -11,7 +11,6 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
-import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
 
 contract AaveV3AccountantPlugin is AaveV3AccountantPluginBase {
     constructor(DataTypes.AaveV3AccountantPluginModuleInitData memory data) AaveV3AccountantPluginBase(_msgSender()) {

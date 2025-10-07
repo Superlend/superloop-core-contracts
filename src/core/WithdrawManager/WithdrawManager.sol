@@ -4,7 +4,6 @@ pragma solidity ^0.8.13;
 
 import {WithdrawManagerBase} from "./WithdrawManagerBase.sol";
 import {WithdrawManagerStorage} from "../lib/WithdrawManagerStorage.sol";
-import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {ReentrancyGuardUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
@@ -16,7 +15,6 @@ import {Errors} from "../../common/Errors.sol";
 import {SafeERC20, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IWithdrawManagerCallbackHandler} from "../../interfaces/IWithdrawManagerCallbackHandler.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title WithdrawManager
@@ -108,10 +106,13 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
     function resolveWithdrawRequests(DataTypes.ResolveWithdrawRequestsData memory data) external onlyVault {
         WithdrawManagerStorage.WithdrawManagerState storage $ = WithdrawManagerStorage.getWithdrawManagerStorage();
 
+        address vaultCached = $.vault;
+
+        ISuperloop(vaultCached).realizePerformanceFee();
+
         // validations
         _validateResolveWithdrawRequests($, data);
 
-        address vaultCached = $.vault;
         // take a snapshot of the current exchange rate
         DataTypes.ExchangeRateSnapshot memory snapshot = _createExchangeRateSnapshot(vaultCached, $.vaultDecimalOffset);
 

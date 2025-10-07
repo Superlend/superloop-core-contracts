@@ -3,20 +3,12 @@
 pragma solidity ^0.8.13;
 
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import {
-    ERC4626Upgradeable,
-    ERC20Upgradeable
-} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
-import {IERC20Metadata, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {ReentrancyGuardUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
-import {ISuperloopModuleRegistry} from "../../interfaces/IModuleRegistry.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
 import {Errors} from "../../common/Errors.sol";
 import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
-import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
-import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ISuperloopModuleRegistry} from "../../interfaces/IModuleRegistry.sol";
 import {SuperloopActions} from "./SuperloopActions.sol";
 import {SuperloopVault} from "./SuperloopVault.sol";
 import {SuperloopBase} from "./SuperloopBase.sol";
@@ -75,11 +67,11 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setCashReserve(data.cashReserve);
         SuperloopStorage.setVaultOperator(data.vaultOperator);
 
-        SuperloopStorage.setPrivilegedAddress(data.vaultAdmin, true);
-        SuperloopStorage.setPrivilegedAddress(data.treasury, true);
-        SuperloopStorage.setPrivilegedAddress(data.withdrawManager, true);
-        SuperloopStorage.setPrivilegedAddress(data.depositManager, true);
-        SuperloopStorage.setPrivilegedAddress(data.vaultOperator, true);
+        _setPrivilegedAddress(data.vaultAdmin, true);
+        _setPrivilegedAddress(data.treasury, true);
+        _setPrivilegedAddress(data.withdrawManager, true);
+        _setPrivilegedAddress(data.depositManager, true);
+        _setPrivilegedAddress(data.vaultOperator, true);
     }
 
     /**

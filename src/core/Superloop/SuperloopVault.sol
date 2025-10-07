@@ -7,7 +7,6 @@ import {
     ERC20Upgradeable
 } from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {DataTypes} from "../../common/DataTypes.sol";
 import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
 import {ReentrancyGuardUpgradeable} from
     "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
@@ -189,13 +188,14 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
 
         uint256 sharesToMint = _getPerformanceFeeAndShares(exchangeRate, $.accountant, decimals);
 
-        // update the last realized fee exchange rate on the accountant module via delegate call
-        IAccountantModule($.accountant).setLastRealizedFeeExchangeRate(exchangeRate, totalSupply());
-
         // if vault made profit, take a performance fee
         if (sharesToMint > 0) {
             // mint the shares to the treasury
             _mint($.treasury, sharesToMint);
+
+            // update the last realized fee exchange rate on the accountant module
+            (exchangeRate,) = _getCurrentExchangeRate();
+            IAccountantModule($.accountant).setLastRealizedFeeExchangeRate(exchangeRate, totalSupply());
 
             emit PerformanceFeeRealized(sharesToMint, $.treasury);
         }
@@ -213,9 +213,8 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         uint256 assets = IAccountantModule(accountant).getPerformanceFee(totalSupplyCached, exchangeRate, decimals);
 
         // calculate how much shares to dilute ie. mint for the treasury as performance fee
-        uint256 denominator = totalAssetsCached - assets + 1;
-        uint256 numerator = ((totalAssetsCached + 1) * (totalSupplyCached + 10 ** _decimalsOffset()))
-            - ((totalSupplyCached + 10 ** _decimalsOffset()) * denominator);
+        uint256 numerator = (totalSupplyCached + 10 ** _decimalsOffset()) * assets;
+        uint256 denominator = totalAssetsCached + 1 - assets;
 
         if (numerator != 0) {
             shares = numerator / denominator;
@@ -288,8 +287,8 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     }
 
     function _onlyPrivileged() internal view {
-        SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
-        require($.privilegedAddresses[_msgSender()], Errors.CALLER_NOT_PRIVILEGED);
+        uint256 isPrivileged = SuperloopStorage.getSuperloopEssentialRolesStorage().privilegedAddresses[_msgSender()];
+        require(isPrivileged > 0, Errors.CALLER_NOT_PRIVILEGED);
     }
 
     modifier onlyWithdrawManager() {
