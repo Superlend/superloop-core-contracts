@@ -8,7 +8,6 @@ import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAdd
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {Errors} from "../../common/Errors.sol";
 import {Context} from "openzeppelin-contracts/contracts/utils/Context.sol";
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReserveConfiguration} from "aave-v3-core/contracts/protocol/libraries/configuration/ReserveConfiguration.sol";
 import {WadRayMath} from "aave-v3-core/contracts/protocol/libraries/math/WadRayMath.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
