@@ -13,6 +13,7 @@ import {UniversalDexModule} from "../modules/dex/UniversalDexModule.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {ISuperloopLegacy} from "./ISuperloopLegacy.sol";
+import {IAccountantModule} from "../interfaces/IAccountantModule.sol";
 
 /**
  * @title MigrationHelper
@@ -134,6 +135,10 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         VaultStateData memory oldVaultState = _getVaultState(oldVault, users, lendAsset, borrowAsset);
         _validateUserBalancesWithTotalSupply(oldVaultState);
 
+        // get the last realized fee exchange rate on the accountant module
+        IAccountantModule oldAccountant = IAccountantModule(ISuperloopLegacy(oldVault).accountantModule());
+        uint256 lastRealizedFeeExchangeRate = oldAccountant.lastRealizedFeeExchangeRate();
+
         // Execute the migration using flash loan
         _performMigration(oldVault, lendAsset, borrowAsset, oldVaultState, newVault, batches);
 
@@ -141,6 +146,14 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         for (uint256 i = 0; i < users.length; i++) {
             ISuperloop(newVault).mintShares(users[i], oldVaultState.balances[i]);
         }
+
+        // set the last realized fee exchange rate on the accountant module
+        IAccountantModule newAccountant = IAccountantModule(ISuperloop(newVault).accountant());
+        newAccountant.setLastRealizedFeeExchangeRate(lastRealizedFeeExchangeRate, ISuperloop(newVault).totalSupply());
+
+        // set the vault address on the accountant module
+        newAccountant.setVault(newVault);
+        Ownable(address(newAccountant)).transferOwnership(ISuperloop(newVault).vaultAdmin());
 
         // Capture new vault state after migration
         VaultStateData memory newVaultState = _getVaultState(newVault, users, lendAsset, borrowAsset);
