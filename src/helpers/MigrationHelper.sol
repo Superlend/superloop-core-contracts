@@ -182,11 +182,12 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param params Encoded parameters containing migration data
      * @return success True if operation completed successfully
      */
-    function executeOperation(address asset, uint256 amount, uint256 premium, address, bytes calldata params)
+    function executeOperation(address asset, uint256 amount, uint256 premium, address initiator, bytes calldata params)
         external
         returns (bool)
     {
         require(msg.sender == address(POOL), "Only pool can call flashloan callback");
+        require(initiator == address(this), "Only migration helper can call flashloan callback");
 
         // Decode migration parameters from flash loan callback data
         (
