@@ -154,7 +154,7 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         SafeERC20.safeTransfer(IERC20(lendReserve), _msgSender(), collateralWithdrawn);
 
         // emit event
-        emit PreliquidationExecuted(id, params.user, user, debtToCover, collateralToSieze);
+        emit PreliquidationExecuted(id, _msgSender(), user, debtToCover, collateralToSieze);
     }
 
     function preliquidationParams(bytes32, DataTypes.CallType)
