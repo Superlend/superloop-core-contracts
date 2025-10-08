@@ -188,8 +188,6 @@ abstract contract PausableUpgradeableEnhanced is Initializable, ContextUpgradeab
         PausableStorage storage $ = _getPausableStorage();
         $._frozen = false;
 
-        _unpause();
-
         emit Unfrozen(_msgSender());
     }
 }
