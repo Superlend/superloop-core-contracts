@@ -166,7 +166,7 @@ abstract contract PausableUpgradeableEnhanced is Initializable, ContextUpgradeab
         PausableStorage storage $ = _getPausableStorage();
         $._frozen = true;
 
-        _pause();
+        if (!paused()) _pause();
 
         emit Frozen(_msgSender());
     }
@@ -176,9 +176,9 @@ abstract contract PausableUpgradeableEnhanced is Initializable, ContextUpgradeab
      *
      * Requirements:
      *
-     * - The contract must be paused.
+     * - The contract must be paused and not frozen.
      */
-    function _unpause() internal virtual whenPaused {
+    function _unpause() internal virtual whenPaused whenNotFrozen {
         PausableStorage storage $ = _getPausableStorage();
         $._paused = false;
         emit Unpaused(_msgSender());
