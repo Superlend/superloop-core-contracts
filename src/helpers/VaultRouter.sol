@@ -112,8 +112,8 @@ contract VaultRouter is Ownable {
         require(supportedDepositManagers[depositManager], Errors.DEPOSIT_MANAGER_NOT_WHITELISTED);
 
         address vaultAsset = IERC4626(vault).asset();
-        SafeERC20.safeTransferFrom(IERC20(tokenIn), _msgSender(), address(this), amountIn);
         uint256 tokenInBalanceBefore = IERC20(tokenIn).balanceOf(address(this));
+        SafeERC20.safeTransferFrom(IERC20(tokenIn), _msgSender(), address(this), amountIn);
 
         if (vaultAsset == tokenIn) {
             _handleDeposit(vault, depositManager, tokenIn, amountIn, depositType);
@@ -124,8 +124,7 @@ contract VaultRouter is Ownable {
         uint256 amountOut = universalDexModule.executeAndExit(swapParams, address(this));
         uint256 tokenInBalanceAfter = IERC20(tokenIn).balanceOf(address(this));
 
-        uint256 tokenInAmountLeft =
-            tokenInBalanceBefore > tokenInBalanceAfter ? tokenInBalanceBefore - tokenInBalanceAfter : 0;
+        uint256 tokenInAmountLeft = tokenInBalanceAfter - tokenInBalanceBefore;
         if (tokenInAmountLeft > 0) {
             SafeERC20.safeTransfer(IERC20(tokenIn), _msgSender(), tokenInAmountLeft);
         }
