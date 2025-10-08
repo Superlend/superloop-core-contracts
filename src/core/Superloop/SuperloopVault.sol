@@ -193,12 +193,12 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
             // mint the shares to the treasury
             _mint($.treasury, sharesToMint);
 
-            // update the last realized fee exchange rate on the accountant module
-            (exchangeRate,) = _getCurrentExchangeRate();
-            IAccountantModule($.accountant).setLastRealizedFeeExchangeRate(exchangeRate, totalSupply());
-
             emit PerformanceFeeRealized(sharesToMint, $.treasury);
         }
+
+        // update the last realized fee exchange rate on the accountant module
+        (exchangeRate,) = _getCurrentExchangeRate();
+        IAccountantModule($.accountant).setLastRealizedFeeExchangeRate(exchangeRate, totalSupply());
     }
 
     function _getPerformanceFeeAndShares(uint256 exchangeRate, address accountant, uint8 decimals)
