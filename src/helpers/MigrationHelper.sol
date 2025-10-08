@@ -296,9 +296,6 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
 
             // Take flash loan of the borrowed asset amount
             POOL.flashLoanSimple(address(this), borrowAsset, borrowBalanceBatch, callbackData, 0);
-
-            borrowBalance = borrowBalance >= borrowBalanceBatch ? borrowBalance - borrowBalanceBatch : 0;
-            lendBalance = lendBalance >= lendBalanceBatch ? lendBalance - lendBalanceBatch : 0;
         }
     }
 
@@ -324,13 +321,13 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
     ) internal {
         // Prepare and execute withdrawal operations on old vault
         DataTypes.ModuleExecutionData[] memory moduleExecutionDataWithdraw =
-            _perpareWithdrawCalls(oldVault, newVault, lendAsset, borrowAsset, borrowBalance, lendBalance);
+            _prepareWithdrawCalls(oldVault, newVault, lendAsset, borrowAsset, borrowBalance, lendBalance);
 
         ISuperloop(oldVault).operate(moduleExecutionDataWithdraw);
 
         // Prepare and execute deposit operations on new vault
         DataTypes.ModuleExecutionData[] memory moduleExecutionDataDeposit =
-            _perpareDepositCalls(lendAsset, borrowAsset, borrowBalance + premium, lendBalance);
+            _prepareDepositCalls(lendAsset, borrowAsset, borrowBalance + premium, lendBalance);
 
         ISuperloop(newVault).operate(moduleExecutionDataDeposit);
     }
@@ -346,7 +343,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param lendBalance Amount of lent asset to withdraw
      * @return moduleExecutionData Array of module operations to execute
      */
-    function _perpareWithdrawCalls(
+    function _prepareWithdrawCalls(
         address oldVault,
         address newVault,
         address lendAsset,
@@ -416,7 +413,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param lendBalance Amount of lent asset to deposit
      * @return moduleExecutionData Array of module operations to execute
      */
-    function _perpareDepositCalls(address lendAsset, address borrowAsset, uint256 borrowBalance, uint256 lendBalance)
+    function _prepareDepositCalls(address lendAsset, address borrowAsset, uint256 borrowBalance, uint256 lendBalance)
         internal
         view
         returns (DataTypes.ModuleExecutionData[] memory)
