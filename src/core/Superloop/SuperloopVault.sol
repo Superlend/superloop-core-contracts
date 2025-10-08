@@ -180,6 +180,22 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         SafeERC20.safeTransfer(IERC20(asset()), receiver, assets);
     }
 
+    function _seed(uint256 assets) internal returns (uint256) {
+        // realize performance fee => set last ex. rate to 1
+        _realizePerformanceFee();
+
+        require(assets > 0, Errors.INVALID_AMOUNT);
+        // check supply cap
+        require(assets <= maxDeposit(address(0)), Errors.SUPPLY_CAP_EXCEEDED);
+
+        // preview deposit
+        uint256 shares = previewDeposit(assets);
+        require(shares > 0, Errors.INVALID_SHARES_AMOUNT);
+        _deposit(_msgSender(), _msgSender(), assets, shares);
+
+        return shares;
+    }
+
     function _realizePerformanceFee() internal {
         SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
 
