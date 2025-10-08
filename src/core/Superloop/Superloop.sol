@@ -99,6 +99,15 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
     }
 
     /**
+     * @notice Seeds the vault with the provided assets
+     * @param assets The amount of assets to seed the vault with
+     */
+    function seed(uint256 assets) public onlyVaultAdmin {
+        require(totalSupply() == 0, Errors.VAULT_ALREADY_SEEDED);
+        _seed(assets);
+    }
+
+    /**
      * @notice Pauses or unpauses the vault
      * @param isPaused_ The boolean value to set the pause state to
      */

@@ -95,6 +95,11 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         require(id_ == id, Errors.PRELIQUIDATION_INVALID_ID);
         require(params.user == vault && address(this) == params.user, Errors.PRELIQUIDATION_INVALID_USER);
         require(pool.getUserEMode(vault) == emodeCategory, Errors.AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY);
+        require(
+            Lltv == _getEffectiveLltv(pool, emodeCategory, lendReserve, borrowReserve),
+            Errors.AAVE_V3_PRELIQUIDATION_INVALID_LLTV
+        );
+
         address user = params.user;
 
         // get collateral tokens and it's USD value
@@ -154,7 +159,7 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         SafeERC20.safeTransfer(IERC20(lendReserve), _msgSender(), collateralWithdrawn);
 
         // emit event
-        emit PreliquidationExecuted(id, params.user, user, debtToCover, collateralToSieze);
+        emit PreliquidationExecuted(id, _msgSender(), user, debtToCover, collateralToSieze);
     }
 
     function preliquidationParams(bytes32, DataTypes.CallType)
@@ -179,28 +184,9 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         IPool pool,
         uint256 _emodeCategory
     ) internal view returns (uint256) {
-        uint256 emodeLltv = 0;
-        if (_emodeCategory != 0) {
-            AaveDataTypes.EModeCategory memory emodeCategoryData = pool.getEModeCategoryData(uint8(_emodeCategory));
-            emodeLltv = Math.mulDiv(emodeCategoryData.liquidationThreshold, WadRayMath.WAD, BPS); // NOTE: div because liquidationThreshold is in BPS
-        }
-
-        AaveDataTypes.ReserveConfigurationMap memory lendReserveConfiguration =
-            pool.getConfiguration(preLiquidationParams_.lendReserve);
-        uint256 lltvBps = ReserveConfiguration.getLiquidationThreshold(lendReserveConfiguration);
-        uint256 effectiveLltv = Math.mulDiv(lltvBps, WadRayMath.WAD, BPS); // NOTE: div because lltv is in BPS
-
-        if (_emodeCategory != 0) {
-            uint256 _lendReserveEmodeCategory = ReserveConfiguration.getEModeCategory(lendReserveConfiguration);
-            AaveDataTypes.ReserveConfigurationMap memory borrowReserveConfiguration =
-                pool.getConfiguration(preLiquidationParams_.borrowReserve);
-            uint256 _borrowReserveEmodeCategory = ReserveConfiguration.getEModeCategory(borrowReserveConfiguration);
-            require(
-                _lendReserveEmodeCategory == _borrowReserveEmodeCategory && _lendReserveEmodeCategory == _emodeCategory,
-                Errors.AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY
-            );
-            effectiveLltv = emodeLltv;
-        }
+        uint256 effectiveLltv = _getEffectiveLltv(
+            pool, _emodeCategory, preLiquidationParams_.lendReserve, preLiquidationParams_.borrowReserve
+        );
 
         require(preLiquidationParams_.preLltv < effectiveLltv, Errors.PRELIQUIDATION_PRELTV_TOO_HIGH);
         require(preLiquidationParams_.preCF1 <= preLiquidationParams_.preCF2, Errors.PRELIQUIDATION_LCF_DECREASING);
@@ -211,6 +197,36 @@ contract AaveV3PreliquidationFallbackHandler is Context {
             preLiquidationParams_.preIF2 <= WadRayMath.wadDiv(WadRayMath.WAD, effectiveLltv),
             Errors.PRELIQUIDATION_LIF_TOO_HIGH
         );
+
+        return effectiveLltv;
+    }
+
+    function _getEffectiveLltv(IPool pool, uint256 _emodeCategory, address _lendReserve, address _borrowReserve)
+        internal
+        view
+        returns (uint256)
+    {
+        uint256 emodeLltv = 0;
+        if (_emodeCategory != 0) {
+            AaveDataTypes.EModeCategory memory emodeCategoryData = pool.getEModeCategoryData(uint8(_emodeCategory));
+            emodeLltv = Math.mulDiv(emodeCategoryData.liquidationThreshold, WadRayMath.WAD, BPS); // NOTE: div because liquidationThreshold is in BPS
+        }
+
+        AaveDataTypes.ReserveConfigurationMap memory lendReserveConfiguration = pool.getConfiguration(_lendReserve);
+        uint256 lltvBps = ReserveConfiguration.getLiquidationThreshold(lendReserveConfiguration);
+        uint256 effectiveLltv = Math.mulDiv(lltvBps, WadRayMath.WAD, BPS); // NOTE: div because lltv is in BPS
+
+        if (_emodeCategory != 0) {
+            uint256 _lendReserveEmodeCategory = ReserveConfiguration.getEModeCategory(lendReserveConfiguration);
+            AaveDataTypes.ReserveConfigurationMap memory borrowReserveConfiguration =
+                pool.getConfiguration(_borrowReserve);
+            uint256 _borrowReserveEmodeCategory = ReserveConfiguration.getEModeCategory(borrowReserveConfiguration);
+            require(
+                _lendReserveEmodeCategory == _borrowReserveEmodeCategory && _lendReserveEmodeCategory == _emodeCategory,
+                Errors.AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY
+            );
+            effectiveLltv = emodeLltv;
+        }
 
         return effectiveLltv;
     }

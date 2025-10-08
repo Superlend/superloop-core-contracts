@@ -6,9 +6,27 @@ import {IntegrationBase} from "../integration/IntegrationBase.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {MigrationHelper} from "../../../src/helpers/MigrationHelper.sol";
 import {ISuperloop} from "../../../src/interfaces/ISuperloop.sol";
+import {IAccountantModule} from "../../../src/interfaces/IAccountantModule.sol";
 import {console} from "forge-std/console.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {ISuperloopLegacy} from "../../../src/helpers/ISuperloopLegacy.sol";
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
+/**
+ * Prerequisites for the migration to work
+ * 1. The old vault's withdraw manager must be empty
+ * 2. Both the vaults should share common aave action modules and dex module
+ * 2. Migration helper contract must be set as priveledged address in the old vault
+ * 3. Migration helper contract must be set as these in the new vault
+ *     1. vault operator
+ *     2. deposit manager in the new vault
+ *     3. vault in the new accountant module
+ * 4. Post migration
+ *     1. Update vault operator on the new vault
+ *     2. Update vault in the new accountant module
+ *     3. Update deposit manager on the new vault
+ *     4. Remove migration helper as priveledged address from the old vault
+ */
 contract MigrationTest is IntegrationBase {
     address REPAY_MODULE = 0x9AF8cCabC21ff594dA237f9694C4A9C6123480c6;
     address WITHDRAW_MODULE = 0x1f5Ba080B9E5705DA47212167cA44611F78DB130;
@@ -193,15 +211,19 @@ contract MigrationTest is IntegrationBase {
         );
         vm.label(address(migrationHelper), "migrationHelper");
 
-        // set migration helper contract as priveledged address in old pool
-        // set migration helper contract as deposit manager in old pool
+        // set migration helper contract as priveledged address in old vault
         address oldVaultAdmin = ISuperloop(oldVault).vaultAdmin();
         vm.prank(oldVaultAdmin);
         ISuperloop(oldVault).setPrivilegedAddress(address(migrationHelper), true);
 
+        // set migration helper contract as deposit manager and vault operator in new vault
         vm.startPrank(admin);
         superloop.setDepositManagerModule(address(migrationHelper));
         superloop.setVaultOperator(address(migrationHelper));
+
+        // set migration helper as vault in new accountant module
+        accountant.setVault(address(migrationHelper));
+        accountant.transferOwnership(address(migrationHelper));
         vm.stopPrank();
 
         address[] memory users = ALL_HOLDERS;
@@ -220,6 +242,9 @@ contract MigrationTest is IntegrationBase {
         console.log("old vault total supply", ISuperloop(oldVault).totalSupply());
         console.log("old vault total assets", ISuperloop(oldVault).totalAssets());
 
+        assertEq(Ownable(address(accountant)).owner(), address(migrationHelper));
+        assertEq(accountant.vault(), address(migrationHelper));
+
         // start recording gas
         uint256 startGas = gasleft();
         uint256 batches = 4;
@@ -234,6 +259,10 @@ contract MigrationTest is IntegrationBase {
         uint256 newVaultSTXTZBalance = IERC20(ST_XTZ).balanceOf(address(superloop));
         (uint256 newVaultLendBalance,,,,,,,,) = poolDataProvider.getUserReserveData(ST_XTZ, address(superloop));
         (,, uint256 newVaultBorrowBalance,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
+        uint256 newVaultLastRealizedFeeExchangeRate =
+            IAccountantModule(ISuperloop(address(superloop)).accountant()).lastRealizedFeeExchangeRate();
+        uint256 oldVaultLastRealizedFeeExchangeRate =
+            IAccountantModule(ISuperloopLegacy(oldVault).accountantModule()).lastRealizedFeeExchangeRate();
 
         console.log("NEW VAULT STATE AFTER MIGRATION");
         console.log("newVaultXTZBalance", newVaultXTZBalance);
@@ -242,12 +271,20 @@ contract MigrationTest is IntegrationBase {
         console.log("newVaultBorrowBalance", newVaultBorrowBalance);
         console.log("new vault total supply", ISuperloop(address(superloop)).totalSupply());
         console.log("new vault total assets", ISuperloop(address(superloop)).totalAssets());
+        console.log(
+            "new vault last realized fee exchange rate",
+            IAccountantModule(ISuperloop(address(superloop)).accountant()).lastRealizedFeeExchangeRate()
+        );
 
         // assert balances of each of the users are the same
 
         for (uint256 i = 0; i < users.length; i++) {
             assertEq(ISuperloop(address(superloop)).balanceOf(users[i]), ISuperloop(oldVault).balanceOf(users[i]));
         }
+
+        assertEq(newVaultLastRealizedFeeExchangeRate, oldVaultLastRealizedFeeExchangeRate);
+        assertEq(Ownable(address(accountant)).owner(), address(admin));
+        assertEq(accountant.vault(), address(superloop));
 
         console.log("gas used", gasUsed);
 
@@ -263,5 +300,9 @@ contract MigrationTest is IntegrationBase {
         console.log("oldVaultBorrowBalance", oldVaultBorrowBalance);
         console.log("old vault total supply", ISuperloop(oldVault).totalSupply());
         console.log("old vault total assets", ISuperloop(oldVault).totalAssets());
+        console.log(
+            "old vault last realized fee exchange rate",
+            IAccountantModule(ISuperloopLegacy(oldVault).accountantModule()).lastRealizedFeeExchangeRate()
+        );
     }
 }

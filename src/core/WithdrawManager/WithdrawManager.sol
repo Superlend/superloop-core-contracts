@@ -60,6 +60,10 @@ contract WithdrawManager is Initializable, ReentrancyGuardUpgradeable, Context, 
         WithdrawManagerStorage.setNextWithdrawRequestId(DataTypes.WithdrawRequestType.INSTANT);
         WithdrawManagerStorage.setNextWithdrawRequestId(DataTypes.WithdrawRequestType.PRIORITY);
         WithdrawManagerStorage.setNextWithdrawRequestId(DataTypes.WithdrawRequestType.DEFERRED);
+        WithdrawManagerStorage.setResolutionIdPointer(DataTypes.WithdrawRequestType.GENERAL, 1);
+        WithdrawManagerStorage.setResolutionIdPointer(DataTypes.WithdrawRequestType.INSTANT, 1);
+        WithdrawManagerStorage.setResolutionIdPointer(DataTypes.WithdrawRequestType.PRIORITY, 1);
+        WithdrawManagerStorage.setResolutionIdPointer(DataTypes.WithdrawRequestType.DEFERRED, 1);
     }
 
     function requestWithdraw(uint256 shares, DataTypes.WithdrawRequestType requestType)

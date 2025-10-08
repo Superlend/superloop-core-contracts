@@ -43,6 +43,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         DepositManagerStorage.setAsset(asset);
         DepositManagerStorage.setDecimalOffset(decimalOffset);
         DepositManagerStorage.setNextDepositRequestId();
+        DepositManagerStorage.setResolutionIdPointer(1); // start with 1
     }
 
     function requestDeposit(uint256 amount, address onBehalfOf) external nonReentrant whenNotPaused {

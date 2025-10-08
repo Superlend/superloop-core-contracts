@@ -13,6 +13,7 @@ import {UniversalDexModule} from "../modules/dex/UniversalDexModule.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/utils/ReentrancyGuard.sol";
 import {ISuperloopLegacy} from "./ISuperloopLegacy.sol";
+import {IAccountantModule} from "../interfaces/IAccountantModule.sol";
 
 /**
  * @title MigrationHelper
@@ -134,6 +135,10 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         VaultStateData memory oldVaultState = _getVaultState(oldVault, users, lendAsset, borrowAsset);
         _validateUserBalancesWithTotalSupply(oldVaultState);
 
+        // get the last realized fee exchange rate on the accountant module
+        IAccountantModule oldAccountant = IAccountantModule(ISuperloopLegacy(oldVault).accountantModule());
+        uint256 lastRealizedFeeExchangeRate = oldAccountant.lastRealizedFeeExchangeRate();
+
         // Execute the migration using flash loan
         _performMigration(oldVault, lendAsset, borrowAsset, oldVaultState, newVault, batches);
 
@@ -141,6 +146,14 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         for (uint256 i = 0; i < users.length; i++) {
             ISuperloop(newVault).mintShares(users[i], oldVaultState.balances[i]);
         }
+
+        // set the last realized fee exchange rate on the accountant module
+        IAccountantModule newAccountant = IAccountantModule(ISuperloop(newVault).accountant());
+        newAccountant.setLastRealizedFeeExchangeRate(lastRealizedFeeExchangeRate, ISuperloop(newVault).totalSupply());
+
+        // set the vault address on the accountant module
+        newAccountant.setVault(newVault);
+        Ownable(address(newAccountant)).transferOwnership(ISuperloop(newVault).vaultAdmin());
 
         // Capture new vault state after migration
         VaultStateData memory newVaultState = _getVaultState(newVault, users, lendAsset, borrowAsset);
@@ -169,11 +182,12 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param params Encoded parameters containing migration data
      * @return success True if operation completed successfully
      */
-    function executeOperation(address asset, uint256 amount, uint256 premium, address, bytes calldata params)
+    function executeOperation(address asset, uint256 amount, uint256 premium, address initiator, bytes calldata params)
         external
         returns (bool)
     {
         require(msg.sender == address(POOL), "Only pool can call flashloan callback");
+        require(initiator == address(this), "Only migration helper can call flashloan callback");
 
         // Decode migration parameters from flash loan callback data
         (
@@ -283,9 +297,6 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
 
             // Take flash loan of the borrowed asset amount
             POOL.flashLoanSimple(address(this), borrowAsset, borrowBalanceBatch, callbackData, 0);
-
-            borrowBalance = borrowBalance >= borrowBalanceBatch ? borrowBalance - borrowBalanceBatch : 0;
-            lendBalance = lendBalance >= lendBalanceBatch ? lendBalance - lendBalanceBatch : 0;
         }
     }
 
@@ -311,13 +322,13 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
     ) internal {
         // Prepare and execute withdrawal operations on old vault
         DataTypes.ModuleExecutionData[] memory moduleExecutionDataWithdraw =
-            _perpareWithdrawCalls(oldVault, newVault, lendAsset, borrowAsset, borrowBalance, lendBalance);
+            _prepareWithdrawCalls(oldVault, newVault, lendAsset, borrowAsset, borrowBalance, lendBalance);
 
         ISuperloop(oldVault).operate(moduleExecutionDataWithdraw);
 
         // Prepare and execute deposit operations on new vault
         DataTypes.ModuleExecutionData[] memory moduleExecutionDataDeposit =
-            _perpareDepositCalls(lendAsset, borrowAsset, borrowBalance + premium, lendBalance);
+            _prepareDepositCalls(lendAsset, borrowAsset, borrowBalance + premium, lendBalance);
 
         ISuperloop(newVault).operate(moduleExecutionDataDeposit);
     }
@@ -333,7 +344,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param lendBalance Amount of lent asset to withdraw
      * @return moduleExecutionData Array of module operations to execute
      */
-    function _perpareWithdrawCalls(
+    function _prepareWithdrawCalls(
         address oldVault,
         address newVault,
         address lendAsset,
@@ -403,7 +414,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param lendBalance Amount of lent asset to deposit
      * @return moduleExecutionData Array of module operations to execute
      */
-    function _perpareDepositCalls(address lendAsset, address borrowAsset, uint256 borrowBalance, uint256 lendBalance)
+    function _prepareDepositCalls(address lendAsset, address borrowAsset, uint256 borrowBalance, uint256 lendBalance)
         internal
         view
         returns (DataTypes.ModuleExecutionData[] memory)

@@ -13,4 +13,10 @@ interface ISuperloopLegacy {
      * @return The address of the withdraw manager module
      */
     function withdrawManagerModule() external view returns (address);
+
+    /**
+     * @notice Gets the accountant module address
+     * @return The address of the accountant module
+     */
+    function accountantModule() external view returns (address);
 }

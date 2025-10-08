@@ -51,7 +51,8 @@ contract AaveV3AccountantPlugin is AaveV3AccountantPluginBase {
         negativeBalance += borrowBalance;
 
         // convert to base asset
-        uint256 totalAssetsInBaseAsset = (positiveBalance - negativeBalance) / baseAssetPrice;
+        uint256 netBalance = positiveBalance > negativeBalance ? positiveBalance - negativeBalance : 0;
+        uint256 totalAssetsInBaseAsset = netBalance / baseAssetPrice;
 
         return totalAssetsInBaseAsset;
     }
