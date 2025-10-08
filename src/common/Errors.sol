@@ -73,7 +73,8 @@ library Errors {
 
     // Aave V3 Preliquidation
     string public constant AAVE_V3_PRELIQUIDATION_INVALID_EMODE_CATEGORY = "62"; // reserve is not in the correct emode category
+    string public constant AAVE_V3_PRELIQUIDATION_INVALID_LLTV = "63"; // lltv is invalid
 
     // Superloop
-    string public constant VAULT_ALREADY_SEEDED = "63"; // vault already seeded
+    string public constant VAULT_ALREADY_SEEDED = "64"; // vault already seeded
 }

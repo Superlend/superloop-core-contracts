@@ -10,6 +10,7 @@ import {console} from "forge-std/console.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
+import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
 
 contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     AaveV3PreliquidationFallbackHandler public preliquidation;
@@ -92,6 +93,32 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     }
 
     // ============ REVERTING CASES ============
+
+    function test_preliquidation_revert_invalid_lltv() public {
+        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
+        deal(XTZ, address(preliquidation), 70 * 10 ** 18);
+
+        vm.startPrank(address(preliquidation));
+        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
+        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
+        pool.borrow(XTZ, 70 * 10 ** 18, 2, 0, address(preliquidation));
+        vm.stopPrank();
+
+        deal(XTZ, address(this), 12 * 10 ** 18);
+
+        // updat emode ltv to 9900 => it should revert
+        vm.prank(POOL_ADMIN);
+        IPoolConfigurator(POOL_CONFIGURATOR).configureReserveAsCollateral(ST_XTZ, 9000, 9200, 10100);
+
+        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+
+        vm.expectRevert(bytes(Errors.AAVE_V3_PRELIQUIDATION_INVALID_LLTV));
+        preliquidation.preliquidate(
+            id,
+            DataTypes.CallType.DELEGATECALL,
+            DataTypes.AaveV3ExecutePreliquidationParams({user: address(preliquidation), debtToCover: 10 * 10 ** 18})
+        );
+    }
 
     function test_preliquidate_revert_invalid_id() public {
         deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
