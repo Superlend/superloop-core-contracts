@@ -35,6 +35,15 @@ contract DepositManagerTest is IntegrationBase {
         assertEq(depositManager.nextDepositRequestId(), 1);
     }
 
+    function test_requestDeposit_MinimumDepositAmountNotMet() public {
+        uint256 depositAmount = 99;
+
+        vm.startPrank(user1);
+        vm.expectRevert(bytes(Errors.INVALID_AMOUNT));
+        depositManager.requestDeposit(depositAmount, address(0));
+        vm.stopPrank();
+    }
+
     function test_resolveDepositRequestResolution() public {
         uint256 exchangeRateBefore = superloop.convertToAssets(ONE_SHARE);
         uint256 depositAmount = 100 * XTZ_SCALE;

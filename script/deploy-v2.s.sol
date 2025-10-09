@@ -125,6 +125,7 @@ contract Deploy is Script {
             modules: modules,
             accountant: address(accountant),
             withdrawManager: address(withdrawManager),
+            minimumDepositAmount: 100,
             cashReserve: 100,
             depositManager: address(depositManager),
             vaultAdmin: vaultAdmin,

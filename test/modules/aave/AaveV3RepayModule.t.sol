@@ -35,6 +35,7 @@ contract AaveV3RepayModuleTest is TestBase {
             name: "XTZ Vault",
             symbol: "XTZV",
             supplyCap: 100000 * 10 ** 18,
+            minimumDepositAmount: 100,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,

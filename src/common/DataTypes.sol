@@ -114,6 +114,7 @@ library DataTypes {
      * @param name The name of the vault
      * @param symbol The symbol of the vault
      * @param supplyCap The maximum supply cap for the vault
+     * @param minimumDepositAmount The minimum deposit amount for the vault
      * @param superloopModuleRegistry The address of the module registry
      * @param modules Array of module addresses to register
      * @param cashReserve The amount of cash reserve for the vault. Represented in BPS
@@ -130,6 +131,7 @@ library DataTypes {
         string symbol;
         // superloop specific
         uint256 supplyCap;
+        uint256 minimumDepositAmount;
         address superloopModuleRegistry;
         address[] modules;
         uint256 cashReserve;

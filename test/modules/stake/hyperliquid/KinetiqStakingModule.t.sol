@@ -33,6 +33,7 @@ contract KinetiqStakingModuleTest is TestBase {
             name: "WHYPE Vault",
             symbol: "WHYPEV",
             supplyCap: 100000 * WHYPE_SCALE,
+            minimumDepositAmount: 100,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,

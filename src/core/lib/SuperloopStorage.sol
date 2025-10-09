@@ -22,6 +22,7 @@ library SuperloopStorage {
     /**
      * @notice Structure for storing Superloop vault state
      * @param supplyCap The maximum supply cap for the vault
+     * @param minimumDepositAmount The minimum deposit amount for the vault
      * @param superloopModuleRegistry The address of the module registry
      * @param registeredModules Mapping from module address to registration status
      * @param callbackHandlers Mapping from callback key to handler address
@@ -30,6 +31,7 @@ library SuperloopStorage {
      */
     struct SuperloopState {
         uint256 supplyCap;
+        uint256 minimumDepositAmount;
         address superloopModuleRegistry;
         uint256 cashReserve;
         mapping(address => bool) registeredModules;
@@ -62,6 +64,15 @@ library SuperloopStorage {
     function setSupplyCap(uint256 supplyCap_) internal {
         SuperloopState storage $ = getSuperloopStorage();
         $.supplyCap = supplyCap_;
+    }
+
+    /**
+     * @notice Sets the minimum deposit amount for the vault
+     * @param minimumDepositAmount_ The new minimum deposit amount value
+     */
+    function setMinimumDepositAmount(uint256 minimumDepositAmount_) internal {
+        SuperloopState storage $ = getSuperloopStorage();
+        $.minimumDepositAmount = minimumDepositAmount_;
     }
 
     /**

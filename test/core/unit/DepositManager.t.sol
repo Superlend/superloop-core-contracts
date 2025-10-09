@@ -40,6 +40,7 @@ contract DepositManagerTest is TestBase {
             name: "XTZ Vault",
             symbol: "XTZV",
             supplyCap: 100000 * 10 ** 18,
+            minimumDepositAmount: 100,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,
@@ -148,6 +149,15 @@ contract DepositManagerTest is TestBase {
 
     function test_requestDeposit_ZeroAmount() public {
         uint256 depositAmount = 0;
+
+        vm.startPrank(user1);
+        vm.expectRevert(bytes(Errors.INVALID_AMOUNT));
+        depositManager.requestDeposit(depositAmount, address(0));
+        vm.stopPrank();
+    }
+
+    function test_requestDeposit_MinimumDepositAmountNotMet() public {
+        uint256 depositAmount = 99;
 
         vm.startPrank(user1);
         vm.expectRevert(bytes(Errors.INVALID_AMOUNT));

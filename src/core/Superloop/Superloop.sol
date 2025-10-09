@@ -50,6 +50,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
      */
     function __Superloop_init(DataTypes.VaultInitData memory data) internal onlyInitializing {
         SuperloopStorage.setSupplyCap(data.supplyCap);
+        SuperloopStorage.setMinimumDepositAmount(data.minimumDepositAmount);
         SuperloopStorage.setSuperloopModuleRegistry(data.superloopModuleRegistry);
 
         for (uint256 i = 0; i < data.modules.length; i++) {
