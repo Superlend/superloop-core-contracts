@@ -127,10 +127,19 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         // check for max withdraw
         require(assets <= maxWithdraw(owner), Errors.INSUFFICIENT_BALANCE);
 
-        uint256 shares = previewWithdraw(assets);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        // amount of shares to redeem, amount of shares to transfer to treasury
+        uint256 feeAssets = _getInstantWithdrawFeeValue(assets);
+        uint256 assetsToRedeem = assets - feeAssets;
 
-        return shares;
+        uint256 sharesToRedeem = previewWithdraw(assetsToRedeem);
+        uint256 sharesToTreasury = previewWithdraw(feeAssets);
+
+        _withdraw(_msgSender(), receiver, owner, assetsToRedeem, sharesToRedeem);
+        if (sharesToTreasury > 0) {
+            _transfer(owner, SuperloopStorage.getSuperloopEssentialRolesStorage().treasury, sharesToTreasury);
+        }
+
+        return sharesToRedeem;
     }
 
     function redeem(uint256 shares, address receiver, address owner)
@@ -146,10 +155,18 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         // check for max redeem
         require(shares <= maxRedeem(owner), Errors.INSUFFICIENT_BALANCE);
 
-        uint256 assets = previewRedeem(shares);
-        _withdraw(_msgSender(), receiver, owner, assets, shares);
+        // realize instant withdraw fee
+        uint256 sharesToTreasury = _getInstantWithdrawFeeValue(shares);
+        uint256 sharesToRedeem = shares - sharesToTreasury;
 
-        return assets;
+        uint256 assetsToRedeem = previewRedeem(sharesToRedeem);
+        _withdraw(_msgSender(), receiver, owner, assetsToRedeem, sharesToRedeem);
+
+        if (sharesToTreasury > 0) {
+            _transfer(owner, SuperloopStorage.getSuperloopEssentialRolesStorage().treasury, sharesToTreasury);
+        }
+
+        return assetsToRedeem;
     }
 
     function transfer(address to, uint256 amount)
@@ -295,6 +312,12 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         );
         uint256 cashReserveActual = IERC20(asset()).balanceOf(address(this));
         return cashReserveExpected > cashReserveActual ? cashReserveExpected - cashReserveActual : 0;
+    }
+
+    function _getInstantWithdrawFeeValue(uint256 value) internal view returns (uint256) {
+        uint256 instantWithdrawFee = SuperloopStorage.getSuperloopStorage().instantWithdrawFee;
+        uint256 feeValue = Math.mulDiv(value, instantWithdrawFee, SuperloopStorage.MAX_BPS_VALUE, Math.Rounding.Floor);
+        return feeValue;
     }
 
     modifier onlyPrivileged() {

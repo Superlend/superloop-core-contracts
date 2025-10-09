@@ -33,6 +33,8 @@ abstract contract IntegrationBase is TestBase {
 
     uint256 public constant ONE_SHARE = 10 ** 20;
 
+    uint256 public constant INSTANT_WITHDRAW_FEE = 100;
+
     uint256 public constant XTZ_SCALE = 10 ** 18;
     uint256 public constant STXTZ_SCALE = 10 ** 6;
 
@@ -65,6 +67,7 @@ abstract contract IntegrationBase is TestBase {
             symbol: "XTZV",
             supplyCap: 100000 * 10 ** 18,
             minimumDepositAmount: 100,
+            instantWithdrawFee: INSTANT_WITHDRAW_FEE,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: address(accountant),

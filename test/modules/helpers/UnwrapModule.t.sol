@@ -32,6 +32,7 @@ contract UnwrapModuleTest is TestBase {
             symbol: "XTZV",
             supplyCap: 100000 * 10 ** 18,
             minimumDepositAmount: 100,
+            instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,

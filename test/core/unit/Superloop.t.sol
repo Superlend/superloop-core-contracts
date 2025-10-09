@@ -39,6 +39,7 @@ contract SuperloopTest is TestBase {
             symbol: "XTZV",
             supplyCap: 100000 * 10 ** 18,
             minimumDepositAmount: 100,
+            instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,
@@ -85,6 +86,7 @@ contract SuperloopTest is TestBase {
             symbol: "TEST",
             supplyCap: 1000 * 10 ** 18,
             minimumDepositAmount: 100,
+            instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,
@@ -124,6 +126,7 @@ contract SuperloopTest is TestBase {
             symbol: "TEST",
             supplyCap: 1000 * 10 ** 18,
             minimumDepositAmount: 100,
+            instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,
@@ -150,6 +153,7 @@ contract SuperloopTest is TestBase {
             symbol: "TEST",
             supplyCap: 1000 * 10 ** 18,
             minimumDepositAmount: 100,
+            instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,
@@ -186,6 +190,7 @@ contract SuperloopTest is TestBase {
             symbol: "TEST",
             supplyCap: 1000 * 10 ** 18,
             minimumDepositAmount: 100,
+            instantWithdrawFee: 100,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,
@@ -340,6 +345,31 @@ contract SuperloopTest is TestBase {
         vm.prank(user1);
         vm.expectRevert(bytes(Errors.CALLER_NOT_VAULT_ADMIN));
         superloop.setPrivilegedAddress(privilegedUser, true);
+    }
+
+    function test_SetInstantWithdrawFeeRevertIfNotAdmin() public {
+        uint256 newInstantWithdrawFee = 100;
+
+        vm.prank(user1);
+        vm.expectRevert(bytes(Errors.CALLER_NOT_VAULT_ADMIN));
+        superloop.setInstantWithdrawFee(newInstantWithdrawFee);
+    }
+
+    function test_SetInstantWithdrawFeeRevertIfInvalidFee() public {
+        uint256 newInstantWithdrawFee = 1000;
+
+        vm.prank(admin);
+        vm.expectRevert(bytes(Errors.INVALID_INSTANT_WITHDRAW_FEE));
+        superloop.setInstantWithdrawFee(newInstantWithdrawFee);
+    }
+
+    function test_SetInstantWithdrawFee() public {
+        uint256 newInstantWithdrawFee = 100;
+
+        vm.prank(admin);
+        superloop.setInstantWithdrawFee(newInstantWithdrawFee);
+
+        assertEq(superloop.instantWithdrawFee(), newInstantWithdrawFee);
     }
 
     // ============ SuperloopVault.sol Tests ============

@@ -67,6 +67,7 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
         SuperloopStorage.setTreasury(data.treasury);
         SuperloopStorage.setCashReserve(data.cashReserve);
         SuperloopStorage.setVaultOperator(data.vaultOperator);
+        _setInstantWithdrawFee(data.instantWithdrawFee);
 
         _setPrivilegedAddress(data.vaultAdmin, true);
         _setPrivilegedAddress(data.treasury, true);

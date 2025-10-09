@@ -34,6 +34,7 @@ contract HyperbeatStakingModuleTest is TestBase {
             symbol: "WHYPEV",
             supplyCap: 100000 * WHYPE_SCALE,
             minimumDepositAmount: 100,
+            instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: mockModule,
