@@ -212,7 +212,7 @@ contract VaultRouterTest is Test {
         );
         vm.stopPrank();
 
-        assertEq(mockToken.balanceOf(user), userBalanceBefore - amountIn);
+        assertEq(mockToken.balanceOf(user), userBalanceBefore); // no diff should be there because unswapped tokens are returned to the user
         assertEq(vaultToken.balanceOf(address(swapVault)), vaultBalanceBefore + SWAP_OUTPUT);
     }
 

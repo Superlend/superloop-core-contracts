@@ -115,6 +115,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param borrowAsset Address of the asset being borrowed from Aave
      * @param batches Number of batches to perform the migration in
      * @return success True if migration completed successfully
+     * @param maxSharesDelta Maximum delta in shares that can left behind in the old vault
      */
     function migrate(
         address oldVault,
@@ -122,7 +123,8 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         address[] calldata users,
         address lendAsset,
         address borrowAsset,
-        uint256 batches
+        uint256 batches,
+        uint256 maxSharesDelta
     ) external onlyOwner nonReentrant returns (bool) {
         // Ensure withdraw manager has no balance to prevent conflicts
         address blackListedUser = ISuperloopLegacy(oldVault).withdrawManagerModule();
@@ -133,7 +135,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
 
         // Capture old vault state before migration
         VaultStateData memory oldVaultState = _getVaultState(oldVault, users, lendAsset, borrowAsset);
-        _validateUserBalancesWithTotalSupply(oldVaultState);
+        _validateUserBalancesWithTotalSupply(oldVaultState, maxSharesDelta);
 
         // get the last realized fee exchange rate on the accountant module
         IAccountantModule oldAccountant = IAccountantModule(ISuperloopLegacy(oldVault).accountantModule());
@@ -157,7 +159,9 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
 
         // Capture new vault state after migration
         VaultStateData memory newVaultState = _getVaultState(newVault, users, lendAsset, borrowAsset);
-        _validateUserBalancesWithTotalSupply(newVaultState);
+
+        // validate that the new vault state is valid
+        _validateUserBalancesWithTotalSupply(newVaultState, 0);
 
         // Validate exchange rate preservation (allow 0.05% tolerance)
         uint256 oldExchangeRate = (oldVaultState.totalAssets * commonDecimalFactor) / oldVaultState.totalSupply;
@@ -249,13 +253,20 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @notice Validates that the sum of individual user balances equals the total supply
      * @dev Ensures data integrity before and after migration
      * @param vaultState Vault state data containing balances and total supply
+     * @param maxSharesDelta Maximum delta in shares that can left behind in the old vault
      */
-    function _validateUserBalancesWithTotalSupply(VaultStateData memory vaultState) internal pure {
+    function _validateUserBalancesWithTotalSupply(VaultStateData memory vaultState, uint256 maxSharesDelta)
+        internal
+        pure
+    {
         uint256 calculatedTotalSupply = 0;
         for (uint256 i = 0; i < vaultState.balances.length; i++) {
             calculatedTotalSupply += vaultState.balances[i];
         }
-        require(calculatedTotalSupply == vaultState.totalSupply, "Calculated total supply does not match total supply");
+        require(
+            vaultState.totalSupply - calculatedTotalSupply <= maxSharesDelta,
+            "Calculated total supply does not match total supply"
+        );
     }
 
     /**

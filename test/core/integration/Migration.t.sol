@@ -245,10 +245,12 @@ contract MigrationTest is IntegrationBase {
         assertEq(Ownable(address(accountant)).owner(), address(migrationHelper));
         assertEq(accountant.vault(), address(migrationHelper));
 
+        uint256 maxSharesDelta = 100;
+
         // start recording gas
         uint256 startGas = gasleft();
         uint256 batches = 4;
-        migrationHelper.migrate(oldVault, address(superloop), users, ST_XTZ, XTZ, batches);
+        migrationHelper.migrate(oldVault, address(superloop), users, ST_XTZ, XTZ, batches, maxSharesDelta);
 
         console.log("migration complete");
 
