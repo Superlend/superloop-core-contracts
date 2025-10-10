@@ -26,6 +26,7 @@ import {UniversalAccountant} from "../src/core/Accountant/universalAccountant/Un
 import {AaveV3AccountantPlugin} from "../src/plugins/accountant/AaveV3AccountantPlugin.sol";
 import {AaveV3PreliquidationFallbackHandler} from "../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
 import {VaultRouter} from "../src/helpers/VaultRouter.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 contract Deploy is Script {
     address public deployer;
@@ -35,14 +36,28 @@ contract Deploy is Script {
     address public treasury;
     address public vaultOperator;
 
+    address public asset;
+    address public lendAsset;
+    address public borrowAsset;
+    string public name;
+    string public symbol;
+    uint256 public supplyCap;
+    uint256 public minimumDepositAmount;
+    uint256 public instantWithdrawFee;
+    uint256 public cashReserve;
+    uint256 public performanceFee;
+    uint256 public seedAmount;
+
     address public AAVE_V3_POOL_ADDRESSES_PROVIDER = 0x5ccF60c7E10547c5389E9cBFf543E5D0Db9F4feC;
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
     address public constant XTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
+    address public constant LBTC = 0xecAc9C5F704e954931349Da37F60E39f515c11c1;
+    address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
     address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
     address public constant VAULT_ADMIN = 0x81b833Df09A7ce39C00ecE916EC54166d2a6B193;
     address public constant TREASURY = 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
-
-    uint256 public constant PERFORMANCE_FEE = 1000; // 10%
+    uint256 public constant XTZ_SCALE = 10 ** 18;
+    uint256 public constant BTC_SCALE = 10 ** 8;
 
     SuperloopModuleRegistry public moduleRegistry;
 
@@ -79,6 +94,32 @@ contract Deploy is Script {
     VaultRouter public vaultRouter;
 
     function setUp() public {
+        asset = XTZ;
+        name = "Test Superloop XTZ v5";
+        symbol = "TestsloopXTZv5";
+        supplyCap = 100_000 * XTZ_SCALE; // in token terms
+        minimumDepositAmount = 100; // in token terms
+        instantWithdrawFee = 10; // 0.1% in BPS
+        cashReserve = 100; // 1% in BPS
+        performanceFee = 1000; // 10% in bps
+        lendAsset = ST_XTZ;
+        borrowAsset = XTZ;
+        seedAmount = (2 * XTZ_SCALE) / 10; // in token terms
+
+        // TODO: Check this config every time before deploying
+        console.log("--------------------------------");
+        console.log("Using configs: ");
+        console.log("ASSET", asset);
+        console.log("NAME", name);
+        console.log("SYMBOL", symbol);
+        console.log("PERFORMANCE_FEE", performanceFee);
+        console.log("SUPPLY_CAP", supplyCap);
+        console.log("MINIMUM_DEPOSIT_AMOUNT", minimumDepositAmount);
+        console.log("INSTANT_WITHDRAW_FEE", instantWithdrawFee);
+        console.log("CASH_RESERVE", cashReserve);
+        console.log("SEED_AMOUNT", seedAmount);
+        console.log("--------------------------------");
+
         vm.createSelectFork("etherlink");
 
         deployerPvtKey = vm.envUint("PRIVATE_KEY");
@@ -88,10 +129,13 @@ contract Deploy is Script {
         treasury = TREASURY;
         vaultOperator = deployer;
 
-        console.log("deployer", deployer);
-        console.log("vaultAdmin", vaultAdmin);
-        console.log("treasury", treasury);
-        console.log("vaultOperator", vaultOperator);
+        console.log("--------------------------------");
+        console.log("Depolyer config and roles: ");
+        console.log("DEPLOYER", deployer);
+        console.log("VAULT_ADMIN", vaultAdmin);
+        console.log("TREASURY", treasury);
+        console.log("VAULT_OPERATOR", vaultOperator);
+        console.log("--------------------------------");
     }
 
     function run() public {
@@ -117,17 +161,17 @@ contract Deploy is Script {
 
         // deploy vault
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "Test Superloop XTZ v4",
-            symbol: "TestsloopXTZv4",
-            supplyCap: 10000 * 10 ** 18,
+            asset: asset,
+            name: name,
+            symbol: symbol,
+            supplyCap: supplyCap,
             superloopModuleRegistry: address(moduleRegistry),
             modules: modules,
             accountant: address(accountant),
             withdrawManager: address(withdrawManager),
-            minimumDepositAmount: 100,
-            instantWithdrawFee: 0,
-            cashReserve: 100,
+            minimumDepositAmount: minimumDepositAmount,
+            instantWithdrawFee: instantWithdrawFee,
+            cashReserve: cashReserve,
             depositManager: address(depositManager),
             vaultAdmin: vaultAdmin,
             treasury: treasury,
@@ -168,11 +212,8 @@ contract Deploy is Script {
         // setup vault router
         _setupVaultRouter();
 
-        // set rebalance admin as priveledged account
-        // superloop.setPrivilegedAddress(rebalanceAdmin, true);
-
-        // transfer vault admin role from deployer to vault admin after all the setup is done
-        // superloop.setVaultAdmin(vaultAdmin);
+        // seed the vault
+        _seedVault();
 
         /**
          * ROLE TRANSFERS :
@@ -238,9 +279,9 @@ contract Deploy is Script {
 
     function _deployAccountant(address vault) internal {
         address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
+        lendAssets[0] = lendAsset;
         address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
+        borrowAssets[0] = borrowAsset;
 
         DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
             .AaveV3AccountantPluginModuleInitData({
@@ -256,7 +297,7 @@ contract Deploy is Script {
         // deploy accountant
         DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
             registeredAccountants: registeredAccountants,
-            performanceFee: uint16(PERFORMANCE_FEE),
+            performanceFee: uint16(performanceFee),
             vault: address(vault)
         });
 
@@ -315,6 +356,11 @@ contract Deploy is Script {
         superloop.setCallbackHandler(key, address(aaveFlashloanCallbackHandler));
         superloop.setCallbackHandler(depositKey, address(depositManagerCallbackHandler));
         superloop.setCallbackHandler(withdrawKey, address(withdrawManagerCallbackHandler));
+    }
+
+    function _seedVault() internal {
+        IERC20(asset).approve(address(superloop), seedAmount);
+        superloop.seed(seedAmount);
     }
 
     function _logAddresses() internal view {
