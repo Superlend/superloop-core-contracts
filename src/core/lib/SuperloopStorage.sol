@@ -20,8 +20,15 @@ library SuperloopStorage {
     uint256 public constant MAX_BPS_VALUE = 10000; // 100%
 
     /**
+     * @notice Maximum instant withdraw fee
+     */
+    uint256 public constant MAX_INSTANT_WITHDRAW_FEE = 100; // 1%
+
+    /**
      * @notice Structure for storing Superloop vault state
      * @param supplyCap The maximum supply cap for the vault
+     * @param minimumDepositAmount The minimum deposit amount for the vault
+     * @param instantWithdrawFee The instant withdraw fee for the vault
      * @param superloopModuleRegistry The address of the module registry
      * @param registeredModules Mapping from module address to registration status
      * @param callbackHandlers Mapping from callback key to handler address
@@ -30,6 +37,8 @@ library SuperloopStorage {
      */
     struct SuperloopState {
         uint256 supplyCap;
+        uint256 minimumDepositAmount;
+        uint256 instantWithdrawFee;
         address superloopModuleRegistry;
         uint256 cashReserve;
         mapping(address => bool) registeredModules;
@@ -62,6 +71,24 @@ library SuperloopStorage {
     function setSupplyCap(uint256 supplyCap_) internal {
         SuperloopState storage $ = getSuperloopStorage();
         $.supplyCap = supplyCap_;
+    }
+
+    /**
+     * @notice Sets the minimum deposit amount for the vault
+     * @param minimumDepositAmount_ The new minimum deposit amount value
+     */
+    function setMinimumDepositAmount(uint256 minimumDepositAmount_) internal {
+        SuperloopState storage $ = getSuperloopStorage();
+        $.minimumDepositAmount = minimumDepositAmount_;
+    }
+
+    /**
+     * @notice Sets the instant withdraw fee for the vault
+     * @param instantWithdrawFee_ The new instant withdraw fee value
+     */
+    function setInstantWithdrawFee(uint256 instantWithdrawFee_) internal {
+        SuperloopState storage $ = getSuperloopStorage();
+        $.instantWithdrawFee = instantWithdrawFee_;
     }
 
     /**

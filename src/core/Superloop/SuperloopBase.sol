@@ -13,6 +13,8 @@ import {Errors} from "../../common/Errors.sol";
  */
 abstract contract SuperloopBase {
     event SupplyCapUpdated(uint256 oldCap, uint256 newCap);
+    event MinimumDepositAmountUpdated(uint256 oldAmount, uint256 newAmount);
+    event InstantWithdrawFeeUpdated(uint256 oldFee, uint256 newFee);
     event SuperloopModuleRegistryUpdated(address indexed oldRegistry, address indexed newRegistry);
     event RegisteredModuleUpdated(address indexed module, bool oldStatus, bool newStatus);
     event CallbackHandlerUpdated(bytes32 indexed key, address indexed oldHandler, address indexed newHandler);
@@ -30,6 +32,16 @@ abstract contract SuperloopBase {
         uint256 oldCap = SuperloopStorage.getSuperloopStorage().supplyCap;
         SuperloopStorage.setSupplyCap(supplyCap_);
         emit SupplyCapUpdated(oldCap, supplyCap_);
+    }
+
+    function setMinimumDepositAmount(uint256 minimumDepositAmount_) external onlyVaultAdmin {
+        uint256 oldAmount = SuperloopStorage.getSuperloopStorage().minimumDepositAmount;
+        SuperloopStorage.setMinimumDepositAmount(minimumDepositAmount_);
+        emit MinimumDepositAmountUpdated(oldAmount, minimumDepositAmount_);
+    }
+
+    function setInstantWithdrawFee(uint256 instantWithdrawFee_) external onlyVaultAdmin {
+        _setInstantWithdrawFee(instantWithdrawFee_);
     }
 
     function setSuperloopModuleRegistry(address superloopModuleRegistry_) external onlyVaultAdmin {
@@ -125,6 +137,14 @@ abstract contract SuperloopBase {
         return SuperloopStorage.getSuperloopStorage().supplyCap;
     }
 
+    function minimumDepositAmount() external view returns (uint256) {
+        return SuperloopStorage.getSuperloopStorage().minimumDepositAmount;
+    }
+
+    function instantWithdrawFee() external view returns (uint256) {
+        return SuperloopStorage.getSuperloopStorage().instantWithdrawFee;
+    }
+
     function superloopModuleRegistry() external view returns (address) {
         return SuperloopStorage.getSuperloopStorage().superloopModuleRegistry;
     }
@@ -172,6 +192,16 @@ abstract contract SuperloopBase {
 
     function vaultOperator() external view returns (address) {
         return SuperloopStorage.getSuperloopEssentialRolesStorage().vaultOperator;
+    }
+
+    function _setInstantWithdrawFee(uint256 instantWithdrawFee_) internal {
+        if (instantWithdrawFee_ > SuperloopStorage.MAX_INSTANT_WITHDRAW_FEE) {
+            revert(Errors.INVALID_INSTANT_WITHDRAW_FEE);
+        }
+
+        uint256 oldFee = SuperloopStorage.getSuperloopStorage().instantWithdrawFee;
+        SuperloopStorage.setInstantWithdrawFee(instantWithdrawFee_);
+        emit InstantWithdrawFeeUpdated(oldFee, instantWithdrawFee_);
     }
 
     function _setPrivilegedAddress(address address_, bool isPrivileged_) internal {

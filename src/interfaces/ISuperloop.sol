@@ -62,6 +62,12 @@ interface ISuperloop is IERC4626 {
     function setSupplyCap(uint256 supplyCap_) external;
 
     /**
+     * @notice Sets the minimum deposit amount for the vault
+     * @param minimumDepositAmount_ The new minimum deposit amount value
+     */
+    function setMinimumDepositAmount(uint256 minimumDepositAmount_) external;
+
+    /**
      * @notice Sets the Superloop module registry address
      * @param superloopModuleRegistry_ The address of the module registry
      */
@@ -123,6 +129,12 @@ interface ISuperloop is IERC4626 {
      * @return The current supply cap value
      */
     function supplyCap() external view returns (uint256);
+
+    /**
+     * @notice Gets the minimum deposit amount for the vault
+     * @return The current minimum deposit amount value
+     */
+    function minimumDepositAmount() external view returns (uint256);
 
     /**
      * @notice Gets the Superloop module registry address

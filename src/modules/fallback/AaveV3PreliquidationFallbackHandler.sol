@@ -136,7 +136,7 @@ contract AaveV3PreliquidationFallbackHandler is Context {
 
         // calculate how much collateral to sieze : (debtCoverUSD / collateralPriceUSD) * incentiveFactor
         uint256 maxDebtToCover = (borrowTokens * currentCloseFactor) / WadRayMath.WAD; // in tokens
-        uint256 debtToCover = Math.min(params.debtToCover, maxDebtToCover);
+        uint256 debtToCover = Math.min(Math.min(params.debtToCover, maxDebtToCover), borrowTokens);
         uint256 debtCoverUSD = (debtToCover * borrowPriceUSD) / (10 ** borrowReserveDecimals); // in oracle decimals
 
         uint256 collateralToSieze = (

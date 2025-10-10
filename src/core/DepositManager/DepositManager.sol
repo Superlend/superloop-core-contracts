@@ -166,7 +166,8 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         // 3. Non zero share amount based on current exchange rate value
         // 4. User has no active deposit request
 
-        require(amount > 0, Errors.INVALID_AMOUNT);
+        uint256 minimumDepositAmount = ISuperloop(cache.vault).minimumDepositAmount();
+        require(amount > minimumDepositAmount, Errors.INVALID_AMOUNT);
         uint256 allPendingDeposits = cache.totalPendingDeposits + amount;
 
         uint256 supplyCap = ISuperloop(cache.vault).maxDeposit(address(0));

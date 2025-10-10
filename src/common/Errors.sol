@@ -77,4 +77,5 @@ library Errors {
 
     // Superloop
     string public constant VAULT_ALREADY_SEEDED = "64"; // vault already seeded
+    string public constant INVALID_INSTANT_WITHDRAW_FEE = "65"; // instant withdraw fee is greater than max instant withdraw fee
 }
