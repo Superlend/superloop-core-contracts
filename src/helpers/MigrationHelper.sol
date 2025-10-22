@@ -116,6 +116,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
      * @param batches Number of batches to perform the migration in
      * @return success True if migration completed successfully
      * @param maxSharesDelta Maximum delta in shares that can left behind in the old vault
+     * @param maxPercentageChangeInExchangeRate Maximum percentage change in exchange rate that is allowed
      */
     function migrate(
         address oldVault,
@@ -124,7 +125,8 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         address lendAsset,
         address borrowAsset,
         uint256 batches,
-        uint256 maxSharesDelta
+        uint256 maxSharesDelta,
+        uint256 maxPercentageChangeInExchangeRate
     ) external onlyOwner nonReentrant returns (bool) {
         // Ensure withdraw manager has no balance to prevent conflicts
         address blackListedUser = ISuperloopLegacy(oldVault).withdrawManagerModule();
@@ -170,7 +172,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
             oldExchangeRate > newExchangeRate ? oldExchangeRate - newExchangeRate : newExchangeRate - oldExchangeRate;
         uint256 percentageChangeInExchangeRate = (diff * 10000) / oldExchangeRate;
 
-        require(percentageChangeInExchangeRate <= 5, "Exchange rates do not match"); // 0.05% change in exchange rate is allowed
+        require(percentageChangeInExchangeRate <= maxPercentageChangeInExchangeRate, "Exchange rates do not match");
 
         emit MigrationProcessed(oldVault, newVault, oldExchangeRate, newExchangeRate);
 

@@ -125,6 +125,12 @@ interface ISuperloop is IERC4626 {
     function setPrivilegedAddress(address privilegedAddress_, bool isPrivileged_) external;
 
     /**
+     * @notice Sets the deposit manager module address
+     * @param depositManagerModule_ The address of the deposit manager module
+     */
+    function setDepositManagerModule(address depositManagerModule_) external;
+
+    /**
      * @notice Gets the supply cap for the vault
      * @return The current supply cap value
      */
@@ -173,6 +179,18 @@ interface ISuperloop is IERC4626 {
      * @return The address of the vault admin
      */
     function vaultAdmin() external view returns (address);
+
+    /**
+     * @notice Gets the vault operator address
+     * @return The address of the vault operator
+     */
+    function vaultOperator() external view returns (address);
+
+    /**
+     * @notice Gets the deposit manager module address
+     * @return The address of the deposit manager module
+     */
+    function depositManagerModule() external view returns (address);
 
     /**
      * @notice Gets the treasury address
