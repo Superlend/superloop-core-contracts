@@ -62,7 +62,7 @@ contract WithdrawManagerTest is TestBase {
         );
         superloop = Superloop(payable(address(proxy)));
 
-        _deployAccountant(address(superloop));
+        _deployAccountant(address(superloop), _singleAddressArray(ST_XTZ), _singleAddressArray(XTZ));
         _deployWithdrawManager(address(superloop));
         _deployDepositManager(address(superloop));
 

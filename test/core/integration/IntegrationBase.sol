@@ -78,6 +78,23 @@ abstract contract IntegrationBase is TestBase {
             treasury: treasury,
             vaultOperator: admin
         });
+        DataTypes.VaultInitData memory initDataBtc = DataTypes.VaultInitData({
+            asset: WBTC,
+            name: "BTC Vault",
+            symbol: "BTC",
+            supplyCap: 100000 * 10 ** 18,
+            minimumDepositAmount: 100,
+            instantWithdrawFee: INSTANT_WITHDRAW_FEE,
+            superloopModuleRegistry: address(moduleRegistry),
+            modules: modules,
+            accountant: address(accountantBtc),
+            withdrawManager: address(withdrawManagerBtc),
+            depositManager: address(0),
+            cashReserve: 1000,
+            vaultAdmin: admin,
+            treasury: treasury,
+            vaultOperator: admin
+        });
         superloopImplementation = new Superloop();
         proxyAdmin = new ProxyAdmin(address(this));
 
@@ -86,11 +103,22 @@ abstract contract IntegrationBase is TestBase {
             address(proxyAdmin),
             abi.encodeWithSelector(Superloop.initialize.selector, initData)
         );
+        TransparentUpgradeableProxy proxyBtc = new TransparentUpgradeableProxy(
+            address(superloopImplementation),
+            address(proxyAdmin),
+            abi.encodeWithSelector(Superloop.initialize.selector, initDataBtc)
+        );
         superloop = Superloop(payable(address(proxy)));
+        superloopBtc = Superloop(payable(address(proxyBtc)));
 
-        _deployAccountant(address(superloop));
-        _deployWithdrawManager(address(superloop));
-        _deployDepositManager(address(superloop));
+        accountant = _deployAccountant(address(superloop), _singleAddressArray(ST_XTZ), _singleAddressArray(XTZ));
+        accountantBtc = _deployAccountant(address(superloopBtc), _singleAddressArray(LBTC), _singleAddressArray(WBTC));
+
+        withdrawManager = _deployWithdrawManager(address(superloop));
+        withdrawManagerBtc = _deployWithdrawManager(address(superloopBtc));
+
+        depositManager = _deployDepositManager(address(superloop));
+        depositManagerBtc = _deployDepositManager(address(superloopBtc));
 
         bytes32 key = keccak256(abi.encodePacked(POOL, IFlashLoanSimpleReceiver.executeOperation.selector));
         bytes32 depositKey =
@@ -110,9 +138,17 @@ abstract contract IntegrationBase is TestBase {
         superloop.setRegisteredModule(address(accountant), true);
         superloop.setRegisteredModule(address(depositManager), true);
 
+        superloopBtc.setRegisteredModule(address(withdrawManagerBtc), true);
+        superloopBtc.setRegisteredModule(address(accountantBtc), true);
+        superloopBtc.setRegisteredModule(address(depositManagerBtc), true);
+
         superloop.setAccountantModule(address(accountant));
         superloop.setWithdrawManagerModule(address(withdrawManager));
         superloop.setDepositManagerModule(address(depositManager));
+
+        superloopBtc.setAccountantModule(address(accountantBtc));
+        superloopBtc.setWithdrawManagerModule(address(withdrawManagerBtc));
+        superloopBtc.setDepositManagerModule(address(depositManagerBtc));
 
         vm.stopPrank();
         vm.label(address(superloop), "superloop");

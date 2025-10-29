@@ -111,11 +111,7 @@ contract Migration is Script {
     }
 
     function _preMigrationSetup() internal {
-        ISuperloop(oldVault).setVaultAdmin(address(migrationHelper));
-        // ISuperloop(oldVault).setPrivilegedAddress(
-        //     address(migrationHelper),
-        //     true
-        // );
+        ISuperloop(oldVault).setPrivilegedAddress(address(migrationHelper), true);
 
         ISuperloop(newVault).setRegisteredModule(REPAY_MODULE, true);
         ISuperloop(newVault).setRegisteredModule(WITHDRAW_MODULE, true);

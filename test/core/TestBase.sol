@@ -34,6 +34,8 @@ import {AaveV3PreliquidationFallbackHandler} from "../../src/modules/fallback/Aa
 contract TestBase is Test {
     address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
     address public constant XTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
+    address public constant LBTC = 0xecAc9C5F704e954931349Da37F60E39f515c11c1;
+    address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
     address public constant AAVE_V3_POOL_ADDRESSES_PROVIDER = 0x5ccF60c7E10547c5389E9cBFf543E5D0Db9F4feC;
     address public constant AAVE_V3_POOL_DATA_PROVIDER = 0x99e8269dDD5c7Af0F1B3973A591b47E8E001BCac;
     address public constant AAVE_V3_PRICE_ORACLE = 0xeCF313dE38aA85EF618D06D1A602bAa917D62525;
@@ -45,7 +47,6 @@ contract TestBase is Test {
     address public constant USDT = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
     address public constant USDC = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9;
     address public constant WXTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
-    address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
     address public constant ROUTER = 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0;
     address public constant USDC_WHALE = 0xd03bfdF9B26DB1e6764724d914d7c3d18106a9Fb;
     address public constant POOL_CONFIGURATOR = 0x30F6880Bb1cF780a49eB4Ef64E64585780AAe060;
@@ -81,8 +82,13 @@ contract TestBase is Test {
     WithdrawManager public withdrawManager;
     UnwrapModule public unwrapModule;
     WrapModule public wrapModule;
-
     DepositManager public depositManager;
+
+    Superloop public superloopBtc;
+    DepositManager public depositManagerBtc;
+    WithdrawManager public withdrawManagerBtc;
+    UniversalAccountant public accountantBtc;
+    AccountantAaveV3 public accountantAaveV3Btc;
 
     address public mockModule;
     AaveV3EmodeModule public emodeModule;
@@ -156,12 +162,10 @@ contract TestBase is Test {
         vm.label(address(withdrawManagerCallbackHandler), "withdrawManagerCallbackHandler");
     }
 
-    function _deployAccountant(address vault) internal {
-        address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
-        address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
-
+    function _deployAccountant(address vault, address[] memory lendAssets, address[] memory borrowAssets)
+        internal
+        returns (UniversalAccountant)
+    {
         DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
             .AaveV3AccountantPluginModuleInitData({
             poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
@@ -187,10 +191,10 @@ contract TestBase is Test {
             abi.encodeWithSelector(UniversalAccountant.initialize.selector, initData)
         );
 
-        accountant = UniversalAccountant(address(proxy));
+        return UniversalAccountant(address(proxy));
     }
 
-    function _deployDepositManager(address vault) internal {
+    function _deployDepositManager(address vault) internal returns (DepositManager) {
         DepositManager depositManagerImplementation = new DepositManager();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(depositManagerImplementation),
@@ -198,17 +202,17 @@ contract TestBase is Test {
             abi.encodeWithSelector(DepositManager.initialize.selector, vault)
         );
 
-        depositManager = DepositManager(address(proxy));
+        return DepositManager(address(proxy));
     }
 
-    function _deployWithdrawManager(address vault) internal {
+    function _deployWithdrawManager(address vault) internal returns (WithdrawManager) {
         WithdrawManager withdrawManagerImplementation = new WithdrawManager();
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(withdrawManagerImplementation),
             address(this),
             abi.encodeWithSelector(WithdrawManager.initialize.selector, vault)
         );
-        withdrawManager = WithdrawManager(address(proxy));
+        return WithdrawManager(address(proxy));
     }
 
     function _deployPreliquidationFallbackHandler(address vault) internal {
@@ -230,5 +234,11 @@ contract TestBase is Test {
         );
         moduleRegistry.setModule("AaveV3PreliquidationFallbackHandler", address(preliquidationFallbackHandler));
         vm.label(address(preliquidationFallbackHandler), "preliquidationFallbackHandler");
+    }
+
+    function _singleAddressArray(address a) internal pure returns (address[] memory) {
+        address[] memory array = new address[](1);
+        array[0] = a;
+        return array;
     }
 }
