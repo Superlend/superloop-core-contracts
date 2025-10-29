@@ -127,26 +127,37 @@ contract TestBase is Test {
     function _deployModules() internal {
         flashloanModule = new AaveV3FlashloanModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3FlashloanModule", address(flashloanModule));
+
         callbackHandler = new AaveV3CallbackHandler();
         moduleRegistry.setModule("AaveV3CallbackHandler", address(callbackHandler));
+
         emodeModule = new AaveV3EmodeModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3EmodeModule", address(emodeModule));
+
         supplyModule = new AaveV3SupplyModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3SupplyModule", address(supplyModule));
+
         withdrawModule = new AaveV3WithdrawModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3WithdrawModule", address(withdrawModule));
+
         borrowModule = new AaveV3BorrowModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3BorrowModule", address(borrowModule));
+
         repayModule = new AaveV3RepayModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
         moduleRegistry.setModule("AaveV3RepayModule", address(repayModule));
+
         dexModule = new UniversalDexModule();
         moduleRegistry.setModule("UniversalDexModule", address(dexModule));
+
         depositManagerCallbackHandler = new DepositManagerCallbackHandler();
         moduleRegistry.setModule("DepositManagerCallbackHandler", address(depositManagerCallbackHandler));
+
         withdrawManagerCallbackHandler = new WithdrawManagerCallbackHandler();
         moduleRegistry.setModule("WithdrawManagerCallbackHandler", address(withdrawManagerCallbackHandler));
+
         unwrapModule = new UnwrapModule(XTZ);
         moduleRegistry.setModule("UnwrapModule", address(unwrapModule));
+
         wrapModule = new WrapModule(XTZ);
         moduleRegistry.setModule("WrapModule", address(wrapModule));
 
