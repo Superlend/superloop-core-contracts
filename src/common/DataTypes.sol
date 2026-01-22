@@ -363,4 +363,28 @@ library DataTypes {
         uint256 preIF1;
         uint256 preIF2;
     }
+
+    /**
+     * @notice Structure for Merkl claim parameters
+     * @param users The addresses of the users to claim rewards for
+     * @param tokens The addresses of the tokens to claim rewards for
+     * @param amounts The amounts of the tokens to claim rewards for
+     * @param proofs The proofs of the Merkle tree
+     */
+    struct MerklClaimParams {
+        address[] users;
+        address[] tokens;
+        uint256[] amounts;
+        bytes32[][] proofs;
+    }
+
+    /**
+     * @notice Structure for vault action parameters
+     * @param vault The address of the vault
+     * @param amount The amount of the vault to supply
+     */
+    struct VaultActionParams {
+        address vault;
+        uint256 amount;
+    }
 }
