@@ -105,7 +105,7 @@ abstract contract TestBase is TestEnv {
     function setUp() public virtual override {
         super.setUp();
 
-        uint256 envIndex = 2; // TODO: move this to config
+        uint256 envIndex = 0; // TODO: move this to config
         environment = testEnvironments[envIndex];
 
         vm.createSelectFork(environment.chainName);

@@ -28,6 +28,10 @@ abstract contract TestEnv is Test {
     address public constant WXTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
     address public constant LBTC = 0xecAc9C5F704e954931349Da37F60E39f515c11c1;
     address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
+    address public constant USDC_ETLK = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9;
+    address public constant USDT_ETLK = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
+    address public constant USDT_ETLK_WHALE = 0x998098A1B2E95e2b8f15360676428EdFd976861f;
+    address public constant USDC_ETLK_WHALE = 0xd03bfdF9B26DB1e6764724d914d7c3d18106a9Fb;
 
     // eth mainnet chain
     address public constant USDe = 0x4c9EDD5852cd905f086C759E8383e09bff1E68B3;
@@ -35,7 +39,7 @@ abstract contract TestEnv is Test {
     address public constant sUSDe = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
     address public constant USDC_ETH = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant USDC_ETH_Whale = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
-    address USDT_ETH = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant USDT_ETH = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
 
     // address public constant
     uint256 public constant PERFORMANCE_FEE = 2000; // 20%
