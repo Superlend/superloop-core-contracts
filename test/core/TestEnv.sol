@@ -41,6 +41,17 @@ abstract contract TestEnv is Test {
     address public constant USDC_ETH_Whale = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
     address public constant USDT_ETH = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
 
+    // hyperevm
+    address public constant WHYPE = 0x5555555555555555555555555555555555555555;
+    address public constant WHYPE_WHALE = 0x008ae222661B6A42e3A097bd7AAC15412829106b;
+    address public constant ST_HYPE = 0xfFaa4a3D97fE9107Cef8a3F48c069F577Ff76cC1;
+    address public constant WST_HYPE = 0x94e8396e0869c9F2200760aF0621aFd240E1CF38;
+    address public constant K_HYPE = 0xfD739d4e423301CE9385c1fb8850539D657C296D;
+    address public constant BE_HYPE = 0xd8FC8F0b03eBA61F64D08B0bef69d80916E5DdA9;
+    address public stakingManager_hyperevm = 0x393D0B87Ed38fc779FD9611144aE649BA6082109;
+    address public stakingCore_hyperevm = 0xCeaD893b162D38e714D82d06a7fe0b0dc3c38E0b;
+    address public overseer_hyperevm = 0xB96f07367e69e86d6e9C3F29215885104813eeAE;
+
     // address public constant
     uint256 public constant PERFORMANCE_FEE = 2000; // 20%
     TestEnvironment[] internal testEnvironments;
@@ -104,6 +115,28 @@ abstract contract TestEnv is Test {
                 priceOracle: 0x54586bE62E3c3580375aE3723C145253060Ca0C2,
                 pool: 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2,
                 vaultAssetWhale: USDeWhale,
+                poolConfigurator: 0x64b761D848206f447Fe2dd461b0c635Ec39EbB27,
+                poolAdmin: 0x72B8fD3eb0c08275b8B60F96aAb0C8a50Cb80EcA,
+                router: address(0),
+                stablecoin: USDC_ETH,
+                stablecoinWhale: USDC_ETH_Whale
+            })
+        );
+
+        // hyperevm
+        testEnvironments.push(
+            TestEnvironment({
+                chainId: 999,
+                chainName: "hyperevm",
+                vaultAsset: WHYPE,
+                vaultAssetDecimals: 18,
+                lendAssets: _singleAddressArray(ST_HYPE),
+                borrowAssets: _singleAddressArray(WHYPE),
+                poolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e, // dummy values as they are not used yet
+                poolDataProvider: 0x0a16f2FCC0D44FaE41cc54e079281D84A363bECD,
+                priceOracle: 0x54586bE62E3c3580375aE3723C145253060Ca0C2,
+                pool: 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2,
+                vaultAssetWhale: WHYPE_WHALE,
                 poolConfigurator: 0x64b761D848206f447Fe2dd461b0c635Ec39EbB27,
                 poolAdmin: 0x72B8fD3eb0c08275b8B60F96aAb0C8a50Cb80EcA,
                 router: address(0),

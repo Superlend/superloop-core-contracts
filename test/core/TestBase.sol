@@ -32,6 +32,9 @@ import {UnwrapModule} from "../../src/modules/helper/UnwrapModule.sol";
 import {WrapModule} from "../../src/modules/helper/WrapModule.sol";
 import {AaveV3PreliquidationFallbackHandler} from "../../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {HyperliquidStakeModule} from "../../src/modules/stake/hyperliquid/HyperliquidStakeModule.sol";
+import {KinetiqStakeModule} from "../../src/modules/stake/hyperliquid/KinetiqStakeModule.sol";
+import {HyperbeatStakingModule} from "../../src/modules/stake/hyperliquid/HyperbeatStakingModule.sol";
 
 abstract contract TestBase is TestEnv {
     // address public constant AAVE_V3_POOL_ADDRESSES_PROVIDER =
@@ -102,10 +105,14 @@ abstract contract TestBase is TestEnv {
     IPoolDataProvider public poolDataProvider;
     IPool public pool;
 
+    HyperliquidStakeModule public hyperliquidStakeModule;
+    KinetiqStakeModule public kinetiqStakeModule;
+    HyperbeatStakingModule public hyperbeatStakingModule;
+
     function setUp() public virtual override {
         super.setUp();
 
-        uint256 envIndex = 0; // TODO: move this to config
+        uint256 envIndex = 3; // TODO: move this to config
         environment = testEnvironments[envIndex];
 
         vm.createSelectFork(environment.chainName);
@@ -189,6 +196,21 @@ abstract contract TestBase is TestEnv {
         vm.label(address(dexModule), "dexModule");
         vm.label(address(depositManagerCallbackHandler), "depositManagerCallbackHandler");
         vm.label(address(withdrawManagerCallbackHandler), "withdrawManagerCallbackHandler");
+    }
+
+    function _deployHyperliquidStakeModule() internal {
+        if (environment.chainId != 999) return;
+
+        wrapModule = new WrapModule(environment.vaultAsset);
+        moduleRegistry.setModule("WrapModule", address(wrapModule));
+        unwrapModule = new UnwrapModule(environment.vaultAsset);
+        moduleRegistry.setModule("UnwrapModule", address(unwrapModule));
+        hyperliquidStakeModule = new HyperliquidStakeModule(overseer_hyperevm);
+        moduleRegistry.setModule("HyperliquidStakeModule", address(hyperliquidStakeModule));
+        kinetiqStakeModule = new KinetiqStakeModule(stakingManager_hyperevm);
+        moduleRegistry.setModule("KinetiqStakeModule", address(kinetiqStakeModule));
+        hyperbeatStakingModule = new HyperbeatStakingModule(stakingCore_hyperevm);
+        moduleRegistry.setModule("HyperbeatStakingModule", address(hyperbeatStakingModule));
     }
 
     function _deployAccountant(address vault, address[] memory lendAssets, address[] memory borrowAssets)
