@@ -112,7 +112,7 @@ abstract contract TestBase is TestEnv {
     function setUp() public virtual override {
         super.setUp();
 
-        uint256 envIndex = 3; // TODO: move this to config
+        uint256 envIndex = 0; // TODO: move this to config
         environment = testEnvironments[envIndex];
 
         vm.createSelectFork(environment.chainName);
@@ -242,7 +242,8 @@ abstract contract TestBase is TestEnv {
             abi.encodeWithSelector(UniversalAccountant.initialize.selector, initData)
         );
 
-        return UniversalAccountant(address(proxy));
+        accountant = UniversalAccountant(address(proxy));
+        return accountant;
     }
 
     function _deployDepositManager(address vault) internal returns (DepositManager) {
@@ -253,7 +254,8 @@ abstract contract TestBase is TestEnv {
             abi.encodeWithSelector(DepositManager.initialize.selector, vault)
         );
 
-        return DepositManager(address(proxy));
+        depositManager = DepositManager(address(proxy));
+        return depositManager;
     }
 
     function _deployWithdrawManager(address vault) internal returns (WithdrawManager) {
@@ -263,7 +265,8 @@ abstract contract TestBase is TestEnv {
             address(this),
             abi.encodeWithSelector(WithdrawManager.initialize.selector, vault)
         );
-        return WithdrawManager(address(proxy));
+        withdrawManager = WithdrawManager(address(proxy));
+        return withdrawManager;
     }
 
     function _deployPreliquidationFallbackHandler(address vault) internal {
