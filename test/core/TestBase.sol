@@ -2,7 +2,8 @@
 
 pragma solidity ^0.8.13;
 
-import {Test, console} from "forge-std/Test.sol";
+import {console} from "forge-std/Test.sol";
+import {TestEnv} from "./TestEnv.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {Superloop} from "../../src/core/Superloop/Superloop.sol";
 import {DataTypes} from "../../src/common/DataTypes.sol";
@@ -30,27 +31,31 @@ import {WithdrawManagerCallbackHandler} from "../../src/modules/callback/Withdra
 import {UnwrapModule} from "../../src/modules/helper/UnwrapModule.sol";
 import {WrapModule} from "../../src/modules/helper/WrapModule.sol";
 import {AaveV3PreliquidationFallbackHandler} from "../../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
+import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract TestBase is Test {
-    address public constant ST_XTZ = 0x01F07f4d78d47A64F4C3B2b65f513f15Be6E1854;
-    address public constant XTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
-    address public constant LBTC = 0xecAc9C5F704e954931349Da37F60E39f515c11c1;
-    address public constant WBTC = 0xbFc94CD2B1E55999Cfc7347a9313e88702B83d0F;
-    address public constant AAVE_V3_POOL_ADDRESSES_PROVIDER = 0x5ccF60c7E10547c5389E9cBFf543E5D0Db9F4feC;
-    address public constant AAVE_V3_POOL_DATA_PROVIDER = 0x99e8269dDD5c7Af0F1B3973A591b47E8E001BCac;
-    address public constant AAVE_V3_PRICE_ORACLE = 0xeCF313dE38aA85EF618D06D1A602bAa917D62525;
-    address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
-    address public constant XTZ_WHALE = 0x008ae222661B6A42e3A097bd7AAC15412829106b;
-    address public constant STXTZ_WHALE = 0x65142dEC2969f1a3083Ad31541Ef4B73871C8C9B;
-    address public constant USDT_WHALE = 0x998098A1B2E95e2b8f15360676428EdFd976861f;
-    uint256 public constant PERFORMANCE_FEE = 2000; // 20%
-    address public constant USDT = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
-    address public constant USDC = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9;
-    address public constant WXTZ = 0xc9B53AB2679f573e480d01e0f49e2B5CFB7a3EAb;
-    address public constant ROUTER = 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0;
-    address public constant USDC_WHALE = 0xd03bfdF9B26DB1e6764724d914d7c3d18106a9Fb;
-    address public constant POOL_CONFIGURATOR = 0x30F6880Bb1cF780a49eB4Ef64E64585780AAe060;
-    address public constant POOL_ADMIN = 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
+abstract contract TestBase is TestEnv {
+    // address public constant AAVE_V3_POOL_ADDRESSES_PROVIDER =
+    //     0x5ccF60c7E10547c5389E9cBFf543E5D0Db9F4feC;
+    // address public constant AAVE_V3_POOL_DATA_PROVIDER =
+    //     0x99e8269dDD5c7Af0F1B3973A591b47E8E001BCac;
+    // address public constant AAVE_V3_PRICE_ORACLE =
+    //     0xeCF313dE38aA85EF618D06D1A602bAa917D62525;
+    // address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
+    // address public constant XTZ_WHALE =
+    //     0x008ae222661B6A42e3A097bd7AAC15412829106b;
+    // address public constant STXTZ_WHALE =
+    //     0x65142dEC2969f1a3083Ad31541Ef4B73871C8C9B;
+    // address public constant USDT_WHALE =
+    //     0x998098A1B2E95e2b8f15360676428EdFd976861f;
+    // address public constant USDT = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
+    // address public constant USDC = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9;
+    // address public constant ROUTER = 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0;
+    // address public constant USDC_WHALE =
+    //     0xd03bfdF9B26DB1e6764724d914d7c3d18106a9Fb;
+    // address public constant POOL_CONFIGURATOR =
+    //     0x30F6880Bb1cF780a49eB4Ef64E64585780AAe060;
+    // address public constant POOL_ADMIN =
+    //     0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
 
     uint256 public constant WAD = 10 ** 18;
     uint256 public constant BPS = 10000;
@@ -61,6 +66,8 @@ contract TestBase is Test {
     uint256 public constant PRE_IF1 = ((BPS + 50) * WAD) / BPS;
     uint256 public constant PRE_IF2 = ((80 + BPS) * WAD) / BPS;
     uint256 public LLTV = (9600 * WAD) / BPS;
+
+    TestEnvironment public environment;
 
     address public admin;
     address public treasury;
@@ -95,8 +102,13 @@ contract TestBase is Test {
     IPoolDataProvider public poolDataProvider;
     IPool public pool;
 
-    function setUp() public virtual {
-        vm.createSelectFork("etherlink");
+    function setUp() public virtual override {
+        super.setUp();
+
+        uint256 envIndex = 2; // TODO: move this to config
+        environment = testEnvironments[envIndex];
+
+        vm.createSelectFork(environment.chainName);
         admin = makeAddr("admin");
         treasury = makeAddr("treasury");
 
@@ -104,46 +116,52 @@ contract TestBase is Test {
         moduleRegistry = new SuperloopModuleRegistry();
         mockModule = makeAddr("mockModule");
         moduleRegistry.setModule("MockModule", mockModule);
-        poolDataProvider = IPoolDataProvider(AAVE_V3_POOL_DATA_PROVIDER);
-        pool = IPool(POOL);
+        poolDataProvider = IPoolDataProvider(environment.poolDataProvider);
+        pool = IPool(environment.pool);
         vm.stopPrank();
 
         vm.label(admin, "admin");
         vm.label(treasury, "treasury");
         vm.label(mockModule, "mockModule");
         vm.label(address(moduleRegistry), "moduleRegistry");
-        vm.label(XTZ, "XTZ");
-        vm.label(ST_XTZ, "ST_XTZ");
-        vm.label(AAVE_V3_POOL_ADDRESSES_PROVIDER, "AAVE_V3_POOL_ADDRESSES_PROVIDER");
-        vm.label(AAVE_V3_POOL_DATA_PROVIDER, "AAVE_V3_POOL_DATA_PROVIDER");
-        vm.label(AAVE_V3_PRICE_ORACLE, "AAVE_V3_PRICE_ORACLE");
-        vm.label(POOL, "POOL");
-        vm.label(XTZ_WHALE, "XTZ_WHALE");
-        vm.label(STXTZ_WHALE, "STXTZ_WHALE");
-        vm.label(address(poolDataProvider), "poolDataProvider");
-        vm.label(address(pool), "pool");
+        for (uint256 i = 0; i < environment.lendAssets.length; i++) {
+            string memory symbol = IERC20Metadata(environment.lendAssets[i]).symbol();
+            vm.label(environment.lendAssets[i], symbol);
+        }
+        for (uint256 i = 0; i < environment.borrowAssets.length; i++) {
+            string memory symbol = IERC20Metadata(environment.borrowAssets[i]).symbol();
+            vm.label(environment.borrowAssets[i], symbol);
+        }
+        vm.label(environment.poolAddressesProvider, "AAVE_V3_POOL_ADDRESSES_PROVIDER");
+        vm.label(environment.poolDataProvider, "AAVE_V3_POOL_DATA_PROVIDER");
+        vm.label(environment.priceOracle, "AAVE_V3_PRICE_ORACLE");
+        vm.label(environment.pool, "POOL");
+        vm.label(environment.vaultAssetWhale, "VAULT_ASSET_WHALE");
+        vm.label(environment.stablecoin, "STABLECOIN");
+        vm.label(environment.stablecoinWhale, "STABLECOIN_WHALE");
+        // vm.label(STXTZ_WHALE, "STXTZ_WHALE");
     }
 
     function _deployModules() internal {
-        flashloanModule = new AaveV3FlashloanModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        flashloanModule = new AaveV3FlashloanModule(environment.poolAddressesProvider);
         moduleRegistry.setModule("AaveV3FlashloanModule", address(flashloanModule));
 
         callbackHandler = new AaveV3CallbackHandler();
         moduleRegistry.setModule("AaveV3CallbackHandler", address(callbackHandler));
 
-        emodeModule = new AaveV3EmodeModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        emodeModule = new AaveV3EmodeModule(environment.poolAddressesProvider);
         moduleRegistry.setModule("AaveV3EmodeModule", address(emodeModule));
 
-        supplyModule = new AaveV3SupplyModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        supplyModule = new AaveV3SupplyModule(environment.poolAddressesProvider);
         moduleRegistry.setModule("AaveV3SupplyModule", address(supplyModule));
 
-        withdrawModule = new AaveV3WithdrawModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        withdrawModule = new AaveV3WithdrawModule(environment.poolAddressesProvider);
         moduleRegistry.setModule("AaveV3WithdrawModule", address(withdrawModule));
 
-        borrowModule = new AaveV3BorrowModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        borrowModule = new AaveV3BorrowModule(environment.poolAddressesProvider);
         moduleRegistry.setModule("AaveV3BorrowModule", address(borrowModule));
 
-        repayModule = new AaveV3RepayModule(AAVE_V3_POOL_ADDRESSES_PROVIDER);
+        repayModule = new AaveV3RepayModule(environment.poolAddressesProvider);
         moduleRegistry.setModule("AaveV3RepayModule", address(repayModule));
 
         dexModule = new UniversalDexModule();
@@ -155,10 +173,10 @@ contract TestBase is Test {
         withdrawManagerCallbackHandler = new WithdrawManagerCallbackHandler();
         moduleRegistry.setModule("WithdrawManagerCallbackHandler", address(withdrawManagerCallbackHandler));
 
-        unwrapModule = new UnwrapModule(XTZ);
+        unwrapModule = new UnwrapModule(environment.vaultAsset);
         moduleRegistry.setModule("UnwrapModule", address(unwrapModule));
 
-        wrapModule = new WrapModule(XTZ);
+        wrapModule = new WrapModule(environment.vaultAsset);
         moduleRegistry.setModule("WrapModule", address(wrapModule));
 
         vm.label(address(flashloanModule), "flashloanModule");
@@ -179,7 +197,7 @@ contract TestBase is Test {
     {
         DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
             .AaveV3AccountantPluginModuleInitData({
-            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
+            poolAddressesProvider: environment.poolAddressesProvider,
             lendAssets: lendAssets,
             borrowAssets: borrowAssets
         });
@@ -228,14 +246,14 @@ contract TestBase is Test {
 
     function _deployPreliquidationFallbackHandler(address vault) internal {
         preliquidationFallbackHandler = new AaveV3PreliquidationFallbackHandler(
-            AAVE_V3_POOL_ADDRESSES_PROVIDER,
+            environment.poolAddressesProvider,
             vault,
             2,
             8,
             DataTypes.AaveV3PreliquidationParamsInit({
                 id: id,
-                lendReserve: ST_XTZ,
-                borrowReserve: XTZ,
+                lendReserve: environment.lendAssets[0],
+                borrowReserve: environment.borrowAssets[0],
                 preLltv: PRE_LLTV,
                 preCF1: PRE_CF1,
                 preCF2: PRE_CF2,
@@ -245,11 +263,5 @@ contract TestBase is Test {
         );
         moduleRegistry.setModule("AaveV3PreliquidationFallbackHandler", address(preliquidationFallbackHandler));
         vm.label(address(preliquidationFallbackHandler), "preliquidationFallbackHandler");
-    }
-
-    function _singleAddressArray(address a) internal pure returns (address[] memory) {
-        address[] memory array = new address[](1);
-        array[0] = a;
-        return array;
     }
 }

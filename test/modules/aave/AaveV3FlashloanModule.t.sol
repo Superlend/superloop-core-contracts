@@ -26,10 +26,10 @@ contract AaveV3FlashloanModuleTest is TestBase {
         modules[0] = address(flashloanModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -52,7 +52,7 @@ contract AaveV3FlashloanModuleTest is TestBase {
         );
         superloop = Superloop(payable(address(proxy)));
 
-        bytes32 key = keccak256(abi.encodePacked(POOL, IFlashLoanSimpleReceiver.executeOperation.selector));
+        bytes32 key = keccak256(abi.encodePacked(environment.pool, IFlashLoanSimpleReceiver.executeOperation.selector));
         superloop.setCallbackHandler(key, address(callbackHandler));
         vm.stopPrank();
         user = makeAddr("user");
@@ -62,17 +62,17 @@ contract AaveV3FlashloanModuleTest is TestBase {
     }
 
     function test_FlashloanBasicFlow() public {
-        vm.startPrank(XTZ_WHALE);
-        IERC20(XTZ).transfer(address(superloop), 10 * 10 ** 18);
+        vm.startPrank(environment.vaultAssetWhale);
+        IERC20(environment.vaultAsset).transfer(address(superloop), 1000 * 10 ** environment.vaultAssetDecimals);
         vm.stopPrank();
 
         // Arrange
-        uint256 flashloanAmount = 1000 * 10 ** 18; // 1000 XTZ
+        uint256 flashloanAmount = 1000 * 10 ** environment.vaultAssetDecimals; // 1000 vaultAsset
         uint16 referralCode = 0;
 
         // Create flashloan params
         DataTypes.AaveV3FlashloanParams memory flashloanParams = DataTypes.AaveV3FlashloanParams({
-            asset: XTZ,
+            asset: environment.vaultAsset,
             amount: flashloanAmount,
             referralCode: referralCode,
             callbackExecutionData: "" // No additional execution data for simple return
@@ -87,14 +87,18 @@ contract AaveV3FlashloanModuleTest is TestBase {
         });
 
         // Record initial balances
-        uint256 initialXTZBalance = IERC20(XTZ).balanceOf(address(superloop));
+        uint256 initialVaultAssetBalance = IERC20(environment.vaultAsset).balanceOf(address(superloop));
 
         // Act
         vm.prank(admin);
         superloop.operate(moduleExecutionData);
 
         // Assert
-        uint256 finalXTZBalance = IERC20(XTZ).balanceOf(address(superloop));
-        assertLt(finalXTZBalance, initialXTZBalance, "Balance should decrease slightly after flashloan due to premium");
+        uint256 finalVaultAssetBalance = IERC20(environment.vaultAsset).balanceOf(address(superloop));
+        assertLt(
+            finalVaultAssetBalance,
+            initialVaultAssetBalance,
+            "Balance should decrease slightly after flashloan due to premium"
+        );
     }
 }

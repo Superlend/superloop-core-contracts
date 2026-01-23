@@ -26,10 +26,10 @@ contract AaveV3EmodeModuleTest is TestBase {
         modules[0] = address(emodeModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -61,7 +61,7 @@ contract AaveV3EmodeModuleTest is TestBase {
 
     function test_EmodeBasicFlow() public {
         uint256 currentEmodeCategory = pool.getUserEMode(address(superloop));
-        console.log("currentEmodeCategory", currentEmodeCategory);
+        assertEq(currentEmodeCategory, 0);
 
         DataTypes.AaveV3EmodeParams memory params = DataTypes.AaveV3EmodeParams({emodeCategory: 1});
 
