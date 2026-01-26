@@ -40,7 +40,7 @@ abstract contract TestEnv is Test {
     address public constant sUSDe = 0x9D39A5DE30e57443BfF2A8307A4256c8797A3497;
     address public constant USDC_ETH = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant USDC_ETH_Whale = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
-    address public constant USDT_ETH = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
+    address public constant USDT_ETH = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
 
     // hyperevm
     address public constant WHYPE = 0x5555555555555555555555555555555555555555;
@@ -56,6 +56,7 @@ abstract contract TestEnv is Test {
     // address public constant
     uint256 public constant PERFORMANCE_FEE = 2000; // 20%
     TestEnvironment[] internal testEnvironments;
+    uint256 public constant INTEREST_RATE_MODE = 2; // variable rate
 
     function setUp() public virtual {
         // etherlink xtz

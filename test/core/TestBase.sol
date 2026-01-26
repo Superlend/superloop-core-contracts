@@ -35,6 +35,8 @@ import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/exten
 import {HyperliquidStakeModule} from "../../src/modules/stake/hyperliquid/HyperliquidStakeModule.sol";
 import {KinetiqStakeModule} from "../../src/modules/stake/hyperliquid/KinetiqStakeModule.sol";
 import {HyperbeatStakingModule} from "../../src/modules/stake/hyperliquid/HyperbeatStakingModule.sol";
+import {VaultSupplyModule} from "../../src/modules/vault/VaultSupplyModule.sol";
+import {VaultWithdrawModule} from "../../src/modules/vault/VaultWithdrawModule.sol";
 
 abstract contract TestBase is TestEnv {
     // address public constant AAVE_V3_POOL_ADDRESSES_PROVIDER =
@@ -100,6 +102,9 @@ abstract contract TestBase is TestEnv {
     UniversalAccountant public accountantBtc;
     AccountantAaveV3 public accountantAaveV3Btc;
 
+    VaultSupplyModule public vaultSupplyModule;
+    VaultWithdrawModule public vaultWithdrawModule;
+
     address public mockModule;
     AaveV3EmodeModule public emodeModule;
     IPoolDataProvider public poolDataProvider;
@@ -112,7 +117,7 @@ abstract contract TestBase is TestEnv {
     function setUp() public virtual override {
         super.setUp();
 
-        uint256 envIndex = 0; // TODO: move this to config
+        uint256 envIndex = 2; // TODO: move this to config
         environment = testEnvironments[envIndex];
 
         vm.createSelectFork(environment.chainName);
@@ -186,6 +191,12 @@ abstract contract TestBase is TestEnv {
         wrapModule = new WrapModule(environment.vaultAsset);
         moduleRegistry.setModule("WrapModule", address(wrapModule));
 
+        vaultSupplyModule = new VaultSupplyModule();
+        moduleRegistry.setModule("VaultSupplyModule", address(vaultSupplyModule));
+
+        vaultWithdrawModule = new VaultWithdrawModule();
+        moduleRegistry.setModule("VaultWithdrawModule", address(vaultWithdrawModule));
+
         vm.label(address(flashloanModule), "flashloanModule");
         vm.label(address(callbackHandler), "callbackHandler");
         vm.label(address(emodeModule), "emodeModule");
@@ -196,6 +207,8 @@ abstract contract TestBase is TestEnv {
         vm.label(address(dexModule), "dexModule");
         vm.label(address(depositManagerCallbackHandler), "depositManagerCallbackHandler");
         vm.label(address(withdrawManagerCallbackHandler), "withdrawManagerCallbackHandler");
+        vm.label(address(vaultSupplyModule), "vaultSupplyModule");
+        vm.label(address(vaultWithdrawModule), "vaultWithdrawModule");
     }
 
     function _deployHyperliquidStakeModule() internal {
