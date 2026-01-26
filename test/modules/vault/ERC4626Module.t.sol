@@ -88,7 +88,6 @@ contract ERC4626ModuleTest is TestBase {
         test_VaultSupply();
 
         address stakingVault = environment.lendAssets[1];
-        address underlyingAsset = environment.lendAssets[0];
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
         moduleExecutionData[0] = DataTypes.ModuleExecutionData({

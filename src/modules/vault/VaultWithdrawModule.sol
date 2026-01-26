@@ -5,6 +5,7 @@ import {IERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.s
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
+import {VaultActionModule} from "./VaultActionModule.sol";
 
 /**
  * @title VaultWithdrawModule
@@ -12,20 +13,12 @@ import {DataTypes} from "../../common/DataTypes.sol";
  * @notice Module for withdrawing assets from a vault
  * @dev Extends IERC4626 to provide vault withdraw functionality
  */
-contract VaultWithdrawModule {
-    /**
-     * @notice Emitted when assets are withdrawn from a vault
-     * @param vault The address of the vault
-     * @param amount The amount of the underlying asset withdrawn
-     * @param shares The amount of shares withdrawn
-     */
-    event VaultWithdrawn(address indexed vault, uint256 amount, uint256 shares);
-
+contract VaultWithdrawModule is VaultActionModule {
     /**
      * @notice Executes the withdraw operation
      * @param params The parameters for the withdraw operation
      */
-    function execute(DataTypes.VaultActionParams memory params) external {
+    function execute(DataTypes.VaultActionParams memory params) external override onlyExecutionContext {
         uint256 amount =
             params.amount == type(uint256).max ? IERC4626(params.vault).maxWithdraw(address(this)) : params.amount;
 
