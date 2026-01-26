@@ -387,4 +387,16 @@ library DataTypes {
         address vault;
         uint256 amount;
     }
+
+    /**
+     * @notice Structure for Morpho flashloan parameters
+     * @param asset The address of the asset to flashloan
+     * @param amount The amount to flashloan
+     * @param callbackExecutionData The data to execute in the flashloan callback
+     */
+    struct MorphoFlashloanParams {
+        address asset;
+        uint256 amount;
+        bytes callbackExecutionData;
+    }
 }
