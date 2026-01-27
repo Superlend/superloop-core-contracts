@@ -134,7 +134,8 @@ contract Superloop is SuperloopVault, SuperloopActions, SuperloopBase {
     }
 
     function realizePerformanceFee() external {
-        _realizePerformanceFee();
+        uint256 totalAssetsCached = totalAssets();
+        _realizePerformanceFee(totalAssetsCached);
     }
 
     /**

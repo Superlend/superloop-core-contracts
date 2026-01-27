@@ -267,7 +267,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         uint256 totalSupplyAfter = Math.mulDiv(
             snapshot.totalSupplyBefore, snapshot.totalAssetsAfter, snapshot.totalAssetsBefore, Math.Rounding.Ceil
         );
-        uint256 totalNewSharesToMint = totalSupplyAfter  - snapshot.totalSupplyBefore;
+        uint256 totalNewSharesToMint = totalSupplyAfter - snapshot.totalSupplyBefore;
 
         return totalNewSharesToMint;
     }
