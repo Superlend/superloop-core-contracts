@@ -10,6 +10,7 @@ import {DataTypes} from "../../src/common/DataTypes.sol";
 import {SuperloopModuleRegistry} from "../../src/core/ModuleRegistry/ModuleRegistry.sol";
 import {AaveV3FlashloanModule} from "../../src/modules/aave/AaveV3FlashloanModule.sol";
 import {AaveV3CallbackHandler} from "../../src/modules/callback/AaveV3CallbackHandler.sol";
+import {MorphoCallbackHandler} from "../../src/modules/callback/MorphoCallbackHandler.sol";
 import {AaveV3EmodeModule} from "../../src/modules/aave/AaveV3EmodeModule.sol";
 import {AaveV3SupplyModule} from "../../src/modules/aave/AaveV3SupplyModule.sol";
 import {AaveV3WithdrawModule} from "../../src/modules/aave/AaveV3WithdrawModule.sol";
@@ -37,6 +38,8 @@ import {KinetiqStakeModule} from "../../src/modules/stake/hyperliquid/KinetiqSta
 import {HyperbeatStakingModule} from "../../src/modules/stake/hyperliquid/HyperbeatStakingModule.sol";
 import {VaultSupplyModule} from "../../src/modules/vault/VaultSupplyModule.sol";
 import {VaultWithdrawModule} from "../../src/modules/vault/VaultWithdrawModule.sol";
+
+import {MorphoFlashloanModule} from "../../src/modules/morpho/MorphoFlashloanModule.sol";
 
 abstract contract TestBase is TestEnv {
     // address public constant AAVE_V3_POOL_ADDRESSES_PROVIDER =
@@ -80,10 +83,12 @@ abstract contract TestBase is TestEnv {
     SuperloopModuleRegistry public moduleRegistry;
     Superloop public superloop;
     AaveV3FlashloanModule public flashloanModule;
+    MorphoFlashloanModule public morphoFlashloanModule;
     DepositManagerCallbackHandler public depositManagerCallbackHandler;
     WithdrawManagerCallbackHandler public withdrawManagerCallbackHandler;
     AaveV3PreliquidationFallbackHandler public preliquidationFallbackHandler;
     AaveV3CallbackHandler public callbackHandler;
+    MorphoCallbackHandler public morphoCallbackHandler;
     AaveV3SupplyModule public supplyModule;
     AaveV3WithdrawModule public withdrawModule;
     AaveV3BorrowModule public borrowModule;
@@ -155,11 +160,17 @@ abstract contract TestBase is TestEnv {
     }
 
     function _deployModules() internal {
+        morphoFlashloanModule = new MorphoFlashloanModule(environment.morpho);
+        moduleRegistry.setModule("MorphoFlashloanModule", address(morphoFlashloanModule));
+
         flashloanModule = new AaveV3FlashloanModule(environment.poolAddressesProvider);
         moduleRegistry.setModule("AaveV3FlashloanModule", address(flashloanModule));
 
         callbackHandler = new AaveV3CallbackHandler();
         moduleRegistry.setModule("AaveV3CallbackHandler", address(callbackHandler));
+
+        morphoCallbackHandler = new MorphoCallbackHandler();
+        moduleRegistry.setModule("MorphoCallbackHandler", address(morphoCallbackHandler));
 
         emodeModule = new AaveV3EmodeModule(environment.poolAddressesProvider);
         moduleRegistry.setModule("AaveV3EmodeModule", address(emodeModule));

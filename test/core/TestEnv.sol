@@ -21,6 +21,7 @@ abstract contract TestEnv is Test {
         address router;
         address stablecoin;
         address stablecoinWhale;
+        address morpho;
     }
 
     // etlk chain
@@ -77,7 +78,8 @@ abstract contract TestEnv is Test {
                 poolAdmin: 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f,
                 router: 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0,
                 stablecoin: 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A,
-                stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f
+                stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f,
+                morpho: 0x0000000000000000000000000000000000000000
             })
         );
 
@@ -99,7 +101,8 @@ abstract contract TestEnv is Test {
                 poolAdmin: 0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f,
                 router: 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0,
                 stablecoin: 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A,
-                stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f
+                stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f,
+                morpho: 0x0000000000000000000000000000000000000000
             })
         );
 
@@ -121,7 +124,8 @@ abstract contract TestEnv is Test {
                 poolAdmin: 0x72B8fD3eb0c08275b8B60F96aAb0C8a50Cb80EcA,
                 router: address(0),
                 stablecoin: USDC_ETH,
-                stablecoinWhale: USDC_ETH_Whale
+                stablecoinWhale: USDC_ETH_Whale,
+                morpho: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb
             })
         );
 
@@ -143,7 +147,8 @@ abstract contract TestEnv is Test {
                 poolAdmin: 0x72B8fD3eb0c08275b8B60F96aAb0C8a50Cb80EcA,
                 router: address(0),
                 stablecoin: USDC_ETH,
-                stablecoinWhale: USDC_ETH_Whale
+                stablecoinWhale: USDC_ETH_Whale,
+                morpho: 0x0000000000000000000000000000000000000000
             })
         );
     }
