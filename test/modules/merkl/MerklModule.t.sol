@@ -5,18 +5,12 @@ pragma solidity ^0.8.13;
 import {TestBase} from "../../core/TestBase.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {
-    DepositManager
-} from "../../../src/core/DepositManager/DepositManager.sol";
+import {DepositManager} from "../../../src/core/DepositManager/DepositManager.sol";
 import {console} from "forge-std/Test.sol";
 import {Errors} from "../../../src/common/Errors.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
-import {
-    ProxyAdmin
-} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {
-    TransparentUpgradeableProxy
-} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IDistributor} from "../../../src/modules/merkl/IDistributor.sol";
 
 contract MerklModuleTest is TestBase {
@@ -55,7 +49,7 @@ contract MerklModuleTest is TestBase {
         });
         superloopImplementation = new Superloop();
         proxyAdmin = new ProxyAdmin(address(this));
-        
+
         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
             address(superloopImplementation),
             address(proxyAdmin),
@@ -75,9 +69,7 @@ contract MerklModuleTest is TestBase {
 
         // set the root of distributor as hash of vault asset
         deal(environment.vaultAsset, environment.distributor, AMOUNT);
-        bytes32 root = keccak256(
-            abi.encode(address(superloop), environment.vaultAsset, AMOUNT)
-        );
+        bytes32 root = keccak256(abi.encode(address(superloop), environment.vaultAsset, AMOUNT));
         bytes32 ipfsHash = bytes32(0);
 
         vm.prank(distributorAdmin);
@@ -87,8 +79,7 @@ contract MerklModuleTest is TestBase {
     }
 
     function test_claim() public {
-        DataTypes.ModuleExecutionData[]
-            memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
+        DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
         address[] memory users = new address[](1);
         users[0] = address(superloop);
         address[] memory tokens = new address[](1);
@@ -102,12 +93,7 @@ contract MerklModuleTest is TestBase {
             module: address(merklModule),
             data: abi.encodeWithSelector(
                 merklModule.execute.selector,
-                DataTypes.MerklClaimParams({
-                    users: users,
-                    tokens: tokens,
-                    amounts: amounts,
-                    proofs: proofs
-                })
+                DataTypes.MerklClaimParams({users: users, tokens: tokens, amounts: amounts, proofs: proofs})
             )
         });
 
@@ -115,6 +101,5 @@ contract MerklModuleTest is TestBase {
         superloop.operate(moduleExecutionData);
 
         assertEq(IERC20(environment.vaultAsset).balanceOf(address(superloop)), AMOUNT);
-
     }
 }
