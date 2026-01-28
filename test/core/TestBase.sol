@@ -39,32 +39,11 @@ import {HyperbeatStakingModule} from "../../src/modules/stake/hyperliquid/Hyperb
 import {VaultSupplyModule} from "../../src/modules/vault/VaultSupplyModule.sol";
 import {VaultWithdrawModule} from "../../src/modules/vault/VaultWithdrawModule.sol";
 
+import {MerklModule} from "../../src/modules/merkl/MerklModule.sol";
+
 import {MorphoFlashloanModule} from "../../src/modules/morpho/MorphoFlashloanModule.sol";
 
 abstract contract TestBase is TestEnv {
-    // address public constant AAVE_V3_POOL_ADDRESSES_PROVIDER =
-    //     0x5ccF60c7E10547c5389E9cBFf543E5D0Db9F4feC;
-    // address public constant AAVE_V3_POOL_DATA_PROVIDER =
-    //     0x99e8269dDD5c7Af0F1B3973A591b47E8E001BCac;
-    // address public constant AAVE_V3_PRICE_ORACLE =
-    //     0xeCF313dE38aA85EF618D06D1A602bAa917D62525;
-    // address public constant POOL = 0x3bD16D195786fb2F509f2E2D7F69920262EF114D;
-    // address public constant XTZ_WHALE =
-    //     0x008ae222661B6A42e3A097bd7AAC15412829106b;
-    // address public constant STXTZ_WHALE =
-    //     0x65142dEC2969f1a3083Ad31541Ef4B73871C8C9B;
-    // address public constant USDT_WHALE =
-    //     0x998098A1B2E95e2b8f15360676428EdFd976861f;
-    // address public constant USDT = 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A;
-    // address public constant USDC = 0x796Ea11Fa2dD751eD01b53C372fFDB4AAa8f00F9;
-    // address public constant ROUTER = 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0;
-    // address public constant USDC_WHALE =
-    //     0xd03bfdF9B26DB1e6764724d914d7c3d18106a9Fb;
-    // address public constant POOL_CONFIGURATOR =
-    //     0x30F6880Bb1cF780a49eB4Ef64E64585780AAe060;
-    // address public constant POOL_ADMIN =
-    //     0x669bd328f6C494949Ed9fB2dc8021557A6Dd005f;
-
     uint256 public constant WAD = 10 ** 18;
     uint256 public constant BPS = 10000;
     bytes32 id = bytes32("1");
@@ -102,6 +81,7 @@ abstract contract TestBase is TestEnv {
     UnwrapModule public unwrapModule;
     WrapModule public wrapModule;
     DepositManager public depositManager;
+    MerklModule public merklModule;
 
     Superloop public superloopBtc;
     DepositManager public depositManagerBtc;
@@ -166,6 +146,9 @@ abstract contract TestBase is TestEnv {
     }
 
     function _deployModules() internal {
+        merklModule = new MerklModule(environment.distributor);
+        moduleRegistry.setModule("MerklModule", address(merklModule));
+
         morphoFlashloanModule = new MorphoFlashloanModule(environment.morpho);
         moduleRegistry.setModule("MorphoFlashloanModule", address(morphoFlashloanModule));
 
@@ -226,6 +209,7 @@ abstract contract TestBase is TestEnv {
         vm.label(address(withdrawManagerCallbackHandler), "withdrawManagerCallbackHandler");
         vm.label(address(vaultSupplyModule), "vaultSupplyModule");
         vm.label(address(vaultWithdrawModule), "vaultWithdrawModule");
+        vm.label(address(merklModule), "merklModule");
     }
 
     function _deployHyperliquidStakeModule() internal {

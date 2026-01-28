@@ -13,7 +13,6 @@ import {Errors} from "../../../src/common/Errors.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {DepositManager} from "../../../src/core/DepositManager/DepositManager.sol";
 
-// TODO : revisit with mutli token setup for eth mainnet
 contract DepositManagerTest is TestBase {
     Superloop public superloopImplementation;
     ProxyAdmin public proxyAdmin;

@@ -23,6 +23,7 @@ abstract contract TestEnv is Test {
         address stablecoinWhale;
         address morpho;
         uint8 emodeCategory;
+        address distributor;
     }
 
     // etlk chain
@@ -81,7 +82,8 @@ abstract contract TestEnv is Test {
                 stablecoin: 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A,
                 stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f,
                 morpho: 0x0000000000000000000000000000000000000000,
-                emodeCategory: 3
+                emodeCategory: 3,
+                distributor: 0x0000000000000000000000000000000000000000
             })
         );
 
@@ -105,7 +107,8 @@ abstract contract TestEnv is Test {
                 stablecoin: 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A,
                 stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f,
                 morpho: 0x0000000000000000000000000000000000000000,
-                emodeCategory: 2
+                emodeCategory: 2,
+                distributor: 0x0000000000000000000000000000000000000000
             })
         );
 
@@ -129,7 +132,8 @@ abstract contract TestEnv is Test {
                 stablecoin: USDC_ETH,
                 stablecoinWhale: USDC_ETH_Whale,
                 morpho: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb,
-                emodeCategory: 2
+                emodeCategory: 2,
+                distributor: 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae
             })
         );
 
@@ -153,7 +157,8 @@ abstract contract TestEnv is Test {
                 stablecoin: USDC_ETH,
                 stablecoinWhale: USDC_ETH_Whale,
                 morpho: 0x0000000000000000000000000000000000000000,
-                emodeCategory: 1
+                emodeCategory: 1,
+                distributor: 0x0000000000000000000000000000000000000000
             })
         );
     }
