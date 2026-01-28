@@ -520,6 +520,10 @@ abstract contract IntegrationBase is TestBase {
         internal
         returns (uint256, uint256, uint256)
     {
+        uint256 vaultTokenScale = 10 ** IERC20Metadata(environment.vaultAsset).decimals();
+        uint256 lendTokenScale = 10 ** IERC20Metadata(environment.lendAssets[0]).decimals();
+        uint256 borrowTokenScale = 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals();
+
         (uint256 supplyAmountUnscaled, uint256 borrowAmountUnscaled) = _createPartialDepositWithResolution(true);
 
         // make 3 withdraw requests
@@ -532,20 +536,31 @@ abstract contract IntegrationBase is TestBase {
 
         // resolve 1st fully, and 2nd partially
         // repay half of borrow amount
-        uint256 repayAmount = (borrowAmountUnscaled * XTZ_SCALE) / 2;
-        uint256 withdrawAmount = ((supplyAmountUnscaled + 10) * STXTZ_SCALE) / 2;
+        uint256 repayAmount = (borrowAmountUnscaled * borrowTokenScale) / 2;
+        uint256 withdrawAmount = ((supplyAmountUnscaled + 10) * lendTokenScale) / 2;
         uint256 repayAmountWithPremium = repayAmount + (repayAmount * 1) / 10000;
         uint256 totalShares = superloop.totalSupply();
         uint256 sharesToResolve = totalShares / 2;
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
-        moduleExecutionData[0] = _repayCall(XTZ, repayAmount);
-        moduleExecutionData[1] = _withdrawCall(ST_XTZ, withdrawAmount);
-        moduleExecutionData[2] =
-            _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
+        moduleExecutionData[0] = _repayCall(environment.borrowAssets[0], repayAmount);
+        moduleExecutionData[1] = _withdrawCall(environment.lendAssets[0], withdrawAmount);
+        moduleExecutionData[2] = USE_MORPHO
+            ? _swapCallExactOut(
+                environment.lendAssets[0],
+                environment.borrowAssets[0],
+                withdrawAmount,
+                repayAmount,
+                environment.router,
+                USDC_USDE_POOL_FEE,
+                block.timestamp + 100
+            )
+            : _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
 
         DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
-        intermediateExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
+        intermediateExecutionData[0] = USE_MORPHO
+            ? _morphoFlashloanCall(environment.borrowAssets[0], repayAmount, abi.encode(moduleExecutionData))
+            : _flashloanCall(environment.borrowAssets[0], repayAmount, abi.encode(moduleExecutionData));
 
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
         finalExecutionData[0] =
