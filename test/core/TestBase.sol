@@ -75,6 +75,8 @@ abstract contract TestBase is TestEnv {
     uint256 public constant PRE_IF2 = ((80 + BPS) * WAD) / BPS;
     uint256 public LLTV = (9600 * WAD) / BPS;
 
+    bool public USE_MORPHO = false;
+
     TestEnvironment public environment;
 
     address public admin;
@@ -124,6 +126,10 @@ abstract contract TestBase is TestEnv {
 
         uint256 envIndex = 2; // TODO: move this to config
         environment = testEnvironments[envIndex];
+
+        if (environment.morpho != address(0)) {
+            USE_MORPHO = true;
+        }
 
         vm.createSelectFork(environment.chainName);
         admin = makeAddr("admin");

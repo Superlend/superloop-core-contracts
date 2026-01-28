@@ -107,7 +107,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         snapshot.totalAssetsAfter = ISuperloop(cache.vault).totalAssets() + 1;
 
         // calculate shares such that the exchange rate is not updated
-        uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot, cache.vaultDecimalOffset);
+        uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot);
 
         // decrease the total pending deposits before minting shares
         $.totalPendingDeposits -= data.amount;
@@ -259,11 +259,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         });
     }
 
-    function _calculateSharesToMint(DataTypes.ExchangeRateSnapshot memory snapshot, uint8 decimalOffset)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateSharesToMint(DataTypes.ExchangeRateSnapshot memory snapshot) internal pure returns (uint256) {
         uint256 totalSupplyAfter = Math.mulDiv(
             snapshot.totalSupplyBefore, snapshot.totalAssetsAfter, snapshot.totalAssetsBefore, Math.Rounding.Ceil
         );

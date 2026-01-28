@@ -85,7 +85,8 @@ contract UniversalDexModuleTest is TestBase {
                     recipient: address(superloop),
                     amountIn: amountIn,
                     amountOutMinimum: 0,
-                    sqrtPriceLimitX96: 0
+                    sqrtPriceLimitX96: 0,
+                    deadline: block.timestamp + 100
                 })
             )
         });
@@ -146,7 +147,8 @@ contract UniversalDexModuleTest is TestBase {
                     recipient: address(dexModule),
                     amountIn: amountIn,
                     amountOutMinimum: 0,
-                    sqrtPriceLimitX96: 0
+                    sqrtPriceLimitX96: 0,
+                    deadline: block.timestamp + 100
                 })
             )
         });

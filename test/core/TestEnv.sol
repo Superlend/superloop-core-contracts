@@ -22,6 +22,7 @@ abstract contract TestEnv is Test {
         address stablecoin;
         address stablecoinWhale;
         address morpho;
+        uint8 emodeCategory;
     }
 
     // etlk chain
@@ -79,7 +80,8 @@ abstract contract TestEnv is Test {
                 router: 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0,
                 stablecoin: 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A,
                 stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f,
-                morpho: 0x0000000000000000000000000000000000000000
+                morpho: 0x0000000000000000000000000000000000000000,
+                emodeCategory: 3
             })
         );
 
@@ -102,7 +104,8 @@ abstract contract TestEnv is Test {
                 router: 0xbfe9C246A5EdB4F021C8910155EC93e7CfDaB7a0,
                 stablecoin: 0x2C03058C8AFC06713be23e58D2febC8337dbfE6A,
                 stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f,
-                morpho: 0x0000000000000000000000000000000000000000
+                morpho: 0x0000000000000000000000000000000000000000,
+                emodeCategory: 2
             })
         );
 
@@ -114,7 +117,7 @@ abstract contract TestEnv is Test {
                 vaultAsset: USDe,
                 vaultAssetDecimals: 18,
                 lendAssets: _twoAddressArray(USDe, sUSDe),
-                borrowAssets: _twoAddressArray(USDT_ETH, USDC_ETH),
+                borrowAssets: _twoAddressArray(USDC_ETH, USDT_ETH),
                 poolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
                 poolDataProvider: 0x0a16f2FCC0D44FaE41cc54e079281D84A363bECD,
                 priceOracle: 0x54586bE62E3c3580375aE3723C145253060Ca0C2,
@@ -122,10 +125,11 @@ abstract contract TestEnv is Test {
                 vaultAssetWhale: USDeWhale,
                 poolConfigurator: 0x64b761D848206f447Fe2dd461b0c635Ec39EbB27,
                 poolAdmin: 0x72B8fD3eb0c08275b8B60F96aAb0C8a50Cb80EcA,
-                router: address(0),
+                router: 0xE592427A0AEce92De3Edee1F18E0157C05861564,
                 stablecoin: USDC_ETH,
                 stablecoinWhale: USDC_ETH_Whale,
-                morpho: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb
+                morpho: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb,
+                emodeCategory: 2
             })
         );
 
@@ -148,7 +152,8 @@ abstract contract TestEnv is Test {
                 router: address(0),
                 stablecoin: USDC_ETH,
                 stablecoinWhale: USDC_ETH_Whale,
-                morpho: 0x0000000000000000000000000000000000000000
+                morpho: 0x0000000000000000000000000000000000000000,
+                emodeCategory: 1
             })
         );
     }
