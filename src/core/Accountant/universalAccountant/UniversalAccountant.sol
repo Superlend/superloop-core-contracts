@@ -5,8 +5,9 @@ pragma solidity ^0.8.13;
 import {UniversalAccountantBase} from "./UniversalAccountantBase.sol";
 import {DataTypes} from "../../../common/DataTypes.sol";
 import {UniversalAccountantStorage} from "../../lib/UniversalAccountantStorage.sol";
-import {ReentrancyGuardUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {Errors} from "../../../common/Errors.sol";
 import {IAaveV3AccountantPlugin} from "../../../interfaces/IAaveV3AccountantPlugin.sol";
 

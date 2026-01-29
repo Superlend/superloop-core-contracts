@@ -227,8 +227,12 @@ contract DepositManagerTest is IntegrationBase {
         DataTypes.ModuleExecutionData[] memory intermediateExecutionDataSecondBatch =
             new DataTypes.ModuleExecutionData[](1);
         intermediateExecutionDataSecondBatch[0] = USE_MORPHO
-            ? _morphoFlashloanCall(environment.lendAssets[0], flashLoanAmount, abi.encode(moduleExecutionDataSecondBatch))
-            : _flashloanCall(environment.lendAssets[0], supplyAmountSecondBatch, abi.encode(moduleExecutionDataSecondBatch));
+            ? _morphoFlashloanCall(
+                environment.lendAssets[0], flashLoanAmount, abi.encode(moduleExecutionDataSecondBatch)
+            )
+            : _flashloanCall(
+                environment.lendAssets[0], supplyAmountSecondBatch, abi.encode(moduleExecutionDataSecondBatch)
+            );
 
         DataTypes.ModuleExecutionData[] memory finalExecutionDataSecondBatch = new DataTypes.ModuleExecutionData[](1);
         finalExecutionDataSecondBatch[0] = _resolveDepositRequestsCall(

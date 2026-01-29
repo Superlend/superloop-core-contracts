@@ -17,7 +17,7 @@ abstract contract UniversalAccountantBase is OwnableUpgradeable, IAccountantModu
 
     function setRegisteredAccountants(address[] memory registeredAccountants_) external onlyOwner {
         address[] memory oldAccountants =
-            UniversalAccountantStorage.getUniversalAccountantStorage().registeredAccountants;
+        UniversalAccountantStorage.getUniversalAccountantStorage().registeredAccountants;
         UniversalAccountantStorage.setRegisteredAccountants(registeredAccountants_);
         emit RegisteredAccountantsUpdated(oldAccountants, registeredAccountants_);
     }

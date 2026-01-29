@@ -9,8 +9,9 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {TestBase} from "../../core/TestBase.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IRouter} from "../../../src/mock/MockIRouter.sol";
 
 // not maintained, may fail
@@ -71,8 +72,7 @@ contract UniversalDexModuleTest is TestBase {
 
         DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
         swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: tokenIn,
-            data: abi.encodeWithSelector(IERC20.approve.selector, environment.router, amountIn)
+            target: tokenIn, data: abi.encodeWithSelector(IERC20.approve.selector, environment.router, amountIn)
         });
         swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
             target: environment.router,
@@ -133,8 +133,7 @@ contract UniversalDexModuleTest is TestBase {
 
         DataTypes.ExecuteSwapParamsData[] memory data = new DataTypes.ExecuteSwapParamsData[](2);
         data[0] = DataTypes.ExecuteSwapParamsData({
-            target: tokenIn,
-            data: abi.encodeWithSelector(IERC20.approve.selector, environment.router, amountIn)
+            target: tokenIn, data: abi.encodeWithSelector(IERC20.approve.selector, environment.router, amountIn)
         });
         data[1] = DataTypes.ExecuteSwapParamsData({
             target: environment.router,

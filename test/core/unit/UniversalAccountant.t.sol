@@ -34,12 +34,12 @@ contract AccountantAaveV3Test is TestBase {
         vault = new MockVault(asset, "Mock Vault", "mVLT");
 
         // deploy accountant plugin
-        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
-            .AaveV3AccountantPluginModuleInitData({
-            poolAddressesProvider: environment.poolAddressesProvider,
-            lendAssets: environment.lendAssets,
-            borrowAssets: environment.borrowAssets
-        });
+        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData =
+            DataTypes.AaveV3AccountantPluginModuleInitData({
+                poolAddressesProvider: environment.poolAddressesProvider,
+                lendAssets: environment.lendAssets,
+                borrowAssets: environment.borrowAssets
+            });
         accountantPlugin = new AaveV3AccountantPlugin(accountantPluginInitData);
 
         address[] memory registeredAccountants = new address[](1);
@@ -47,9 +47,7 @@ contract AccountantAaveV3Test is TestBase {
 
         // deploy accountant
         DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
-            registeredAccountants: registeredAccountants,
-            performanceFee: uint16(PERFORMANCE_FEE),
-            vault: address(vault)
+            registeredAccountants: registeredAccountants, performanceFee: uint16(PERFORMANCE_FEE), vault: address(vault)
         });
 
         accountantImplementation = new UniversalAccountant();
@@ -80,9 +78,7 @@ contract AccountantAaveV3Test is TestBase {
         registeredAccountants[0] = address(accountantPlugin);
 
         DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
-            registeredAccountants: registeredAccountants,
-            performanceFee: uint16(PERFORMANCE_FEE),
-            vault: address(vault)
+            registeredAccountants: registeredAccountants, performanceFee: uint16(PERFORMANCE_FEE), vault: address(vault)
         });
 
         vm.expectRevert();

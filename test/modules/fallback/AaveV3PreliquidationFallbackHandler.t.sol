@@ -2,8 +2,9 @@
 pragma solidity ^0.8.13;
 
 import {TestBase} from "../../core/TestBase.sol";
-import {AaveV3PreliquidationFallbackHandler} from
-    "../../../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
+import {
+    AaveV3PreliquidationFallbackHandler
+} from "../../../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {Errors} from "../../../src/common/Errors.sol";
 import {console} from "forge-std/console.sol";
@@ -65,9 +66,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         );
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -100,9 +100,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         uint256 debtRepaidUSD =
             (debtRepaid * debtPriceUsd) / (10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
         preliquidation.preliquidate(
             id,
             DataTypes.CallType.DELEGATECALL,
@@ -140,9 +139,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         );
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -166,13 +164,11 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
 
         // updat emode ltv to 9900 => it should revert
         vm.prank(environment.poolAdmin);
-        IPoolConfigurator(environment.poolConfigurator).configureReserveAsCollateral(
-            environment.lendAssets[0], 9000, 9200, 10100
-        );
+        IPoolConfigurator(environment.poolConfigurator)
+            .configureReserveAsCollateral(environment.lendAssets[0], 9000, 9200, 10100);
 
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         vm.expectRevert(bytes(Errors.AAVE_V3_PRELIQUIDATION_INVALID_LLTV));
         preliquidation.preliquidate(
@@ -195,9 +191,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         );
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -218,9 +213,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
             address(this),
             12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
         );
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         bytes32 wrongId = bytes32("wrong_id");
         vm.expectRevert(bytes(Errors.PRELIQUIDATION_INVALID_ID));
@@ -244,9 +238,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         );
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -267,9 +260,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
             address(this),
             12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
         );
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         address wrongUser = makeAddr("wrongUser");
         vm.expectRevert(bytes(Errors.PRELIQUIDATION_INVALID_USER));
@@ -294,9 +286,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         ); // High borrow amount
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -328,9 +319,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         ); // Low borrow amount
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -351,9 +341,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
             address(this),
             12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
         );
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         vm.expectRevert(bytes(Errors.PRELIQUIDATION_NOT_IN_PRELIQUIDATION_STATE));
         preliquidation.preliquidate(
@@ -381,9 +370,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -398,9 +386,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
             address(this),
             12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
         );
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         // This should revert because LTV <= preLltv
         vm.expectRevert(bytes(Errors.PRELIQUIDATION_NOT_IN_PRELIQUIDATION_STATE));
@@ -425,9 +412,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -442,9 +428,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
             address(this),
             12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
         );
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         // This should succeed as it's exactly at the boundary
         preliquidation.preliquidate(
@@ -467,9 +452,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         );
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -490,9 +474,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         uint256 borrowAssetBalanceBefore = IERC20(environment.borrowAssets[0]).balanceOf(address(this));
         uint256 lendAssetBalanceBefore = IERC20(environment.lendAssets[0]).balanceOf(address(this));
 
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
         preliquidation.preliquidate(
             id,
             DataTypes.CallType.DELEGATECALL,
@@ -525,9 +508,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -542,9 +524,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
             address(this),
             12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
         );
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         preliquidation.preliquidate(
             id,
@@ -565,9 +546,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -582,9 +562,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
             address(this),
             12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
         );
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         preliquidation.preliquidate(
             id,
@@ -605,9 +584,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(environment.lendAssets[0]).approve(
-            address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
-        );
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
         pool.supply(
             environment.lendAssets[0],
             100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
@@ -622,9 +600,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
             address(this),
             12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
         );
-        IERC20(environment.borrowAssets[0]).approve(
-            address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
-        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         preliquidation.preliquidate(
             id,

@@ -13,8 +13,9 @@ import {AaveV3WithdrawModule} from "../src/modules/aave/AaveV3WithdrawModule.sol
 import {AaveV3BorrowModule} from "../src/modules/aave/AaveV3BorrowModule.sol";
 import {AaveV3RepayModule} from "../src/modules/aave/AaveV3RepayModule.sol";
 import {SuperloopModuleRegistry} from "../src/core/ModuleRegistry/ModuleRegistry.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {DataTypes} from "../src/common/DataTypes.sol";
 import {Superloop} from "../src/core/Superloop/Superloop.sol";
 import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
@@ -260,10 +261,9 @@ contract Deploy is Script {
 
     function deployModules() internal {
         // deploy morpho flashloan module
-        morphoFlashloanModule =
-        // new MorphoFlashloanModule(MORPHO);
+        morphoFlashloanModule = new MorphoFlashloanModule(MORPHO);
         // moduleRegistry.setModule("MorphoFlashloanModule", address(morphoFlashloanModule));
-         morphoCallbackHandler = new MorphoCallbackHandler();
+        morphoCallbackHandler = new MorphoCallbackHandler();
         moduleRegistry.setModule("MorphoCallbackHandler", address(morphoCallbackHandler));
 
         // deploy aave flashloan module
@@ -313,12 +313,12 @@ contract Deploy is Script {
     }
 
     function _deployAccountant(address vault) internal {
-        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
-            .AaveV3AccountantPluginModuleInitData({
-            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
-            lendAssets: lendAssets,
-            borrowAssets: borrowAssets
-        });
+        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData =
+            DataTypes.AaveV3AccountantPluginModuleInitData({
+                poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
+                lendAssets: lendAssets,
+                borrowAssets: borrowAssets
+            });
         accountantAaveV3Plugin = address(new AaveV3AccountantPlugin(accountantPluginInitData));
 
         address[] memory registeredAccountants = new address[](1);
@@ -326,9 +326,7 @@ contract Deploy is Script {
 
         // deploy accountant
         DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
-            registeredAccountants: registeredAccountants,
-            performanceFee: uint16(performanceFee),
-            vault: address(vault)
+            registeredAccountants: registeredAccountants, performanceFee: uint16(performanceFee), vault: address(vault)
         });
 
         accountantImplementation = address(new UniversalAccountant());

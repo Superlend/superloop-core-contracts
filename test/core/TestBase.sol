@@ -24,8 +24,9 @@ import {WithdrawManager} from "../../src/core/WithdrawManager/WithdrawManager.so
 import {DepositManager} from "../../src/core/DepositManager/DepositManager.sol";
 import {DepositManagerCallbackHandler} from "../../src/modules/callback/DepositManagerCallbackHandler.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UniversalAccountant} from "../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
 import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
 import {WithdrawManagerCallbackHandler} from "../../src/modules/callback/WithdrawManagerCallbackHandler.sol";
@@ -231,12 +232,12 @@ abstract contract TestBase is TestEnv {
         internal
         returns (UniversalAccountant)
     {
-        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
-            .AaveV3AccountantPluginModuleInitData({
-            poolAddressesProvider: environment.poolAddressesProvider,
-            lendAssets: lendAssets,
-            borrowAssets: borrowAssets
-        });
+        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData =
+            DataTypes.AaveV3AccountantPluginModuleInitData({
+                poolAddressesProvider: environment.poolAddressesProvider,
+                lendAssets: lendAssets,
+                borrowAssets: borrowAssets
+            });
         address accountantPlugin = address(new AaveV3AccountantPlugin(accountantPluginInitData));
 
         address[] memory registeredAccountants = new address[](1);
@@ -244,9 +245,7 @@ abstract contract TestBase is TestEnv {
 
         // deploy accountant
         DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
-            registeredAccountants: registeredAccountants,
-            performanceFee: uint16(PERFORMANCE_FEE),
-            vault: address(vault)
+            registeredAccountants: registeredAccountants, performanceFee: uint16(PERFORMANCE_FEE), vault: address(vault)
         });
 
         address accountantImplementation = address(new UniversalAccountant());

@@ -2,8 +2,9 @@
 
 pragma solidity ^0.8.13;
 
-import {ReentrancyGuardUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
@@ -83,8 +84,8 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
         }
 
         uint256 baseAssetPrice = aaveOracle.getAssetPrice(baseAsset);
-        positiveBalance +=
-            (IERC20(baseAsset).balanceOf($.vault) * commonDecimalFactor * baseAssetPrice) / (10 ** baseDecimals);
+        positiveBalance += (IERC20(baseAsset).balanceOf($.vault) * commonDecimalFactor * baseAssetPrice)
+            / (10 ** baseDecimals);
 
         // convert to base asset
         uint256 totalAssetsInBaseAsset = (positiveBalance - negativeBalance) / baseAssetPrice;

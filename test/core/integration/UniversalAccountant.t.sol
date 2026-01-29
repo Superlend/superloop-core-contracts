@@ -4,8 +4,9 @@ pragma solidity ^0.8.13;
 import {TestBase} from "../TestBase.sol";
 import {UniversalAccountant} from "../../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
 import {AaveV3AccountantPlugin} from "../../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {console} from "forge-std/console.sol";
 import {MockVault} from "../../../src/mock/MockVault.sol";
@@ -37,12 +38,12 @@ contract UniversalAccountantTest is TestBase {
         vault = new MockVault(IERC20(environment.vaultAsset), "Mock Vault", "mVLT");
 
         // deploy accountant plugin
-        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
-            .AaveV3AccountantPluginModuleInitData({
-            poolAddressesProvider: environment.poolAddressesProvider,
-            lendAssets: environment.lendAssets,
-            borrowAssets: environment.borrowAssets
-        });
+        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData =
+            DataTypes.AaveV3AccountantPluginModuleInitData({
+                poolAddressesProvider: environment.poolAddressesProvider,
+                lendAssets: environment.lendAssets,
+                borrowAssets: environment.borrowAssets
+            });
         accountantPlugin = new AaveV3AccountantPlugin(accountantPluginInitData);
 
         address[] memory registeredAccountants = new address[](1);
@@ -50,9 +51,7 @@ contract UniversalAccountantTest is TestBase {
 
         // deploy accountant
         DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
-            registeredAccountants: registeredAccountants,
-            performanceFee: uint16(PERFORMANCE_FEE),
-            vault: address(vault)
+            registeredAccountants: registeredAccountants, performanceFee: uint16(PERFORMANCE_FEE), vault: address(vault)
         });
 
         accountantImplementation = new UniversalAccountant();
@@ -78,22 +77,19 @@ contract UniversalAccountantTest is TestBase {
         // create borrow positions
         for (uint256 i = 0; i < environment.borrowAssets.length; i++) {
             uint8 decimals = IERC20Metadata(environment.borrowAssets[i]).decimals();
-            IPool(environment.pool).borrow(
-                environment.borrowAssets[i], 500 * 10 ** decimals, INTEREST_RATE_MODE, 0, address(vault)
-            );
+            IPool(environment.pool)
+                .borrow(environment.borrowAssets[i], 500 * 10 ** decimals, INTEREST_RATE_MODE, 0, address(vault));
         }
         vm.stopPrank();
 
         for (uint256 i = 0; i < environment.lendAssets.length; i++) {
-            (uint256 currentSupply,,,,,,,,) = IPoolDataProvider(environment.poolDataProvider).getUserReserveData(
-                environment.lendAssets[i], address(vault)
-            );
+            (uint256 currentSupply,,,,,,,,) = IPoolDataProvider(environment.poolDataProvider)
+                .getUserReserveData(environment.lendAssets[i], address(vault));
             assertApproxEqAbs(currentSupply, 1000 * 10 ** IERC20Metadata(environment.lendAssets[i]).decimals(), 2);
         }
         for (uint256 i = 0; i < environment.borrowAssets.length; i++) {
-            (,, uint256 currentBorrow,,,,,,) = IPoolDataProvider(environment.poolDataProvider).getUserReserveData(
-                environment.borrowAssets[i], address(vault)
-            );
+            (,, uint256 currentBorrow,,,,,,) = IPoolDataProvider(environment.poolDataProvider)
+                .getUserReserveData(environment.borrowAssets[i], address(vault));
 
             assertApproxEqAbs(currentBorrow, 500 * 10 ** IERC20Metadata(environment.borrowAssets[i]).decimals(), 2);
         }

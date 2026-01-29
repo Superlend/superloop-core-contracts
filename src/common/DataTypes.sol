@@ -54,7 +54,6 @@ library DataTypes {
         DEFERRED, // low slippage queue
         PRIORITY, // medium slippage queue
         INSTANT // high slippage queue
-
     }
 
     struct WithdrawQueue {
@@ -105,7 +104,6 @@ library DataTypes {
         UNPROCESSED, // Request is pending processing
         CLAIMABLE, // Request is ready to be claimed
         CANCELLED // Request has been cancelled
-
     }
 
     /**
@@ -222,7 +220,6 @@ library DataTypes {
     enum CallType {
         CALL, // Regular call to external contract
         DELEGATECALL // Delegate call to external contract
-
     }
 
     /**

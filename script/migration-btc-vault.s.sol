@@ -158,9 +158,8 @@ contract Migration is Script {
         ISuperloop(newVault).setDepositManagerModule(address(migrationHelper));
         ISuperloop(newVault).setVaultOperator(address(migrationHelper));
         IAccountantModule(ISuperloop(newVault).accountant()).setVault(address(migrationHelper));
-        Ownable(address(IAccountantModule(ISuperloop(newVault).accountant()))).transferOwnership(
-            address(migrationHelper)
-        );
+        Ownable(address(IAccountantModule(ISuperloop(newVault).accountant())))
+            .transferOwnership(address(migrationHelper));
 
         // assert these roles
         address withdrawManager = ISuperloopLegacy(oldVault).withdrawManagerModule();

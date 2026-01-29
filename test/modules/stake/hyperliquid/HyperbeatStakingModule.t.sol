@@ -5,8 +5,9 @@ pragma solidity ^0.8.13;
 import {TestBase} from "../../../core/TestBase.sol";
 import {DataTypes} from "../../../../src/common/DataTypes.sol";
 import {Superloop} from "../../../../src/core/Superloop/Superloop.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
 import {console} from "forge-std/console.sol";
@@ -76,8 +77,7 @@ contract HyperbeatStakingModuleTest is TestBase {
             data: abi.encodeWithSelector(
                 unwrapModule.execute.selector,
                 DataTypes.AaveV3ActionParams({
-                    asset: environment.vaultAsset,
-                    amount: 100 * 10 ** environment.vaultAssetDecimals
+                    asset: environment.vaultAsset, amount: 100 * 10 ** environment.vaultAssetDecimals
                 })
             )
         });
@@ -86,7 +86,9 @@ contract HyperbeatStakingModuleTest is TestBase {
             module: address(hyperbeatStakingModule),
             data: abi.encodeWithSelector(
                 hyperbeatStakingModule.execute.selector,
-                DataTypes.StakeParams({assets: 100 * 10 ** environment.vaultAssetDecimals, data: abi.encode(string(""))})
+                DataTypes.StakeParams({
+                    assets: 100 * 10 ** environment.vaultAssetDecimals, data: abi.encode(string(""))
+                })
             )
         });
 

@@ -80,7 +80,9 @@ contract WithdrawManagerTest is IntegrationBase {
                 USDC_USDE_POOL_FEE,
                 block.timestamp + 100
             )
-            : _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
+            : _swapCallExactOutCurve(
+                ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP
+            );
 
         DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
         intermediateExecutionData[0] = USE_MORPHO
@@ -169,7 +171,9 @@ contract WithdrawManagerTest is IntegrationBase {
                 USDC_USDE_POOL_FEE,
                 block.timestamp + 100
             )
-            : _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
+            : _swapCallExactOutCurve(
+                ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP
+            );
 
         DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
         intermediateExecutionData[0] = USE_MORPHO
@@ -375,7 +379,9 @@ contract WithdrawManagerTest is IntegrationBase {
                 USDC_USDE_POOL_FEE,
                 block.timestamp + 100
             )
-            : _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
+            : _swapCallExactOutCurve(
+                ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP
+            );
 
         DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
         intermediateExecutionData[0] = USE_MORPHO

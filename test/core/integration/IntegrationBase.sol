@@ -5,8 +5,9 @@ pragma solidity ^0.8.13;
 import {TestBase} from "../TestBase.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -167,9 +168,7 @@ abstract contract IntegrationBase is TestBase {
         returns (DataTypes.ModuleExecutionData memory)
     {
         DataTypes.ResolveWithdrawRequestsData memory resolveWithdrawRequestsData = DataTypes.ResolveWithdrawRequestsData({
-            shares: shares,
-            requestType: requestType,
-            callbackExecutionData: data
+            shares: shares, requestType: requestType, callbackExecutionData: data
         });
         return DataTypes.ModuleExecutionData({
             executionType: DataTypes.CallType.CALL,
@@ -184,10 +183,7 @@ abstract contract IntegrationBase is TestBase {
         returns (DataTypes.ModuleExecutionData memory)
     {
         DataTypes.AaveV3FlashloanParams memory flashloanParams = DataTypes.AaveV3FlashloanParams({
-            asset: asset,
-            amount: amount,
-            referralCode: 0,
-            callbackExecutionData: data
+            asset: asset, amount: amount, referralCode: 0, callbackExecutionData: data
         });
         return DataTypes.ModuleExecutionData({
             executionType: DataTypes.CallType.DELEGATECALL,
@@ -239,8 +235,7 @@ abstract contract IntegrationBase is TestBase {
     ) internal view returns (DataTypes.ModuleExecutionData memory) {
         DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
         swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: tokenIn,
-            data: abi.encodeWithSelector(IERC20.approve.selector, router, swapAmount)
+            target: tokenIn, data: abi.encodeWithSelector(IERC20.approve.selector, router, swapAmount)
         });
         swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
             target: router,
@@ -285,8 +280,7 @@ abstract contract IntegrationBase is TestBase {
     ) internal view returns (DataTypes.ModuleExecutionData memory) {
         DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
         swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: tokenIn,
-            data: abi.encodeWithSelector(IERC20.approve.selector, router, withdrawAmount)
+            target: tokenIn, data: abi.encodeWithSelector(IERC20.approve.selector, router, withdrawAmount)
         });
         swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
             target: router,
@@ -331,8 +325,7 @@ abstract contract IntegrationBase is TestBase {
     ) internal view returns (DataTypes.ModuleExecutionData memory) {
         DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
         swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: tokenIn,
-            data: abi.encodeWithSelector(IERC20.approve.selector, pool, amountIn)
+            target: tokenIn, data: abi.encodeWithSelector(IERC20.approve.selector, pool, amountIn)
         });
         swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
             target: pool,
@@ -364,11 +357,7 @@ abstract contract IntegrationBase is TestBase {
         });
     }
 
-    function _withdrawCall(address asset, uint256 amount)
-        internal
-        view
-        returns (DataTypes.ModuleExecutionData memory)
-    {
+    function _withdrawCall(address asset, uint256 amount) internal view returns (DataTypes.ModuleExecutionData memory) {
         DataTypes.AaveV3ActionParams memory withdrawParams =
             DataTypes.AaveV3ActionParams({asset: asset, amount: amount});
         return DataTypes.ModuleExecutionData({
@@ -555,7 +544,9 @@ abstract contract IntegrationBase is TestBase {
                 USDC_USDE_POOL_FEE,
                 block.timestamp + 100
             )
-            : _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
+            : _swapCallExactOutCurve(
+                ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP
+            );
 
         DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
         intermediateExecutionData[0] = USE_MORPHO
