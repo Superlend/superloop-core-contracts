@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import {IDistributor} from "./IDistributor.sol";
 import {DataTypes} from "../../common/DataTypes.sol";
+import {Errors} from "../../common/Errors.sol";
+import {SuperloopStorage} from "../../core/lib/SuperloopStorage.sol";
 
 /**
  * @title MerklModule
@@ -36,9 +38,18 @@ contract MerklModule {
      * @notice Executes the claim operation
      * @param params The parameters for the claim operation
      */
-    function execute(DataTypes.MerklClaimParams memory params) external {
+    function execute(DataTypes.MerklClaimParams memory params) external onlyExecutionContext {
         distributor.claim(params.users, params.tokens, params.amounts, params.proofs);
 
         emit MerklRewardClaimed(params.users, params.tokens, params.amounts);
+    }
+
+    modifier onlyExecutionContext() {
+        require(_isExecutionContext(), Errors.NOT_IN_EXECUTION_CONTEXT);
+        _;
+    }
+
+    function _isExecutionContext() internal view returns (bool) {
+        return SuperloopStorage.isInExecutionContext();
     }
 }
