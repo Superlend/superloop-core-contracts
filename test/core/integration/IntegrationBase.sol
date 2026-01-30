@@ -61,7 +61,7 @@ abstract contract IntegrationBase is TestBase {
         vm.startPrank(admin);
         _deployModules();
 
-        address[] memory modules = new address[](11);
+        address[] memory modules = new address[](12);
         modules[0] = address(dexModule);
         modules[1] = address(flashloanModule);
         modules[2] = address(callbackHandler);
@@ -73,6 +73,7 @@ abstract contract IntegrationBase is TestBase {
         modules[8] = address(depositManagerCallbackHandler);
         modules[9] = address(morphoFlashloanModule);
         modules[10] = address(morphoCallbackHandler);
+        modules[11] = address(vaultSupplyModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
             asset: environment.vaultAsset,
@@ -587,5 +588,19 @@ abstract contract IntegrationBase is TestBase {
         assertEq(resolutionIdPointer, 2);
 
         return (totalShares - sharesToResolve, repayAmount, withdrawAmount);
+    }
+
+    function _stakeCall(address stakingVault, uint256 amount)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        DataTypes.VaultActionParams memory vaultActionParams =
+            DataTypes.VaultActionParams({vault: stakingVault, amount: amount});
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(vaultSupplyModule),
+            data: abi.encodeWithSelector(vaultSupplyModule.execute.selector, vaultActionParams)
+        });
     }
 }
