@@ -3,8 +3,9 @@
 pragma solidity ^0.8.13;
 
 import {Initializable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
-import {ReentrancyGuardUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20Metadata, IERC20} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
@@ -107,7 +108,7 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         snapshot.totalAssetsAfter = ISuperloop(cache.vault).totalAssets() + 1;
 
         // calculate shares such that the exchange rate is not updated
-        uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot, cache.vaultDecimalOffset);
+        uint256 totalNewSharesToMint = _calculateSharesToMint(snapshot);
 
         // decrease the total pending deposits before minting shares
         $.totalPendingDeposits -= data.amount;
@@ -259,15 +260,11 @@ contract DepositManager is Initializable, ReentrancyGuardUpgradeable, Context, D
         });
     }
 
-    function _calculateSharesToMint(DataTypes.ExchangeRateSnapshot memory snapshot, uint8 decimalOffset)
-        internal
-        pure
-        returns (uint256)
-    {
+    function _calculateSharesToMint(DataTypes.ExchangeRateSnapshot memory snapshot) internal pure returns (uint256) {
         uint256 totalSupplyAfter = Math.mulDiv(
             snapshot.totalSupplyBefore, snapshot.totalAssetsAfter, snapshot.totalAssetsBefore, Math.Rounding.Ceil
         );
-        uint256 totalNewSharesToMint = (totalSupplyAfter + 10 ** decimalOffset) - snapshot.totalSupplyBefore;
+        uint256 totalNewSharesToMint = totalSupplyAfter - snapshot.totalSupplyBefore;
 
         return totalNewSharesToMint;
     }

@@ -15,6 +15,7 @@ import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProv
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 import {IPriceOracleGetter} from "aave-v3-core/contracts/interfaces/IPriceOracleGetter.sol";
 
+// TODO : revisit with mutli token setup for eth mainnet
 contract AccountantAaveV3Test is TestBase {
     AccountantAaveV3 public accountantAaveV3Implementation;
     ProxyAdmin public proxyAdmin;
@@ -31,15 +32,10 @@ contract AccountantAaveV3Test is TestBase {
         asset = IERC20(XTZ);
         vault = new MockVault(asset, "Mock Vault", "mVLT");
 
-        address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
-        address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
-
         DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
-            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
-            lendAssets: lendAssets,
-            borrowAssets: borrowAssets,
+            poolAddressesProvider: environment.poolAddressesProvider,
+            lendAssets: environment.lendAssets,
+            borrowAssets: environment.borrowAssets,
             performanceFee: uint16(PERFORMANCE_FEE),
             vault: address(vault)
         });
@@ -56,22 +52,17 @@ contract AccountantAaveV3Test is TestBase {
         accountantAaveV3 = AccountantAaveV3(address(proxy));
 
         // Fund the accountant with XTZ from whale
-        vm.startPrank(XTZ_WHALE);
+        vm.startPrank(environment.vaultAssetWhale);
         asset.transfer(address(vault), INITIAL_WHALE_BALANCE);
         vm.stopPrank();
     }
 
     function test_Initialize() public {
         // Test that initialization works correctly
-        address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
-        address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
-
         DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
-            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
-            lendAssets: lendAssets,
-            borrowAssets: borrowAssets,
+            poolAddressesProvider: environment.poolAddressesProvider,
+            lendAssets: environment.lendAssets,
+            borrowAssets: environment.borrowAssets,
             performanceFee: uint16(PERFORMANCE_FEE),
             vault: address(vault)
         });
@@ -93,15 +84,10 @@ contract AccountantAaveV3Test is TestBase {
 
     function test_InitializeRevertIfAlreadyInitialized() public {
         // Test that initialize reverts if called again
-        address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
-        address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
-
         DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
-            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
-            lendAssets: lendAssets,
-            borrowAssets: borrowAssets,
+            poolAddressesProvider: environment.poolAddressesProvider,
+            lendAssets: environment.lendAssets,
+            borrowAssets: environment.borrowAssets,
             performanceFee: uint16(PERFORMANCE_FEE),
             vault: address(vault)
         });
@@ -230,15 +216,10 @@ contract AccountantAaveV3Test is TestBase {
         AccountantAaveV3 newContract = new AccountantAaveV3();
 
         // Should revert if we try to initialize directly
-        address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
-        address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
-
         DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
-            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
-            lendAssets: lendAssets,
-            borrowAssets: borrowAssets,
+            poolAddressesProvider: environment.poolAddressesProvider,
+            lendAssets: environment.lendAssets,
+            borrowAssets: environment.borrowAssets,
             performanceFee: uint16(PERFORMANCE_FEE),
             vault: address(vault)
         });
@@ -286,7 +267,7 @@ contract AccountantAaveV3Test is TestBase {
         address[] memory borrowAssets = new address[](0);
 
         DataTypes.AaveV3AccountantModuleInitData memory initData = DataTypes.AaveV3AccountantModuleInitData({
-            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
+            poolAddressesProvider: environment.poolAddressesProvider,
             lendAssets: lendAssets,
             borrowAssets: borrowAssets,
             performanceFee: uint16(PERFORMANCE_FEE),
@@ -311,28 +292,32 @@ contract AccountantAaveV3Test is TestBase {
 
     function _enableMockingPoolDataProvider() internal {
         vm.mockCall(
-            AAVE_V3_POOL_DATA_PROVIDER,
-            abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, ST_XTZ, address(vault)),
+            environment.poolDataProvider,
+            abi.encodeWithSelector(
+                IPoolDataProvider.getUserReserveData.selector, environment.lendAssets[0], address(vault)
+            ),
             abi.encode(1000 * 10 ** 6, 0, 0, 0, 0, 0, 0, 0, 0)
         );
 
         vm.mockCall(
-            AAVE_V3_POOL_DATA_PROVIDER,
-            abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, XTZ, address(vault)),
+            environment.poolDataProvider,
+            abi.encodeWithSelector(
+                IPoolDataProvider.getUserReserveData.selector, environment.borrowAssets[0], address(vault)
+            ),
             abi.encode(0, 0, 800 ether, 0, 0, 0, 0, 0, 0)
         );
     }
 
     function _enableMockingPriceOracle(uint256 stXtzPrice, uint256 xtzPrice) internal {
         vm.mockCall(
-            AAVE_V3_PRICE_ORACLE,
-            abi.encodeWithSelector(IPriceOracleGetter.getAssetPrice.selector, ST_XTZ),
+            environment.priceOracle,
+            abi.encodeWithSelector(IPriceOracleGetter.getAssetPrice.selector, environment.lendAssets[0]),
             abi.encode(stXtzPrice)
         );
 
         vm.mockCall(
-            AAVE_V3_PRICE_ORACLE,
-            abi.encodeWithSelector(IPriceOracleGetter.getAssetPrice.selector, XTZ),
+            environment.priceOracle,
+            abi.encodeWithSelector(IPriceOracleGetter.getAssetPrice.selector, environment.borrowAssets[0]),
             abi.encode(xtzPrice)
         );
     }

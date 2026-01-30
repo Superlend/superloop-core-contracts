@@ -7,6 +7,7 @@ import {SuperloopModuleRegistry} from "../../../src/core/ModuleRegistry/ModuleRe
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {Errors} from "../../../src/common/Errors.sol";
 
+// TODO : revisit with mutli token setup for eth mainnet
 contract ModuleRegistryTest is Test {
     SuperloopModuleRegistry public moduleRegistry;
 

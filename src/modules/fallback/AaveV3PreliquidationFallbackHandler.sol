@@ -139,9 +139,9 @@ contract AaveV3PreliquidationFallbackHandler is Context {
         uint256 debtToCover = Math.min(Math.min(params.debtToCover, maxDebtToCover), borrowTokens);
         uint256 debtCoverUSD = (debtToCover * borrowPriceUSD) / (10 ** borrowReserveDecimals); // in oracle decimals
 
-        uint256 collateralToSieze = (
-            ((debtCoverUSD * 10 ** lendReserveDecimals) / collateralPriceUSD) * currentIncentiveFactor
-        ) / WadRayMath.WAD; // in tokens
+        uint256 collateralToSieze =
+            (((debtCoverUSD * 10 ** lendReserveDecimals) / collateralPriceUSD) * currentIncentiveFactor)
+                / WadRayMath.WAD; // in tokens
 
         // transfer debt tokens to self
         SafeERC20.safeTransferFrom(IERC20(borrowReserve), _msgSender(), address(this), debtToCover);

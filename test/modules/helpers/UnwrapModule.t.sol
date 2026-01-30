@@ -7,8 +7,9 @@ import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfa
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {console} from "forge-std/console.sol";
 
@@ -27,10 +28,10 @@ contract UnwrapModuleTest is TestBase {
         modules[0] = address(unwrapModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -60,16 +61,19 @@ contract UnwrapModuleTest is TestBase {
     }
 
     function test_SupplyBasicFlow() public {
-        vm.startPrank(XTZ_WHALE);
-        IERC20(XTZ).transfer(address(superloop), 1000 * 10 ** 18);
+        // works only on etherlink
+        if (environment.chainId != 42793) return;
+
+        vm.startPrank(environment.vaultAssetWhale);
+        IERC20(environment.vaultAsset).transfer(address(superloop), 1000 * 10 ** environment.vaultAssetDecimals);
         vm.stopPrank();
 
         // Arrange
-        uint256 supplyAmount = 100 * 10 ** 18; // 1000 XTZ
+        uint256 supplyAmount = 100 * 10 ** environment.vaultAssetDecimals; // 1000 vaultAsset
 
         // Create supply params
         DataTypes.AaveV3ActionParams memory unwarpParams =
-            DataTypes.AaveV3ActionParams({asset: XTZ, amount: supplyAmount});
+            DataTypes.AaveV3ActionParams({asset: environment.vaultAsset, amount: supplyAmount});
 
         // Create module execution data
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
@@ -80,14 +84,14 @@ contract UnwrapModuleTest is TestBase {
         });
 
         // current supply
-        uint256 currentBalanceWrappedToken = IERC20(XTZ).balanceOf(address(superloop));
+        uint256 currentBalanceWrappedToken = IERC20(environment.vaultAsset).balanceOf(address(superloop));
         uint256 currentBalanceUnderlyingToken = address(superloop).balance;
 
         // Act
         vm.prank(admin);
         superloop.operate(moduleExecutionData);
 
-        uint256 finalBalanceWrappedToken = IERC20(XTZ).balanceOf(address(superloop));
+        uint256 finalBalanceWrappedToken = IERC20(environment.vaultAsset).balanceOf(address(superloop));
         uint256 finalBalanceUnderlyingToken = address(superloop).balance;
 
         console.log("currentBalanceWrappedToken", currentBalanceWrappedToken);

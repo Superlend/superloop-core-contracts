@@ -8,8 +8,9 @@ import {
 } from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SuperloopStorage} from "../lib/SuperloopStorage.sol";
-import {ReentrancyGuardUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {IAccountantModule} from "../../interfaces/IAccountantModule.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
@@ -50,19 +51,23 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     }
 
     function previewDeposit(uint256 assets) public view override returns (uint256) {
-        return _convertToSharesWithPerformanceFee(assets, Math.Rounding.Floor);
+        uint256 totalAssetsCached = totalAssets();
+        return _convertToSharesWithPerformanceFee(assets, totalAssetsCached, Math.Rounding.Floor);
     }
 
     function previewMint(uint256 shares) public view override returns (uint256) {
-        return _convertToAssetsWithPerformanceFee(shares, Math.Rounding.Ceil);
+        uint256 totalAssetsCached = totalAssets();
+        return _convertToAssetsWithPerformanceFee(shares, totalAssetsCached, Math.Rounding.Ceil);
     }
 
     function previewWithdraw(uint256 assets) public view override returns (uint256) {
-        return _convertToSharesWithPerformanceFee(assets, Math.Rounding.Ceil);
+        uint256 totalAssetsCached = totalAssets();
+        return _convertToSharesWithPerformanceFee(assets, totalAssetsCached, Math.Rounding.Ceil);
     }
 
     function previewRedeem(uint256 shares) public view override returns (uint256) {
-        return _convertToAssetsWithPerformanceFee(shares, Math.Rounding.Floor);
+        uint256 totalAssetsCached = totalAssets();
+        return _convertToAssetsWithPerformanceFee(shares, totalAssetsCached, Math.Rounding.Floor);
     }
 
     function maxMint(address) public view override returns (uint256) {
@@ -77,15 +82,15 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
     }
 
     function deposit(uint256 assets, address receiver) public override nonReentrant whenNotPaused returns (uint256) {
-        // realize performance fee
-        _realizePerformanceFee();
+        uint256 totalAssetsCached = totalAssets();
+        _realizePerformanceFee(totalAssetsCached);
 
         require(assets > 0, Errors.INVALID_AMOUNT);
         // check supply cap
         require(assets <= maxDeposit(address(0)), Errors.SUPPLY_CAP_EXCEEDED);
 
-        // calculate the cash reserve at curren total assets
-        uint256 cashReserveShortfall = _getCashReserveShortfall();
+        // calculate the cash reserve at curren total
+        uint256 cashReserveShortfall = _getCashReserveShortfall(totalAssetsCached);
         require(assets <= cashReserveShortfall, Errors.INSUFFICIENT_CASH_SHORTFALL);
 
         // preview deposit
@@ -98,14 +103,15 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
 
     function mint(uint256 shares, address receiver) public override nonReentrant whenNotPaused returns (uint256) {
         // realize performance fee
-        _realizePerformanceFee();
+        uint256 totalAssetsCached = totalAssets();
+        _realizePerformanceFee(totalAssetsCached);
 
         require(shares > 0, Errors.INVALID_SHARES_AMOUNT);
         require(shares <= maxMint(address(0)), Errors.SUPPLY_CAP_EXCEEDED);
 
         uint256 assets = previewMint(shares);
 
-        uint256 cashReserveShortfall = _getCashReserveShortfall();
+        uint256 cashReserveShortfall = _getCashReserveShortfall(totalAssetsCached);
         require(assets <= cashReserveShortfall, Errors.INSUFFICIENT_CASH_SHORTFALL);
 
         require(assets > 0, Errors.INVALID_AMOUNT);
@@ -122,7 +128,8 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         returns (uint256)
     {
         // realize performance fee
-        _realizePerformanceFee();
+        uint256 totalAssetsCached = totalAssets();
+        _realizePerformanceFee(totalAssetsCached);
 
         // check for max withdraw
         require(assets <= maxWithdraw(owner), Errors.INSUFFICIENT_BALANCE);
@@ -150,7 +157,8 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         returns (uint256)
     {
         // realize performance fee
-        _realizePerformanceFee();
+        uint256 totalAssetsCached = totalAssets();
+        _realizePerformanceFee(totalAssetsCached);
 
         // check for max redeem
         require(shares <= maxRedeem(owner), Errors.INSUFFICIENT_BALANCE);
@@ -199,7 +207,8 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
 
     function _seed(uint256 assets) internal returns (uint256) {
         // realize performance fee => set last ex. rate to 1
-        _realizePerformanceFee();
+        uint256 totalAssetsCached = totalAssets();
+        _realizePerformanceFee(totalAssetsCached);
 
         require(assets > 0, Errors.INVALID_AMOUNT);
         // check supply cap
@@ -213,13 +222,11 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         return shares;
     }
 
-    function _realizePerformanceFee() internal {
+    function _realizePerformanceFee(uint256 totalAssetsCached) internal {
         SuperloopStorage.SuperloopEssentialRoles storage $ = SuperloopStorage.getSuperloopEssentialRolesStorage();
+        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate(totalAssetsCached);
 
-        // calculate current exchange rate
-        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
-
-        uint256 sharesToMint = _getPerformanceFeeAndShares(exchangeRate, $.accountant, decimals);
+        uint256 sharesToMint = _getPerformanceFeeAndShares(exchangeRate, $.accountant, decimals, totalAssetsCached);
 
         // if vault made profit, take a performance fee
         if (sharesToMint > 0) {
@@ -230,16 +237,16 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         }
 
         // update the last realized fee exchange rate on the accountant module
-        (exchangeRate,) = _getCurrentExchangeRate();
+        (exchangeRate,) = _getCurrentExchangeRate(totalAssetsCached);
         IAccountantModule($.accountant).setLastRealizedFeeExchangeRate(exchangeRate, totalSupply());
     }
 
-    function _getPerformanceFeeAndShares(uint256 exchangeRate, address accountant, uint8 decimals)
-        internal
-        view
-        returns (uint256 shares)
-    {
-        uint256 totalAssetsCached = totalAssets();
+    function _getPerformanceFeeAndShares(
+        uint256 exchangeRate,
+        address accountant,
+        uint8 decimals,
+        uint256 totalAssetsCached
+    ) internal view returns (uint256 shares) {
         uint256 totalSupplyCached = totalSupply();
 
         // get performance fee
@@ -256,43 +263,43 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         return shares;
     }
 
-    function _getCurrentExchangeRate() internal view returns (uint256, uint8) {
+    function _getCurrentExchangeRate(uint256 totalAssetsCached) internal view returns (uint256, uint8) {
         uint8 decimals = IERC20Metadata(asset()).decimals();
         uint256 assets = 1 * 10 ** decimals;
         return (
-            Math.mulDiv(assets, totalAssets() + 1, totalSupply() + 10 ** _decimalsOffset(), Math.Rounding.Floor),
+            Math.mulDiv(assets, totalAssetsCached + 1, totalSupply() + 10 ** _decimalsOffset(), Math.Rounding.Floor),
             decimals
         );
     }
 
-    function _convertToSharesWithPerformanceFee(uint256 assets, Math.Rounding rounding)
+    function _convertToSharesWithPerformanceFee(uint256 assets, uint256 totalAssetsCached, Math.Rounding rounding)
         internal
         view
         returns (uint256)
     {
-        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
+        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate(totalAssetsCached);
         uint256 treasuryShares = _getPerformanceFeeAndShares(
-            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountant, decimals
+            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountant, decimals, totalAssetsCached
         );
         uint256 _totalSupply = totalSupply() + treasuryShares + 10 ** _decimalsOffset();
-        uint256 _totalAssets = totalAssets() + 1;
+        uint256 _totalAssets = totalAssetsCached + 1;
 
         uint256 shares = Math.mulDiv(assets, _totalSupply, _totalAssets, rounding);
 
         return shares;
     }
 
-    function _convertToAssetsWithPerformanceFee(uint256 shares, Math.Rounding rounding)
+    function _convertToAssetsWithPerformanceFee(uint256 shares, uint256 totalAssetsCached, Math.Rounding rounding)
         internal
         view
         returns (uint256)
     {
-        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate();
+        (uint256 exchangeRate, uint8 decimals) = _getCurrentExchangeRate(totalAssetsCached);
         uint256 treasuryShares = _getPerformanceFeeAndShares(
-            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountant, decimals
+            exchangeRate, SuperloopStorage.getSuperloopEssentialRolesStorage().accountant, decimals, totalAssetsCached
         );
         uint256 _totalSupply = totalSupply() + treasuryShares + 10 ** _decimalsOffset();
-        uint256 _totalAssets = totalAssets() + 1;
+        uint256 _totalAssets = totalAssetsCached + 1;
 
         uint256 assets = Math.mulDiv(shares, _totalAssets, _totalSupply, rounding);
 
@@ -303,9 +310,9 @@ abstract contract SuperloopVault is ERC4626Upgradeable, ReentrancyGuardUpgradeab
         return SuperloopStorage.DECIMALS_OFFSET;
     }
 
-    function _getCashReserveShortfall() internal view returns (uint256) {
+    function _getCashReserveShortfall(uint256 totalAssetsCached) internal view returns (uint256) {
         uint256 cashReserveExpected = Math.mulDiv(
-            totalAssets(),
+            totalAssetsCached,
             SuperloopStorage.getSuperloopStorage().cashReserve,
             SuperloopStorage.MAX_BPS_VALUE,
             Math.Rounding.Floor

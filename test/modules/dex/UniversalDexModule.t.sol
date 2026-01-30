@@ -9,10 +9,12 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {TestBase} from "../../core/TestBase.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IRouter} from "../../../src/mock/MockIRouter.sol";
 
+// not maintained, may fail
 contract UniversalDexModuleTest is TestBase {
     Superloop public superloopImplementation;
     ProxyAdmin public proxyAdmin;
@@ -28,10 +30,10 @@ contract UniversalDexModuleTest is TestBase {
         modules[0] = address(dexModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -61,8 +63,8 @@ contract UniversalDexModuleTest is TestBase {
     }
 
     function test_executeSwap() public {
-        address tokenIn = USDT;
-        address tokenOut = USDC;
+        address tokenIn = USDT_ETLK;
+        address tokenOut = USDC_ETLK;
 
         uint256 amountIn = 1000 * 10 ** 6;
         uint256 maxAmountIn = 1000 * 10 ** 6;
@@ -70,21 +72,21 @@ contract UniversalDexModuleTest is TestBase {
 
         DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
         swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: USDT,
-            data: abi.encodeWithSelector(IERC20.approve.selector, ROUTER, amountIn)
+            target: tokenIn, data: abi.encodeWithSelector(IERC20.approve.selector, environment.router, amountIn)
         });
         swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
-            target: ROUTER,
+            target: environment.router,
             data: abi.encodeWithSelector(
                 IRouter.exactInputSingle.selector,
                 IRouter.ExactInputSingleParams({
-                    tokenIn: USDT,
-                    tokenOut: USDC,
+                    tokenIn: tokenIn,
+                    tokenOut: tokenOut,
                     fee: 100,
                     recipient: address(superloop),
                     amountIn: amountIn,
                     amountOutMinimum: 0,
-                    sqrtPriceLimitX96: 0
+                    sqrtPriceLimitX96: 0,
+                    deadline: block.timestamp + 100
                 })
             )
         });
@@ -105,25 +107,25 @@ contract UniversalDexModuleTest is TestBase {
             data: abi.encodeWithSelector(dexModule.execute.selector, swapParams)
         });
 
-        vm.startPrank(USDT_WHALE);
-        IERC20(USDT).transfer(address(superloop), amountIn);
+        vm.startPrank(USDT_ETLK_WHALE);
+        IERC20(tokenIn).transfer(address(superloop), amountIn);
         vm.stopPrank();
 
         vm.startPrank(admin);
         superloop.operate(moduleExecutionData);
         vm.stopPrank();
 
-        uint256 usdcBalance = IERC20(USDC).balanceOf(address(superloop));
+        uint256 usdcBalance = IERC20(tokenOut).balanceOf(address(superloop));
         assertGt(usdcBalance, 0);
     }
 
     function test_executeSwapAndExit() public {
-        vm.startPrank(USDT_WHALE);
-        IERC20(USDT).transfer(address(user), 1000 * 10 ** 6);
-        vm.stopPrank();
+        address tokenIn = USDT_ETLK;
+        address tokenOut = USDC_ETLK;
 
-        address tokenIn = USDT;
-        address tokenOut = USDC;
+        vm.startPrank(USDT_ETLK_WHALE);
+        IERC20(tokenIn).transfer(address(user), 1000 * 10 ** 6);
+        vm.stopPrank();
 
         uint256 amountIn = 1000 * 10 ** 6;
         uint256 maxAmountIn = 1000 * 10 ** 6;
@@ -131,21 +133,21 @@ contract UniversalDexModuleTest is TestBase {
 
         DataTypes.ExecuteSwapParamsData[] memory data = new DataTypes.ExecuteSwapParamsData[](2);
         data[0] = DataTypes.ExecuteSwapParamsData({
-            target: USDT,
-            data: abi.encodeWithSelector(IERC20.approve.selector, ROUTER, amountIn)
+            target: tokenIn, data: abi.encodeWithSelector(IERC20.approve.selector, environment.router, amountIn)
         });
         data[1] = DataTypes.ExecuteSwapParamsData({
-            target: ROUTER,
+            target: environment.router,
             data: abi.encodeWithSelector(
                 IRouter.exactInputSingle.selector,
                 IRouter.ExactInputSingleParams({
-                    tokenIn: USDT,
-                    tokenOut: USDC,
+                    tokenIn: tokenIn,
+                    tokenOut: tokenOut,
                     fee: 100,
                     recipient: address(dexModule),
                     amountIn: amountIn,
                     amountOutMinimum: 0,
-                    sqrtPriceLimitX96: 0
+                    sqrtPriceLimitX96: 0,
+                    deadline: block.timestamp + 100
                 })
             )
         });
@@ -160,12 +162,12 @@ contract UniversalDexModuleTest is TestBase {
         });
 
         vm.startPrank(user);
-        IERC20(USDT).approve(address(dexModule), amountIn);
+        IERC20(tokenIn).approve(address(dexModule), amountIn);
         uint256 amountOut = dexModule.executeAndExit(params, user);
 
         vm.stopPrank();
 
-        uint256 usdcBalanceUser = IERC20(USDC).balanceOf(address(user));
+        uint256 usdcBalanceUser = IERC20(tokenOut).balanceOf(address(user));
         assertEq(usdcBalanceUser, amountOut);
     }
 }

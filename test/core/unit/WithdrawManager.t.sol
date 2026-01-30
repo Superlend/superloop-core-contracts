@@ -6,8 +6,9 @@ import {TestBase} from "../TestBase.sol";
 import {console} from "forge-std/console.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {Errors} from "../../../src/common/Errors.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -36,10 +37,10 @@ contract WithdrawManagerTest is TestBase {
         modules[4] = address(dexModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -62,7 +63,7 @@ contract WithdrawManagerTest is TestBase {
         );
         superloop = Superloop(payable(address(proxy)));
 
-        _deployAccountant(address(superloop));
+        _deployAccountant(address(superloop), environment.lendAssets, environment.borrowAssets);
         _deployWithdrawManager(address(superloop));
         _deployDepositManager(address(superloop));
 
@@ -86,7 +87,7 @@ contract WithdrawManagerTest is TestBase {
         uint256 nextDeferredRequestId = withdrawManager.nextWithdrawRequestId(DataTypes.WithdrawRequestType.DEFERRED);
 
         assertEq(vault, address(superloop));
-        assertEq(asset, XTZ);
+        assertEq(asset, environment.vaultAsset);
         assertEq(nextGeneralRequestId, 1);
         assertEq(nextInstantRequestId, 1);
         assertEq(nextPriorityRequestId, 1);
@@ -347,9 +348,7 @@ contract WithdrawManagerTest is TestBase {
 
     function test_resolveWithdrawRequests_OnlyVault() public {
         DataTypes.ResolveWithdrawRequestsData memory data = DataTypes.ResolveWithdrawRequestsData({
-            shares: 1000 * 10 ** 18,
-            requestType: DataTypes.WithdrawRequestType.GENERAL,
-            callbackExecutionData: ""
+            shares: 1000 * 10 ** 18, requestType: DataTypes.WithdrawRequestType.GENERAL, callbackExecutionData: ""
         });
 
         vm.startPrank(user1);
@@ -360,9 +359,7 @@ contract WithdrawManagerTest is TestBase {
 
     function test_resolveWithdrawRequests_ZeroShares() public {
         DataTypes.ResolveWithdrawRequestsData memory data = DataTypes.ResolveWithdrawRequestsData({
-            shares: 0,
-            requestType: DataTypes.WithdrawRequestType.GENERAL,
-            callbackExecutionData: ""
+            shares: 0, requestType: DataTypes.WithdrawRequestType.GENERAL, callbackExecutionData: ""
         });
 
         vm.startPrank(address(superloop));
@@ -373,9 +370,7 @@ contract WithdrawManagerTest is TestBase {
 
     function test_resolveWithdrawRequests_ExceedsPending() public {
         DataTypes.ResolveWithdrawRequestsData memory data = DataTypes.ResolveWithdrawRequestsData({
-            shares: 1000 * 10 ** 18,
-            requestType: DataTypes.WithdrawRequestType.GENERAL,
-            callbackExecutionData: ""
+            shares: 1000 * 10 ** 18, requestType: DataTypes.WithdrawRequestType.GENERAL, callbackExecutionData: ""
         });
 
         vm.startPrank(address(superloop));

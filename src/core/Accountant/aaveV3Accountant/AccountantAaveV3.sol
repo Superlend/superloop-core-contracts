@@ -2,8 +2,9 @@
 
 pragma solidity ^0.8.13;
 
-import {ReentrancyGuardUpgradeable} from
-    "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
@@ -15,6 +16,12 @@ import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol
 import {Errors} from "../../../common/Errors.sol";
 import {AccountantAaveV3Base} from "./AccountantAaveV3Base.sol";
 
+/**
+ * @title AccountantAaveV3
+ * @author Superlend
+ * @notice Manages total assets calculation and performance fee tracking for Aave V3 positions
+ * @dev Calculates total assets by aggregating lending positions, subtracting borrowing positions, and converting to base asset using Aave oracle prices
+ */
 contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
     event LastRealizedFeeExchangeRateUpdated(uint256 oldRate, uint256 newRate);
 
@@ -28,6 +35,10 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
         __AccountantAaveV3Base_init(_msgSender());
     }
 
+    /**
+     * @notice Initializes the AccountantAaveV3 module with Aave V3 configuration
+     * @param data Initialization data containing pool addresses provider, lend/borrow assets, performance fee, and vault address
+     */
     function __AccountantAaveV3Module_init(DataTypes.AaveV3AccountantModuleInitData memory data)
         internal
         onlyInitializing
@@ -39,7 +50,11 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
         AccountantAaveV3Storage.setVault(data.vault);
     }
 
-    // get total assets for the contract
+    /**
+     * @notice Calculates total assets by aggregating Aave V3 positions and converting to base asset
+     * @return Total assets value in base asset terms
+     * @dev Sums lending positions (positive balance), subtracts borrowing positions (negative balance), adds base asset balance, and converts to base asset using oracle prices
+     */
     function getTotalAssets() public view returns (uint256) {
         AccountantAaveV3Storage.AccountantAaveV3State storage $ = AccountantAaveV3Storage.getAccountantAaveV3Storage();
         address baseAsset = IERC4626($.vault).asset();
@@ -68,6 +83,7 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
             }
         }
 
+        // sum all borrowing positions
         len = $.borrowAssets.length;
         for (uint256 i; i < len;) {
             address borrowAsset = $.borrowAssets[i];
@@ -82,9 +98,10 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
             }
         }
 
+        // add base asset balance held in vault
         uint256 baseAssetPrice = aaveOracle.getAssetPrice(baseAsset);
-        positiveBalance +=
-            (IERC20(baseAsset).balanceOf($.vault) * commonDecimalFactor * baseAssetPrice) / (10 ** baseDecimals);
+        positiveBalance += (IERC20(baseAsset).balanceOf($.vault) * commonDecimalFactor * baseAssetPrice)
+            / (10 ** baseDecimals);
 
         // convert to base asset
         uint256 totalAssetsInBaseAsset = (positiveBalance - negativeBalance) / baseAssetPrice;
@@ -92,6 +109,14 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
         return totalAssetsInBaseAsset;
     }
 
+    /**
+     * @notice Calculates the performance fee based on exchange rate appreciation
+     * @param totalShares Total number of shares in the vault
+     * @param exchangeRate Current exchange rate (assets per share)
+     * @param decimals Decimal precision for the calculation
+     * @return Performance fee amount in base asset terms
+     * @dev Calculates fee only on positive performance (when current rate > last realized rate)
+     */
     function getPerformanceFee(uint256 totalShares, uint256 exchangeRate, uint8 decimals)
         public
         view
@@ -103,6 +128,7 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
         uint256 latestAssetAmount = totalShares * exchangeRate;
         uint256 prevAssetAmount = totalShares * $.lastRealizedFeeExchangeRate;
 
+        // return 0 if there's no positive performance
         if (prevAssetAmount > latestAssetAmount) return 0;
 
         uint256 interestGenerated = latestAssetAmount - prevAssetAmount;
@@ -113,6 +139,12 @@ contract AccountantAaveV3 is ReentrancyGuardUpgradeable, AccountantAaveV3Base {
         return performanceFee;
     }
 
+    /**
+     * @notice Updates the last realized fee exchange rate after performance fee collection
+     * @param lastRealizedFeeExchangeRate_ New exchange rate to set as the last realized rate
+     * @param totalSupply Total supply of shares in the vault
+     * @dev Only allows rate updates that are higher than the previous rate (unless totalSupply is 0)
+     */
     function setLastRealizedFeeExchangeRate(uint256 lastRealizedFeeExchangeRate_, uint256 totalSupply)
         public
         onlyVault

@@ -16,6 +16,7 @@ import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 import {IPriceOracleGetter} from "aave-v3-core/contracts/interfaces/IPriceOracleGetter.sol";
 import {AaveV3AccountantPlugin} from "../../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
 
+// TODO : revisit with mutli token setup for eth mainnet
 contract AccountantAaveV3Test is TestBase {
     UniversalAccountant public accountantImplementation;
     AaveV3AccountantPlugin public accountantPlugin;
@@ -29,21 +30,16 @@ contract AccountantAaveV3Test is TestBase {
     function setUp() public override {
         super.setUp();
 
-        asset = IERC20(XTZ);
+        asset = IERC20(environment.vaultAsset);
         vault = new MockVault(asset, "Mock Vault", "mVLT");
 
-        address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
-        address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
-
         // deploy accountant plugin
-        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData = DataTypes
-            .AaveV3AccountantPluginModuleInitData({
-            poolAddressesProvider: AAVE_V3_POOL_ADDRESSES_PROVIDER,
-            lendAssets: lendAssets,
-            borrowAssets: borrowAssets
-        });
+        DataTypes.AaveV3AccountantPluginModuleInitData memory accountantPluginInitData =
+            DataTypes.AaveV3AccountantPluginModuleInitData({
+                poolAddressesProvider: environment.poolAddressesProvider,
+                lendAssets: environment.lendAssets,
+                borrowAssets: environment.borrowAssets
+            });
         accountantPlugin = new AaveV3AccountantPlugin(accountantPluginInitData);
 
         address[] memory registeredAccountants = new address[](1);
@@ -51,9 +47,7 @@ contract AccountantAaveV3Test is TestBase {
 
         // deploy accountant
         DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
-            registeredAccountants: registeredAccountants,
-            performanceFee: uint16(PERFORMANCE_FEE),
-            vault: address(vault)
+            registeredAccountants: registeredAccountants, performanceFee: uint16(PERFORMANCE_FEE), vault: address(vault)
         });
 
         accountantImplementation = new UniversalAccountant();
@@ -66,7 +60,7 @@ contract AccountantAaveV3Test is TestBase {
         accountant = UniversalAccountant(address(proxy));
 
         // Fund the accountant with XTZ from whale
-        vm.startPrank(XTZ_WHALE);
+        vm.startPrank(environment.vaultAssetWhale);
         asset.transfer(address(vault), INITIAL_WHALE_BALANCE);
         vm.stopPrank();
     }
@@ -80,18 +74,11 @@ contract AccountantAaveV3Test is TestBase {
 
     function test_InitializeRevertIfAlreadyInitialized() public {
         // Test that initialize reverts if called again
-        address[] memory lendAssets = new address[](1);
-        lendAssets[0] = ST_XTZ;
-        address[] memory borrowAssets = new address[](1);
-        borrowAssets[0] = XTZ;
-
         address[] memory registeredAccountants = new address[](1);
         registeredAccountants[0] = address(accountantPlugin);
 
         DataTypes.UniversalAccountantModuleInitData memory initData = DataTypes.UniversalAccountantModuleInitData({
-            registeredAccountants: registeredAccountants,
-            performanceFee: uint16(PERFORMANCE_FEE),
-            vault: address(vault)
+            registeredAccountants: registeredAccountants, performanceFee: uint16(PERFORMANCE_FEE), vault: address(vault)
         });
 
         vm.expectRevert();
@@ -239,28 +226,32 @@ contract AccountantAaveV3Test is TestBase {
 
     function _enableMockingPoolDataProvider() internal {
         vm.mockCall(
-            AAVE_V3_POOL_DATA_PROVIDER,
-            abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, ST_XTZ, address(vault)),
+            environment.poolDataProvider,
+            abi.encodeWithSelector(
+                IPoolDataProvider.getUserReserveData.selector, environment.lendAssets[0], address(vault)
+            ),
             abi.encode(1000 * 10 ** 6, 0, 0, 0, 0, 0, 0, 0, 0)
         );
 
         vm.mockCall(
-            AAVE_V3_POOL_DATA_PROVIDER,
-            abi.encodeWithSelector(IPoolDataProvider.getUserReserveData.selector, XTZ, address(vault)),
+            environment.poolDataProvider,
+            abi.encodeWithSelector(
+                IPoolDataProvider.getUserReserveData.selector, environment.borrowAssets[0], address(vault)
+            ),
             abi.encode(0, 0, 800 ether, 0, 0, 0, 0, 0, 0)
         );
     }
 
     function _enableMockingPriceOracle(uint256 stXtzPrice, uint256 xtzPrice) internal {
         vm.mockCall(
-            AAVE_V3_PRICE_ORACLE,
-            abi.encodeWithSelector(IPriceOracleGetter.getAssetPrice.selector, ST_XTZ),
+            environment.priceOracle,
+            abi.encodeWithSelector(IPriceOracleGetter.getAssetPrice.selector, environment.lendAssets[0]),
             abi.encode(stXtzPrice)
         );
 
         vm.mockCall(
-            AAVE_V3_PRICE_ORACLE,
-            abi.encodeWithSelector(IPriceOracleGetter.getAssetPrice.selector, XTZ),
+            environment.priceOracle,
+            abi.encodeWithSelector(IPriceOracleGetter.getAssetPrice.selector, environment.borrowAssets[0]),
             abi.encode(xtzPrice)
         );
     }

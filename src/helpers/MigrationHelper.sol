@@ -388,8 +388,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         // Step 3: Transfer all assets from old vault to new vault via DEX module
         DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](2);
         swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: lendAsset,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(newVault), lendBalance)
+            target: lendAsset, data: abi.encodeWithSelector(IERC20.transfer.selector, address(newVault), lendBalance)
         });
         uint256 xtzBalanceOldVault = IERC20(borrowAsset).balanceOf(oldVault);
         swapParamsData[1] = DataTypes.ExecuteSwapParamsData({
@@ -455,8 +454,7 @@ contract MigrationHelper is FlashLoanSimpleReceiverBase, Ownable, ReentrancyGuar
         // Step 3: Transfer borrowed asset back to migration helper for flash loan repayment
         DataTypes.ExecuteSwapParamsData[] memory swapParamsData = new DataTypes.ExecuteSwapParamsData[](1);
         swapParamsData[0] = DataTypes.ExecuteSwapParamsData({
-            target: borrowAsset,
-            data: abi.encodeWithSelector(IERC20.transfer.selector, address(this), borrowBalance)
+            target: borrowAsset, data: abi.encodeWithSelector(IERC20.transfer.selector, address(this), borrowBalance)
         });
         DataTypes.ExecuteSwapParams memory swapParams = DataTypes.ExecuteSwapParams({
             tokenIn: placeholderAsset,

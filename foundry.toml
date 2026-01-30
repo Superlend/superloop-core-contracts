@@ -10,6 +10,9 @@ viaIR = true
 [rpc_endpoints]
 etherlink="https://node.mainnet.etherlink.com"
 hyperevm="https://rpc.hyperlend.finance"
+mainnet="https://ethereum-rpc.publicnode.com"
 
 [etherscan]
 etherlink={ key = "NO_KEY", chain = 42793, url= "https://explorer.etherlink.com/api/" }
+mainnet={ key = "${ETHERSCAN_API_KEY}", chain = 1 }
+

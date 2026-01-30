@@ -5,8 +5,9 @@ pragma solidity ^0.8.13;
 import {TestBase} from "../../core/TestBase.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {console} from "forge-std/console.sol";
@@ -26,10 +27,10 @@ contract AaveV3EmodeModuleTest is TestBase {
         modules[0] = address(emodeModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -61,7 +62,7 @@ contract AaveV3EmodeModuleTest is TestBase {
 
     function test_EmodeBasicFlow() public {
         uint256 currentEmodeCategory = pool.getUserEMode(address(superloop));
-        console.log("currentEmodeCategory", currentEmodeCategory);
+        assertEq(currentEmodeCategory, 0);
 
         DataTypes.AaveV3EmodeParams memory params = DataTypes.AaveV3EmodeParams({emodeCategory: 1});
 

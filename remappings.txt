@@ -5,3 +5,4 @@ halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/
 openzeppelin-contracts/=lib/openzeppelin-contracts/
 aave-v3-core/=lib/aave-v3-core/
 openzeppelin-contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable/
+morpho-blue/=lib/morpho-blue/src/

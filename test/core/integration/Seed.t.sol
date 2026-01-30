@@ -15,29 +15,31 @@ contract SeedTest is IntegrationBase {
     }
 
     function test_seed() public {
-        uint256 seedAmount = 10 * XTZ_SCALE;
-        deal(XTZ, admin, seedAmount);
+        uint256 vaultScale = 10 ** environment.vaultAssetDecimals;
+        uint256 seedAmount = 10 * vaultScale;
+        deal(environment.vaultAsset, admin, seedAmount);
 
         vm.startPrank(admin);
-        IERC20(XTZ).approve(address(superloop), seedAmount);
+        IERC20(environment.vaultAsset).approve(address(superloop), seedAmount);
         superloop.seed(seedAmount);
         vm.stopPrank();
 
         uint256 totalSupply = superloop.totalSupply();
 
-        assertApproxEqAbs(totalSupply, 10 * (XTZ_SCALE) * 100, 100);
+        assertApproxEqAbs(totalSupply, 10 * (vaultScale) * 100, 100);
         assertEq(superloop.totalAssets(), seedAmount);
         assertEq(superloop.balanceOf(admin), totalSupply);
     }
 
     function test_seed_failing_cases() public {
-        uint256 seedAmount = 10 * XTZ_SCALE;
-        deal(XTZ, user1, seedAmount);
-        deal(XTZ, admin, seedAmount);
+        uint256 vaultScale = 10 ** environment.vaultAssetDecimals;
+        uint256 seedAmount = 10 * vaultScale;
+        deal(environment.vaultAsset, user1, seedAmount);
+        deal(environment.vaultAsset, admin, seedAmount);
 
         // should rever if not called by admin
         vm.startPrank(user1);
-        IERC20(XTZ).approve(address(superloop), seedAmount);
+        IERC20(environment.vaultAsset).approve(address(superloop), seedAmount);
         vm.expectRevert(bytes(Errors.CALLER_NOT_VAULT_ADMIN));
         superloop.seed(seedAmount);
         vm.stopPrank();
@@ -50,7 +52,7 @@ contract SeedTest is IntegrationBase {
 
         // should seed
         vm.startPrank(admin);
-        IERC20(XTZ).approve(address(superloop), seedAmount);
+        IERC20(environment.vaultAsset).approve(address(superloop), seedAmount);
         superloop.seed(seedAmount);
         vm.stopPrank();
 

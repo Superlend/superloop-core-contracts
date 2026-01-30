@@ -34,10 +34,10 @@ contract SuperloopTest is TestBase {
         modules[4] = address(dexModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -60,7 +60,7 @@ contract SuperloopTest is TestBase {
         );
         superloop = Superloop(payable(address(proxy)));
 
-        _deployAccountant(address(superloop));
+        _deployAccountant(address(superloop), environment.lendAssets, environment.borrowAssets);
         _deployWithdrawManager(address(superloop));
 
         superloop.setAccountantModule(address(accountantAaveV3));
@@ -81,7 +81,7 @@ contract SuperloopTest is TestBase {
         modules[0] = address(supplyModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
+            asset: environment.vaultAsset,
             name: "Test Vault",
             symbol: "TEST",
             supplyCap: 1000 * 10 ** 18,
@@ -112,7 +112,7 @@ contract SuperloopTest is TestBase {
         // Test that the contract is properly initialized
         assertEq(newSuperloop.name(), "Test Vault");
         assertEq(newSuperloop.symbol(), "TEST");
-        assertEq(newSuperloop.asset(), XTZ);
+        assertEq(newSuperloop.asset(), environment.vaultAsset);
     }
 
     function test_InitializeRevertIfAlreadyInitialized() public {
@@ -121,7 +121,7 @@ contract SuperloopTest is TestBase {
         modules[0] = address(supplyModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
+            asset: environment.vaultAsset,
             name: "Test Vault",
             symbol: "TEST",
             supplyCap: 1000 * 10 ** 18,
@@ -148,7 +148,7 @@ contract SuperloopTest is TestBase {
         modules[0] = address(0x123); // Invalid module
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
+            asset: environment.vaultAsset,
             name: "Test Vault",
             symbol: "TEST",
             supplyCap: 1000 * 10 ** 18,
@@ -185,7 +185,7 @@ contract SuperloopTest is TestBase {
         modules[0] = address(supplyModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
+            asset: environment.vaultAsset,
             name: "Test Vault",
             symbol: "TEST",
             supplyCap: 1000 * 10 ** 18,
@@ -427,28 +427,28 @@ contract SuperloopTest is TestBase {
     // ============ Integration Tests ============
 
     function test_skimRevertIfInvalidAsset() public {
-        deal(XTZ, address(superloop), 1000 * 10 ** 18);
+        deal(environment.vaultAsset, address(superloop), 1000 * 10 ** 18);
 
         vm.expectRevert(bytes(Errors.INVALID_SKIM_ASSET));
 
         vm.prank(admin);
-        superloop.skim(XTZ);
+        superloop.skim(environment.vaultAsset);
     }
 
     function test_skim() public {
-        deal(ST_XTZ, address(superloop), 1000 * 10 ** 18);
+        deal(environment.borrowAssets[0], address(superloop), 1000 * 10 ** 18);
 
         vm.prank(admin);
-        superloop.skim(ST_XTZ);
+        superloop.skim(environment.borrowAssets[0]);
 
-        assertEq(IERC20(ST_XTZ).balanceOf(treasury), 1000 * 10 ** 18);
-        assertEq(IERC20(ST_XTZ).balanceOf(address(superloop)), 0);
+        assertEq(IERC20(environment.borrowAssets[0]).balanceOf(treasury), 1000 * 10 ** 18);
+        assertEq(IERC20(environment.borrowAssets[0]).balanceOf(address(superloop)), 0);
     }
 
     function _seed() internal {
         vm.startPrank(admin);
-        deal(XTZ, admin, 1000 * 10 ** 18);
-        IERC20(XTZ).approve(address(superloop), type(uint256).max);
+        deal(environment.vaultAsset, admin, 1000 * 10 ** 18);
+        IERC20(environment.vaultAsset).approve(address(superloop), type(uint256).max);
         superloop.deposit(100 * 10 ** 18, admin);
         vm.stopPrank();
     }

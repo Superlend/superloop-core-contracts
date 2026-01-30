@@ -15,7 +15,8 @@ contract WithdrawManagerTest is IntegrationBase {
     function setUp() public override {
         super.setUp();
 
-        DataTypes.AaveV3EmodeParams memory params = DataTypes.AaveV3EmodeParams({emodeCategory: 3});
+        DataTypes.AaveV3EmodeParams memory params =
+            DataTypes.AaveV3EmodeParams({emodeCategory: environment.emodeCategory});
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
         moduleExecutionData[0] = DataTypes.ModuleExecutionData({
@@ -30,7 +31,7 @@ contract WithdrawManagerTest is IntegrationBase {
 
     function test_initialize() public view {
         assertEq(withdrawManager.vault(), address(superloop));
-        assertEq(withdrawManager.asset(), XTZ);
+        assertEq(withdrawManager.asset(), environment.vaultAsset);
         assertEq(withdrawManager.nextWithdrawRequestId(requestType), 1);
         assertEq(withdrawManager.nextWithdrawRequestId(DataTypes.WithdrawRequestType.INSTANT), 1);
         assertEq(withdrawManager.nextWithdrawRequestId(DataTypes.WithdrawRequestType.PRIORITY), 1);
@@ -57,21 +58,36 @@ contract WithdrawManagerTest is IntegrationBase {
         // assert claimable and sharesProcessed for 1st and 2nd requests
         (uint256 sharesLeftToResolve,,) = _createPartialWithdrawWithResolution(requestType);
 
-        (,, uint256 repayAmount,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
-        (uint256 withdrawAmount,,,,,,,,) = poolDataProvider.getUserReserveData(ST_XTZ, address(superloop));
+        (,, uint256 repayAmount,,,,,,) =
+            poolDataProvider.getUserReserveData(environment.borrowAssets[0], address(superloop));
+        (uint256 withdrawAmount,,,,,,,,) =
+            poolDataProvider.getUserReserveData(environment.lendAssets[0], address(superloop));
 
         // resolve 2nd fuly and 3rd partially. I will unwind the entire amount but claim only partial amount
         uint256 repayAmountWithPremium = repayAmount + (repayAmount * 1) / 10000;
         uint256 sharesToResolve = sharesLeftToResolve / 2;
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
-        moduleExecutionData[0] = _repayCall(XTZ, repayAmount);
-        moduleExecutionData[1] = _withdrawCall(ST_XTZ, withdrawAmount);
-        moduleExecutionData[2] =
-            _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
+        moduleExecutionData[0] = _repayCall(environment.borrowAssets[0], repayAmount);
+        moduleExecutionData[1] = _withdrawCall(environment.lendAssets[0], withdrawAmount);
+        moduleExecutionData[2] = USE_MORPHO
+            ? _swapCallExactOut(
+                environment.lendAssets[0],
+                environment.borrowAssets[0],
+                withdrawAmount,
+                repayAmount,
+                environment.router,
+                USDC_USDE_POOL_FEE,
+                block.timestamp + 100
+            )
+            : _swapCallExactOutCurve(
+                ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP
+            );
 
         DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
-        intermediateExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
+        intermediateExecutionData[0] = USE_MORPHO
+            ? _morphoFlashloanCall(environment.borrowAssets[0], repayAmount, abi.encode(moduleExecutionData))
+            : _flashloanCall(environment.borrowAssets[0], repayAmount, abi.encode(moduleExecutionData));
 
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
         finalExecutionData[0] =
@@ -111,12 +127,12 @@ contract WithdrawManagerTest is IntegrationBase {
         vm.stopPrank();
 
         // req 2 is partially processed, hence it should be partially cancelled and user 2 should get back the remaining shares + claimable amount
-        uint256 user2BalanceBefore = IERC20(XTZ).balanceOf(user2);
+        uint256 user2BalanceBefore = IERC20(environment.vaultAsset).balanceOf(user2);
         uint256 user2ShareBalanceBefore = superloop.balanceOf(user2);
         vm.startPrank(user2);
         withdrawManager.cancelWithdrawRequest(2, requestType);
         vm.stopPrank();
-        uint256 user2BalanceAfter = IERC20(XTZ).balanceOf(user2);
+        uint256 user2BalanceAfter = IERC20(environment.vaultAsset).balanceOf(user2);
         uint256 user2ShareBalanceAfter = superloop.balanceOf(user2);
 
         DataTypes.WithdrawRequestData memory withdrawRequest2 = withdrawManager.withdrawRequest(2, requestType);
@@ -133,21 +149,36 @@ contract WithdrawManagerTest is IntegrationBase {
         uint256 totalPendingWithdraws = withdrawManager.totalPendingWithdraws(requestType);
         assertApproxEqRel(totalPendingWithdraws, sharesLeftToResolve - withdrawRequest2.sharesProcessed, 1e18);
 
-        (,, uint256 repayAmount,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
-        (uint256 withdrawAmount,,,,,,,,) = poolDataProvider.getUserReserveData(ST_XTZ, address(superloop));
+        (,, uint256 repayAmount,,,,,,) =
+            poolDataProvider.getUserReserveData(environment.borrowAssets[0], address(superloop));
+        (uint256 withdrawAmount,,,,,,,,) =
+            poolDataProvider.getUserReserveData(environment.lendAssets[0], address(superloop));
 
         // unwind the remaining position
         uint256 repayAmountWithPremium = repayAmount + (repayAmount * 1) / 10000;
         uint256 sharesToResolve = totalPendingWithdraws;
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
-        moduleExecutionData[0] = _repayCall(XTZ, repayAmount);
-        moduleExecutionData[1] = _withdrawCall(ST_XTZ, withdrawAmount);
-        moduleExecutionData[2] =
-            _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
+        moduleExecutionData[0] = _repayCall(environment.borrowAssets[0], repayAmount);
+        moduleExecutionData[1] = _withdrawCall(environment.lendAssets[0], withdrawAmount);
+        moduleExecutionData[2] = USE_MORPHO
+            ? _swapCallExactOut(
+                environment.lendAssets[0],
+                environment.borrowAssets[0],
+                withdrawAmount,
+                repayAmount,
+                environment.router,
+                USDC_USDE_POOL_FEE,
+                block.timestamp + 100
+            )
+            : _swapCallExactOutCurve(
+                ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP
+            );
 
         DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
-        intermediateExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
+        intermediateExecutionData[0] = USE_MORPHO
+            ? _morphoFlashloanCall(environment.borrowAssets[0], repayAmount, abi.encode(moduleExecutionData))
+            : _flashloanCall(environment.borrowAssets[0], repayAmount, abi.encode(moduleExecutionData));
 
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
         finalExecutionData[0] =
@@ -196,12 +227,12 @@ contract WithdrawManagerTest is IntegrationBase {
         _createPartialWithdrawWithResolution(requestType);
 
         // should be able to withdraw if fully processed
-        uint256 user1BalanceBefore = IERC20(XTZ).balanceOf(user1);
+        uint256 user1BalanceBefore = IERC20(environment.vaultAsset).balanceOf(user1);
         uint256 user1ShareBalanceBefore = superloop.balanceOf(user1);
         vm.startPrank(user1);
         withdrawManager.withdraw(requestType);
         vm.stopPrank();
-        uint256 user1BalanceAfter = IERC20(XTZ).balanceOf(user1);
+        uint256 user1BalanceAfter = IERC20(environment.vaultAsset).balanceOf(user1);
         uint256 user1ShareBalanceAfter = superloop.balanceOf(user1);
         DataTypes.WithdrawRequestData memory withdrawRequest1 = withdrawManager.withdrawRequest(1, requestType);
         assertEq(uint256(withdrawRequest1.state), uint256(DataTypes.RequestProcessingState.FULLY_PROCESSED));
@@ -217,12 +248,12 @@ contract WithdrawManagerTest is IntegrationBase {
         vm.stopPrank();
 
         // should be able to withdraw partially processed
-        uint256 user2BalanceBefore = IERC20(XTZ).balanceOf(user2);
+        uint256 user2BalanceBefore = IERC20(environment.vaultAsset).balanceOf(user2);
         uint256 user2ShareBalanceBefore = superloop.balanceOf(user2);
         vm.startPrank(user2);
         withdrawManager.withdraw(requestType);
         vm.stopPrank();
-        uint256 user2BalanceAfter = IERC20(XTZ).balanceOf(user2);
+        uint256 user2BalanceAfter = IERC20(environment.vaultAsset).balanceOf(user2);
         uint256 user2ShareBalanceAfter = superloop.balanceOf(user2);
         DataTypes.WithdrawRequestData memory withdrawRequest2 = withdrawManager.withdrawRequest(2, requestType);
         assertEq(uint256(withdrawRequest2.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_PROCESSED));
@@ -237,7 +268,7 @@ contract WithdrawManagerTest is IntegrationBase {
         vm.stopPrank();
 
         // should not be able to claim if cancelled
-        user2BalanceBefore = IERC20(XTZ).balanceOf(user2);
+        user2BalanceBefore = IERC20(environment.vaultAsset).balanceOf(user2);
         user2ShareBalanceBefore = superloop.balanceOf(user2);
         vm.startPrank(user2);
         withdrawManager.cancelWithdrawRequest(2, requestType);
@@ -247,7 +278,7 @@ contract WithdrawManagerTest is IntegrationBase {
         vm.expectRevert(bytes(Errors.WITHDRAW_REQUEST_NOT_FOUND));
         withdrawManager.withdraw(requestType);
         vm.stopPrank();
-        user2BalanceAfter = IERC20(XTZ).balanceOf(user2);
+        user2BalanceAfter = IERC20(environment.vaultAsset).balanceOf(user2);
         user2ShareBalanceAfter = superloop.balanceOf(user2);
         assertEq(user2BalanceAfter - user2BalanceBefore, 0);
         assertEq(
@@ -329,18 +360,33 @@ contract WithdrawManagerTest is IntegrationBase {
     }
 
     function _resolveAllRequests(uint256 sharesToResolve, DataTypes.WithdrawRequestType _requestType) internal {
-        (,, uint256 repayAmount,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
-        (uint256 withdrawAmount,,,,,,,,) = poolDataProvider.getUserReserveData(ST_XTZ, address(superloop));
+        (,, uint256 repayAmount,,,,,,) =
+            poolDataProvider.getUserReserveData(environment.borrowAssets[0], address(superloop));
+        (uint256 withdrawAmount,,,,,,,,) =
+            poolDataProvider.getUserReserveData(environment.lendAssets[0], address(superloop));
         uint256 repayAmountWithPremium = repayAmount + (repayAmount * 1) / 10000;
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](3);
-        moduleExecutionData[0] = _repayCall(XTZ, repayAmount);
-        moduleExecutionData[1] = _withdrawCall(ST_XTZ, withdrawAmount);
-        moduleExecutionData[2] =
-            _swapCallExactOutCurve(ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP);
+        moduleExecutionData[0] = _repayCall(environment.borrowAssets[0], repayAmount);
+        moduleExecutionData[1] = _withdrawCall(environment.lendAssets[0], withdrawAmount);
+        moduleExecutionData[2] = USE_MORPHO
+            ? _swapCallExactOut(
+                environment.lendAssets[0],
+                environment.borrowAssets[0],
+                withdrawAmount,
+                repayAmount,
+                environment.router,
+                USDC_USDE_POOL_FEE,
+                block.timestamp + 100
+            )
+            : _swapCallExactOutCurve(
+                ST_XTZ, XTZ, XTZ_STXTZ_POOL, withdrawAmount, repayAmountWithPremium, STXTZ_XTZ_SWAP
+            );
 
         DataTypes.ModuleExecutionData[] memory intermediateExecutionData = new DataTypes.ModuleExecutionData[](1);
-        intermediateExecutionData[0] = _flashloanCall(XTZ, repayAmount, abi.encode(moduleExecutionData));
+        intermediateExecutionData[0] = USE_MORPHO
+            ? _morphoFlashloanCall(environment.borrowAssets[0], repayAmount, abi.encode(moduleExecutionData))
+            : _flashloanCall(environment.borrowAssets[0], repayAmount, abi.encode(moduleExecutionData));
 
         DataTypes.ModuleExecutionData[] memory finalExecutionData = new DataTypes.ModuleExecutionData[](1);
         finalExecutionData[0] =

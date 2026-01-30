@@ -2,8 +2,9 @@
 pragma solidity ^0.8.13;
 
 import {TestBase} from "../../core/TestBase.sol";
-import {AaveV3PreliquidationFallbackHandler} from
-    "../../../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
+import {
+    AaveV3PreliquidationFallbackHandler
+} from "../../../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {Errors} from "../../../src/common/Errors.sol";
 import {console} from "forge-std/console.sol";
@@ -11,7 +12,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
+// not maintained right now. will be updated soon.
 contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     AaveV3PreliquidationFallbackHandler public preliquidation;
 
@@ -20,14 +23,14 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         id = bytes32("1");
         LLTV = (7800 * WAD) / BPS;
         preliquidation = new AaveV3PreliquidationFallbackHandler(
-            AAVE_V3_POOL_ADDRESSES_PROVIDER,
+            environment.poolAddressesProvider,
             0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f,
             2,
             8,
             DataTypes.AaveV3PreliquidationParamsInit({
                 id: id,
-                lendReserve: ST_XTZ,
-                borrowReserve: XTZ,
+                lendReserve: environment.lendAssets[0],
+                borrowReserve: environment.borrowAssets[0],
                 preLltv: PRE_LLTV,
                 preCF1: PRE_CF1,
                 preCF2: PRE_CF2,
@@ -40,8 +43,8 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     function test_preliquidationParams() public view {
         DataTypes.AaveV3PreliquidationParams memory preliquidationParams =
             preliquidation.preliquidationParams(id, DataTypes.CallType.DELEGATECALL);
-        assertEq(preliquidationParams.lendReserve, ST_XTZ);
-        assertEq(preliquidationParams.borrowReserve, XTZ);
+        assertEq(preliquidationParams.lendReserve, environment.lendAssets[0]);
+        assertEq(preliquidationParams.borrowReserve, environment.borrowAssets[0]);
         assertEq(preliquidationParams.Lltv, LLTV);
         assertEq(preliquidationParams.preLltv, PRE_LLTV);
         assertEq(preliquidationParams.preCF1, PRE_CF1);
@@ -51,66 +54,121 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     }
 
     function test_preliquidation() public {
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        deal(XTZ, address(preliquidation), 70 * 10 ** 18);
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        deal(
+            environment.borrowAssets[0],
+            address(preliquidation),
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, 70 * 10 ** 18, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(
+            environment.borrowAssets[0],
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(),
+            2,
+            0,
+            address(preliquidation)
+        );
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
 
-        uint256 stxtzBalanceBefore = IERC20(ST_XTZ).balanceOf(address(this));
-        uint256 xtzBalanceBefore = IERC20(XTZ).balanceOf(address(this));
+        uint256 lendAssetBalanceBefore = IERC20(environment.lendAssets[0]).balanceOf(address(this));
+        uint256 borrowAssetBalanceBefore = IERC20(environment.borrowAssets[0]).balanceOf(address(this));
 
-        IAaveOracle oracle = IAaveOracle(IPoolAddressesProvider(AAVE_V3_POOL_ADDRESSES_PROVIDER).getPriceOracle());
+        IAaveOracle oracle = IAaveOracle(IPoolAddressesProvider(environment.poolAddressesProvider).getPriceOracle());
 
         // usd value of debt repaid
         uint256 debtRepaid = 10 * 10 ** 18;
-        uint256 debtPriceUsd = oracle.getAssetPrice(XTZ);
-        uint256 debtRepaidUSD = debtRepaid * debtPriceUsd / (10 ** 18);
+        uint256 debtPriceUsd = oracle.getAssetPrice(environment.borrowAssets[0]);
+        uint256 debtRepaidUSD =
+            (debtRepaid * debtPriceUsd) / (10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
         preliquidation.preliquidate(
             id,
             DataTypes.CallType.DELEGATECALL,
             DataTypes.AaveV3ExecutePreliquidationParams({user: address(preliquidation), debtToCover: 10 * 10 ** 18})
         );
 
-        uint256 stxtzBalanceAfter = IERC20(ST_XTZ).balanceOf(address(this));
-        uint256 xtzBalanceAfter = IERC20(XTZ).balanceOf(address(this));
+        uint256 lendAssetBalanceAfter = IERC20(environment.lendAssets[0]).balanceOf(address(this));
+        uint256 borrowAssetBalanceAfter = IERC20(environment.borrowAssets[0]).balanceOf(address(this));
 
-        uint256 collateralToSieze = stxtzBalanceAfter - stxtzBalanceBefore;
-        uint256 collateralPriceUsd = oracle.getAssetPrice(ST_XTZ);
-        uint256 collateralToSiezeUSD = collateralToSieze * collateralPriceUsd / (10 ** 6);
+        uint256 collateralToSieze = lendAssetBalanceAfter - lendAssetBalanceBefore;
+        uint256 collateralPriceUsd = oracle.getAssetPrice(environment.lendAssets[0]);
+        uint256 collateralToSiezeUSD = (collateralToSieze * collateralPriceUsd) / (10 ** 6);
 
         // compare collateralToSiezeUSD and debtRepaidUSD
         uint256 incentiveWAD = ((collateralToSiezeUSD) * WAD) / debtRepaidUSD;
         assertTrue(incentiveWAD > PRE_IF1 && incentiveWAD < PRE_IF2);
-        assertEq(xtzBalanceAfter, xtzBalanceBefore - 10 * 10 ** 18);
+        assertEq(
+            borrowAssetBalanceAfter,
+            borrowAssetBalanceBefore - 10 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
     }
 
     // ============ REVERTING CASES ============
 
     function test_preliquidation_revert_invalid_lltv() public {
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        deal(XTZ, address(preliquidation), 70 * 10 ** 18);
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        deal(
+            environment.borrowAssets[0],
+            address(preliquidation),
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, 70 * 10 ** 18, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(
+            environment.borrowAssets[0],
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(),
+            2,
+            0,
+            address(preliquidation)
+        );
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
 
         // updat emode ltv to 9900 => it should revert
-        vm.prank(POOL_ADMIN);
-        IPoolConfigurator(POOL_CONFIGURATOR).configureReserveAsCollateral(ST_XTZ, 9000, 9200, 10100);
+        vm.prank(environment.poolAdmin);
+        IPoolConfigurator(environment.poolConfigurator)
+            .configureReserveAsCollateral(environment.lendAssets[0], 9000, 9200, 10100);
 
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         vm.expectRevert(bytes(Errors.AAVE_V3_PRELIQUIDATION_INVALID_LLTV));
         preliquidation.preliquidate(
@@ -121,17 +179,42 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     }
 
     function test_preliquidate_revert_invalid_id() public {
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        deal(XTZ, address(preliquidation), 70 * 10 ** 18);
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        deal(
+            environment.borrowAssets[0],
+            address(preliquidation),
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, 70 * 10 ** 18, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(
+            environment.borrowAssets[0],
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(),
+            2,
+            0,
+            address(preliquidation)
+        );
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         bytes32 wrongId = bytes32("wrong_id");
         vm.expectRevert(bytes(Errors.PRELIQUIDATION_INVALID_ID));
@@ -143,17 +226,42 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     }
 
     function test_preliquidate_revert_invalid_user() public {
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        deal(XTZ, address(preliquidation), 70 * 10 ** 18);
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        deal(
+            environment.borrowAssets[0],
+            address(preliquidation),
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, 70 * 10 ** 18, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(
+            environment.borrowAssets[0],
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(),
+            2,
+            0,
+            address(preliquidation)
+        );
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         address wrongUser = makeAddr("wrongUser");
         vm.expectRevert(bytes(Errors.PRELIQUIDATION_INVALID_USER));
@@ -166,30 +274,75 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
 
     function test_preliquidate_revert_possible_bad_debt() public {
         // Set up position with LTV > LLTV (bad debt scenario)
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        deal(XTZ, address(preliquidation), 80 * 10 ** 18); // High borrow amount
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        deal(
+            environment.borrowAssets[0],
+            address(preliquidation),
+            80 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        ); // High borrow amount
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
         vm.expectRevert(bytes(Errors.INSUFFICIENT_CASH_SHORTFALL));
-        pool.borrow(XTZ, 80 * 10 ** 18, 2, 0, address(preliquidation));
+        pool.borrow(
+            environment.borrowAssets[0],
+            80 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(),
+            2,
+            0,
+            address(preliquidation)
+        );
         vm.stopPrank();
     }
 
     function test_preliquidate_revert_not_in_preliquidation_state() public {
         // Set up position with LTV <= preLltv (not in preliquidation state)
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        deal(XTZ, address(preliquidation), 40 * 10 ** 18); // Low borrow amount
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        deal(
+            environment.borrowAssets[0],
+            address(preliquidation),
+            40 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        ); // Low borrow amount
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, 40 * 10 ** 18, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(
+            environment.borrowAssets[0],
+            40 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(),
+            2,
+            0,
+            address(preliquidation)
+        );
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         vm.expectRevert(bytes(Errors.PRELIQUIDATION_NOT_IN_PRELIQUIDATION_STATE));
         preliquidation.preliquidate(
@@ -203,23 +356,38 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
 
     function test_preliquidate_edge_case_ltv_equals_prelltv() public {
         // Set up position with LTV = preLltv (exactly at the boundary)
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
 
         // Calculate exact borrow amount to achieve LTV = preLltv
         // We need: borrowUsdWAD = collateralUsdWAD * preLltv
         // For simplicity, we'll use a value that should be close to the boundary
         uint256 borrowAmount = 50 * 10 ** 18; // This should be close to preLltv boundary
 
-        deal(XTZ, address(preliquidation), borrowAmount);
+        deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, borrowAmount, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(environment.borrowAssets[0], borrowAmount, 2, 0, address(preliquidation));
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         // This should revert because LTV <= preLltv
         vm.expectRevert(bytes(Errors.PRELIQUIDATION_NOT_IN_PRELIQUIDATION_STATE));
@@ -232,21 +400,36 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
 
     function test_preliquidate_edge_case_ltv_equals_lltv() public {
         // Set up position with LTV = Lltv (exactly at the liquidation threshold)
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
 
         // Calculate exact borrow amount to achieve LTV = Lltv
         uint256 borrowAmount = 74 * 10 ** 18; // This should be close to Lltv boundary
 
-        deal(XTZ, address(preliquidation), borrowAmount);
+        deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, borrowAmount, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(environment.borrowAssets[0], borrowAmount, 2, 0, address(preliquidation));
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         // This should succeed as it's exactly at the boundary
         preliquidation.preliquidate(
@@ -257,53 +440,92 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
     }
 
     function test_preliquidate_edge_case_trying_to_liquidate_max() public {
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        deal(XTZ, address(this), 70 * 10 ** 18);
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, 70 * 10 ** 18, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(
+            environment.borrowAssets[0],
+            70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(),
+            2,
+            0,
+            address(preliquidation)
+        );
         vm.stopPrank();
 
         // try to liquidate 70xtz, but i should be able to do only till close factor
 
-        uint256 xtzBalanceBefore = IERC20(XTZ).balanceOf(address(this));
-        uint256 stxtzBalanceBefore = IERC20(ST_XTZ).balanceOf(address(this));
+        uint256 borrowAssetBalanceBefore = IERC20(environment.borrowAssets[0]).balanceOf(address(this));
+        uint256 lendAssetBalanceBefore = IERC20(environment.lendAssets[0]).balanceOf(address(this));
 
-        IERC20(XTZ).approve(address(preliquidation), 70 * 10 ** 18);
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 70 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
         preliquidation.preliquidate(
             id,
             DataTypes.CallType.DELEGATECALL,
             DataTypes.AaveV3ExecutePreliquidationParams({user: address(preliquidation), debtToCover: 70 * 10 ** 18})
         );
 
-        uint256 xtzBalanceAfter = IERC20(XTZ).balanceOf(address(this));
-        uint256 stxtzBalanceAfter = IERC20(ST_XTZ).balanceOf(address(this));
+        uint256 borrowAssetBalanceAfter = IERC20(environment.borrowAssets[0]).balanceOf(address(this));
+        uint256 lendAssetBalanceAfter = IERC20(environment.lendAssets[0]).balanceOf(address(this));
 
-        uint256 collateralSeized = stxtzBalanceAfter - stxtzBalanceBefore;
+        uint256 collateralSeized = lendAssetBalanceAfter - lendAssetBalanceBefore;
 
-        assertTrue(collateralSeized < 40 * 10 ** 6);
-        assertTrue(xtzBalanceBefore - xtzBalanceAfter < 40 * 10 ** 18);
+        assertTrue(collateralSeized < 40 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        assertTrue(
+            borrowAssetBalanceBefore - borrowAssetBalanceAfter
+                < 40 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
     }
 
     // ============ LTV IN RANGE TESTS ============
 
     function test_preliquidate_ltv_low_range() public {
         // Set up position with LTV slightly above preLltv
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        uint256 borrowAmount = 55 * 10 ** 18; // Between preLltv and Lltv
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        uint256 borrowAmount = 55 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(); // Between preLltv and Lltv
 
-        deal(XTZ, address(preliquidation), borrowAmount);
+        deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, borrowAmount, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(environment.borrowAssets[0], borrowAmount, 2, 0, address(preliquidation));
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         preliquidation.preliquidate(
             id,
@@ -314,19 +536,34 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
 
     function test_preliquidate_ltv_mid_range() public {
         // Set up position with LTV in the middle of preLltv and Lltv
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        uint256 borrowAmount = 65 * 10 ** 18; // Middle of the range
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        uint256 borrowAmount = 65 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(); // Middle of the range
 
-        deal(XTZ, address(preliquidation), borrowAmount);
+        deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, borrowAmount, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(environment.borrowAssets[0], borrowAmount, 2, 0, address(preliquidation));
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         preliquidation.preliquidate(
             id,
@@ -337,19 +574,34 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
 
     function test_preliquidate_ltv_high_range() public {
         // Set up position with LTV close to Lltv
-        deal(ST_XTZ, address(preliquidation), 100 * 10 ** 6);
-        uint256 borrowAmount = 74 * 10 ** 18; // Close to Lltv
+        deal(
+            environment.lendAssets[0],
+            address(preliquidation),
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals()
+        );
+        uint256 borrowAmount = 74 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals(); // Close to Lltv
 
-        deal(XTZ, address(preliquidation), borrowAmount);
+        deal(environment.borrowAssets[0], address(preliquidation), borrowAmount);
 
         vm.startPrank(address(preliquidation));
-        IERC20(ST_XTZ).approve(address(pool), 100 * 10 ** 6);
-        pool.supply(ST_XTZ, 100 * 10 ** 6, address(preliquidation), 0);
-        pool.borrow(XTZ, borrowAmount, 2, 0, address(preliquidation));
+        IERC20(environment.lendAssets[0])
+            .approve(address(pool), 100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals());
+        pool.supply(
+            environment.lendAssets[0],
+            100 * 10 ** IERC20Metadata(environment.lendAssets[0]).decimals(),
+            address(preliquidation),
+            0
+        );
+        pool.borrow(environment.borrowAssets[0], borrowAmount, 2, 0, address(preliquidation));
         vm.stopPrank();
 
-        deal(XTZ, address(this), 12 * 10 ** 18);
-        IERC20(XTZ).approve(address(preliquidation), 12 * 10 ** 18);
+        deal(
+            environment.borrowAssets[0],
+            address(this),
+            12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals()
+        );
+        IERC20(environment.borrowAssets[0])
+            .approve(address(preliquidation), 12 * 10 ** IERC20Metadata(environment.borrowAssets[0]).decimals());
 
         preliquidation.preliquidate(
             id,
@@ -365,14 +617,14 @@ contract AaveV3PreliquidationFallbackHandlerTest is TestBase {
         vm.prank(address(newPreLiq));
         pool.setUserEMode(3);
         preliquidation = new AaveV3PreliquidationFallbackHandler(
-            AAVE_V3_POOL_ADDRESSES_PROVIDER,
+            environment.poolAddressesProvider,
             newPreLiq,
             2,
             8,
             DataTypes.AaveV3PreliquidationParamsInit({
                 id: id,
-                lendReserve: ST_XTZ,
-                borrowReserve: XTZ,
+                lendReserve: environment.lendAssets[0],
+                borrowReserve: environment.borrowAssets[0],
                 preLltv: PRE_LLTV,
                 preCF1: PRE_CF1,
                 preCF2: PRE_CF2,

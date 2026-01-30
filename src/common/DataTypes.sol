@@ -54,7 +54,6 @@ library DataTypes {
         DEFERRED, // low slippage queue
         PRIORITY, // medium slippage queue
         INSTANT // high slippage queue
-
     }
 
     struct WithdrawQueue {
@@ -105,7 +104,6 @@ library DataTypes {
         UNPROCESSED, // Request is pending processing
         CLAIMABLE, // Request is ready to be claimed
         CANCELLED // Request has been cancelled
-
     }
 
     /**
@@ -222,7 +220,6 @@ library DataTypes {
     enum CallType {
         CALL, // Regular call to external contract
         DELEGATECALL // Delegate call to external contract
-
     }
 
     /**
@@ -362,5 +359,41 @@ library DataTypes {
         uint256 preCF2;
         uint256 preIF1;
         uint256 preIF2;
+    }
+
+    /**
+     * @notice Structure for Merkl claim parameters
+     * @param users The addresses of the users to claim rewards for
+     * @param tokens The addresses of the tokens to claim rewards for
+     * @param amounts The amounts of the tokens to claim rewards for
+     * @param proofs The proofs of the Merkle tree
+     */
+    struct MerklClaimParams {
+        address[] users;
+        address[] tokens;
+        uint256[] amounts;
+        bytes32[][] proofs;
+    }
+
+    /**
+     * @notice Structure for vault action parameters
+     * @param vault The address of the vault
+     * @param amount The amount of the vault to supply
+     */
+    struct VaultActionParams {
+        address vault;
+        uint256 amount;
+    }
+
+    /**
+     * @notice Structure for Morpho flashloan parameters
+     * @param asset The address of the asset to flashloan
+     * @param amount The amount to flashloan
+     * @param callbackExecutionData The data to execute in the flashloan callback
+     */
+    struct MorphoFlashloanParams {
+        address asset;
+        uint256 amount;
+        bytes callbackExecutionData;
     }
 }

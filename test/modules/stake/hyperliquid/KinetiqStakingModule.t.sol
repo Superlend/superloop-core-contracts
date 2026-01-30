@@ -2,11 +2,12 @@
 
 pragma solidity ^0.8.13;
 
-import {TestBase} from "./TestBase.sol";
+import {TestBase} from "../../../core/TestBase.sol";
 import {DataTypes} from "../../../../src/common/DataTypes.sol";
 import {Superloop} from "../../../../src/core/Superloop/Superloop.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
 import {console} from "forge-std/console.sol";
@@ -14,12 +15,13 @@ import {console} from "forge-std/console.sol";
 contract KinetiqStakingModuleTest is TestBase {
     Superloop public superloopImplementation;
     address public user;
+    uint256 public constant WHYPE_SCALE = 10 ** 18;
 
     function setUp() public override {
         super.setUp();
 
         vm.startPrank(admin);
-        _deployModules();
+        _deployHyperliquidStakeModule();
 
         address[] memory modules = new address[](5);
         modules[0] = address(hyperliquidStakeModule);
@@ -29,10 +31,10 @@ contract KinetiqStakingModuleTest is TestBase {
         modules[4] = address(unwrapModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: WHYPE,
-            name: "WHYPE Vault",
-            symbol: "WHYPEV",
-            supplyCap: 100000 * WHYPE_SCALE,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -62,7 +64,7 @@ contract KinetiqStakingModuleTest is TestBase {
 
     function test_KinetiqStake() public {
         // transfer 100 wHYPE to the vault
-        deal(WHYPE, address(superloop), 100 * WHYPE_SCALE);
+        deal(environment.vaultAsset, address(superloop), 100 * 10 ** environment.vaultAssetDecimals);
 
         // call unwrap module & kinetiq stake module
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](2);
@@ -70,7 +72,8 @@ contract KinetiqStakingModuleTest is TestBase {
             executionType: DataTypes.CallType.DELEGATECALL,
             module: address(unwrapModule),
             data: abi.encodeWithSelector(
-                unwrapModule.execute.selector, DataTypes.AaveV3ActionParams({asset: WHYPE, amount: 100 * WHYPE_SCALE})
+                unwrapModule.execute.selector,
+                DataTypes.AaveV3ActionParams({asset: environment.vaultAsset, amount: 100 * WHYPE_SCALE})
             )
         });
         moduleExecutionData[1] = DataTypes.ModuleExecutionData({
@@ -78,7 +81,9 @@ contract KinetiqStakingModuleTest is TestBase {
             module: address(kinetiqStakeModule),
             data: abi.encodeWithSelector(
                 kinetiqStakeModule.execute.selector,
-                DataTypes.StakeParams({assets: 100 * WHYPE_SCALE, data: abi.encode(string(""))})
+                DataTypes.StakeParams({
+                    assets: 100 * 10 ** environment.vaultAssetDecimals, data: abi.encode(string(""))
+                })
             )
         });
 

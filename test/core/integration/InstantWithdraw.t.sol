@@ -17,16 +17,18 @@ contract InstantWithdrawTest is IntegrationBase {
     function test_instantWithdraw() public {
         _seed();
 
+        uint256 vaultScale = 10 ** environment.vaultAssetDecimals;
+
         uint256 userSharesBalanceBefore = superloop.balanceOf(admin);
-        uint256 userTokenBalanceBefore = IERC20(XTZ).balanceOf(admin);
+        uint256 userTokenBalanceBefore = IERC20(environment.vaultAsset).balanceOf(admin);
         uint256 treasurySharesBalanceBefore = superloop.balanceOf(treasury);
 
         vm.startPrank(admin);
-        uint256 instantWithdrawAmount = 10 * XTZ_SCALE;
+        uint256 instantWithdrawAmount = 10 * vaultScale;
         superloop.withdraw(instantWithdrawAmount, admin, admin);
 
         uint256 userSharesBalanceAfter = superloop.balanceOf(admin);
-        uint256 userTokenBalanceAfter = IERC20(XTZ).balanceOf(admin);
+        uint256 userTokenBalanceAfter = IERC20(environment.vaultAsset).balanceOf(admin);
         uint256 treasurySharesBalanceAfter = superloop.balanceOf(treasury);
 
         uint256 instantWithdrawFee = (instantWithdrawAmount * INSTANT_WITHDRAW_FEE) / 10_000;
@@ -39,7 +41,7 @@ contract InstantWithdrawTest is IntegrationBase {
         _seed();
 
         uint256 userSharesBalanceBefore = superloop.balanceOf(admin);
-        uint256 userTokenBalanceBefore = IERC20(XTZ).balanceOf(admin);
+        uint256 userTokenBalanceBefore = IERC20(environment.vaultAsset).balanceOf(admin);
         uint256 treasurySharesBalanceBefore = superloop.balanceOf(treasury);
 
         vm.startPrank(admin);
@@ -47,7 +49,7 @@ contract InstantWithdrawTest is IntegrationBase {
         superloop.redeem(instantRedeemAmount, admin, admin);
 
         uint256 userSharesBalanceAfter = superloop.balanceOf(admin);
-        uint256 userTokenBalanceAfter = IERC20(XTZ).balanceOf(admin);
+        uint256 userTokenBalanceAfter = IERC20(environment.vaultAsset).balanceOf(admin);
         uint256 treasurySharesBalanceAfter = superloop.balanceOf(treasury);
 
         uint256 instantRedeemFee = (instantRedeemAmount * INSTANT_WITHDRAW_FEE) / 10_000;
@@ -57,11 +59,12 @@ contract InstantWithdrawTest is IntegrationBase {
     }
 
     function _seed() internal {
-        uint256 seedAmount = 100 * XTZ_SCALE;
-        deal(XTZ, admin, seedAmount);
+        uint256 vaultScale = 10 ** environment.vaultAssetDecimals;
+        uint256 seedAmount = 100 * vaultScale;
+        deal(environment.vaultAsset, admin, seedAmount);
 
         vm.startPrank(admin);
-        IERC20(XTZ).approve(address(superloop), seedAmount);
+        IERC20(environment.vaultAsset).approve(address(superloop), seedAmount);
         superloop.seed(seedAmount);
         vm.stopPrank();
 

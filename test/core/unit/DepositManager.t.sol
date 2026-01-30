@@ -6,8 +6,9 @@ import {TestBase} from "../TestBase.sol";
 import {console} from "forge-std/console.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {Errors} from "../../../src/common/Errors.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -36,10 +37,10 @@ contract DepositManagerTest is TestBase {
         modules[4] = address(dexModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -62,7 +63,7 @@ contract DepositManagerTest is TestBase {
         );
         superloop = Superloop(payable(address(proxy)));
 
-        _deployAccountant(address(superloop));
+        _deployAccountant(address(superloop), environment.lendAssets, environment.borrowAssets);
         _deployWithdrawManager(address(superloop));
         _deployDepositManager(address(superloop));
 
@@ -83,7 +84,7 @@ contract DepositManagerTest is TestBase {
         uint256 nextDepositRequestId = depositManager.nextDepositRequestId();
 
         assertEq(vault, address(superloop));
-        assertEq(asset, XTZ);
+        assertEq(asset, environment.vaultAsset);
         assertEq(nextDepositRequestId, 1);
     }
 
@@ -93,10 +94,10 @@ contract DepositManagerTest is TestBase {
         uint256 depositAmount = 1000 * 10 ** 18;
 
         // Give user1 some XTZ tokens
-        deal(XTZ, user1, depositAmount);
+        deal(environment.vaultAsset, user1, depositAmount);
 
         vm.startPrank(user1);
-        IERC20(XTZ).approve(address(depositManager), depositAmount);
+        IERC20(environment.vaultAsset).approve(address(depositManager), depositAmount);
 
         // Expect the DepositRequested event
         vm.expectEmit(true, true, true, true);
@@ -121,18 +122,18 @@ contract DepositManagerTest is TestBase {
         assertEq(depositManager.totalPendingDeposits(), depositAmount);
 
         // Verify tokens were transferred to deposit manager
-        assertEq(IERC20(XTZ).balanceOf(address(depositManager)), depositAmount);
-        assertEq(IERC20(XTZ).balanceOf(user1), 0);
+        assertEq(IERC20(environment.vaultAsset).balanceOf(address(depositManager)), depositAmount);
+        assertEq(IERC20(environment.vaultAsset).balanceOf(user1), 0);
     }
 
     function test_requestDeposit_OnBehalfOf() public {
         uint256 depositAmount = 1000 * 10 ** 18;
 
         // Give user1 some XTZ tokens
-        deal(XTZ, user1, depositAmount);
+        deal(environment.vaultAsset, user1, depositAmount);
 
         vm.startPrank(user1);
-        IERC20(XTZ).approve(address(depositManager), depositAmount);
+        IERC20(environment.vaultAsset).approve(address(depositManager), depositAmount);
 
         // Expect the DepositRequested event with user2 as the beneficiary
         vm.expectEmit(true, true, true, true);
@@ -170,10 +171,10 @@ contract DepositManagerTest is TestBase {
         uint256 depositAmount = 200000 * 10 ** 18; // Exceeds supply cap of 100000 * 10**18
 
         // Give user1 enough XTZ tokens
-        deal(XTZ, user1, depositAmount);
+        deal(environment.vaultAsset, user1, depositAmount);
 
         vm.startPrank(user1);
-        IERC20(XTZ).approve(address(depositManager), depositAmount);
+        IERC20(environment.vaultAsset).approve(address(depositManager), depositAmount);
 
         vm.expectRevert(bytes(Errors.SUPPLY_CAP_EXCEEDED));
         depositManager.requestDeposit(depositAmount, address(0));
@@ -184,10 +185,10 @@ contract DepositManagerTest is TestBase {
         uint256 depositAmount = 1000 * 10 ** 18;
 
         // Give user1 some XTZ tokens
-        deal(XTZ, user1, depositAmount * 2);
+        deal(environment.vaultAsset, user1, depositAmount * 2);
 
         vm.startPrank(user1);
-        IERC20(XTZ).approve(address(depositManager), depositAmount * 2);
+        IERC20(environment.vaultAsset).approve(address(depositManager), depositAmount * 2);
 
         // Make first deposit request
         depositManager.requestDeposit(depositAmount, address(0));
@@ -203,7 +204,7 @@ contract DepositManagerTest is TestBase {
 
         // Don't give user1 any XTZ tokens
         vm.startPrank(user1);
-        IERC20(XTZ).approve(address(depositManager), depositAmount);
+        IERC20(environment.vaultAsset).approve(address(depositManager), depositAmount);
 
         vm.expectRevert();
         depositManager.requestDeposit(depositAmount, address(0));
@@ -216,13 +217,13 @@ contract DepositManagerTest is TestBase {
         uint256 depositAmount = 1000 * 10 ** 18;
 
         // Give user1 some XTZ tokens and make a deposit request
-        deal(XTZ, user1, depositAmount);
+        deal(environment.vaultAsset, user1, depositAmount);
 
         vm.startPrank(user1);
-        IERC20(XTZ).approve(address(depositManager), depositAmount);
+        IERC20(environment.vaultAsset).approve(address(depositManager), depositAmount);
         depositManager.requestDeposit(depositAmount, address(0));
 
-        uint256 userBalanceBefore = IERC20(XTZ).balanceOf(user1);
+        uint256 userBalanceBefore = IERC20(environment.vaultAsset).balanceOf(user1);
 
         // Expect the DepositRequestCancelled event
         vm.expectEmit(true, true, true, true);
@@ -244,18 +245,18 @@ contract DepositManagerTest is TestBase {
         assertEq(depositManager.totalPendingDeposits(), 0);
 
         // Verify tokens were refunded to user
-        assertEq(IERC20(XTZ).balanceOf(user1), userBalanceBefore + depositAmount);
-        assertEq(IERC20(XTZ).balanceOf(address(depositManager)), 0);
+        assertEq(IERC20(environment.vaultAsset).balanceOf(user1), userBalanceBefore + depositAmount);
+        assertEq(IERC20(environment.vaultAsset).balanceOf(address(depositManager)), 0);
     }
 
     function test_cancelDepositRequest_WrongOwner() public {
         uint256 depositAmount = 1000 * 10 ** 18;
 
         // Give user1 some XTZ tokens and make a deposit request
-        deal(XTZ, user1, depositAmount);
+        deal(environment.vaultAsset, user1, depositAmount);
 
         vm.startPrank(user1);
-        IERC20(XTZ).approve(address(depositManager), depositAmount);
+        IERC20(environment.vaultAsset).approve(address(depositManager), depositAmount);
         depositManager.requestDeposit(depositAmount, address(0));
         vm.stopPrank();
 

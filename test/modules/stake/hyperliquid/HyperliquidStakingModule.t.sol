@@ -2,23 +2,25 @@
 
 pragma solidity ^0.8.13;
 
-import {TestBase} from "./TestBase.sol";
+import {TestBase} from "../../../core/TestBase.sol";
 import {DataTypes} from "../../../../src/common/DataTypes.sol";
 import {Superloop} from "../../../../src/core/Superloop/Superloop.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {IPoolConfigurator} from "aave-v3-core/contracts/interfaces/IPoolConfigurator.sol";
 
 contract HyperliquidStakingModuleTest is TestBase {
     Superloop public superloopImplementation;
     address public user;
+    uint256 public constant WHYPE_SCALE = 10 ** 18;
 
     function setUp() public override {
         super.setUp();
 
         vm.startPrank(admin);
-        _deployModules();
+        _deployHyperliquidStakeModule();
 
         address[] memory modules = new address[](5);
         modules[0] = address(hyperliquidStakeModule);
@@ -28,7 +30,7 @@ contract HyperliquidStakingModuleTest is TestBase {
         modules[4] = address(unwrapModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: WHYPE,
+            asset: environment.vaultAsset,
             name: "WHYPE Vault",
             symbol: "WHYPEV",
             supplyCap: 100000 * WHYPE_SCALE,
@@ -69,7 +71,8 @@ contract HyperliquidStakingModuleTest is TestBase {
             executionType: DataTypes.CallType.DELEGATECALL,
             module: address(unwrapModule),
             data: abi.encodeWithSelector(
-                unwrapModule.execute.selector, DataTypes.AaveV3ActionParams({asset: WHYPE, amount: 100 * WHYPE_SCALE})
+                unwrapModule.execute.selector,
+                DataTypes.AaveV3ActionParams({asset: environment.vaultAsset, amount: 100 * WHYPE_SCALE})
             )
         });
         moduleExecutionData[1] = DataTypes.ModuleExecutionData({

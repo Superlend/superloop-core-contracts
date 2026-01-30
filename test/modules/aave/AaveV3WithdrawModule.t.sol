@@ -7,8 +7,9 @@ import {IFlashLoanSimpleReceiver} from "aave-v3-core/contracts/flashloan/interfa
 import {DataTypes} from "../../../src/common/DataTypes.sol";
 import {Superloop} from "../../../src/core/Superloop/Superloop.sol";
 import {ProxyAdmin} from "openzeppelin-contracts/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {
+    TransparentUpgradeableProxy
+} from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {console} from "forge-std/console.sol";
 
@@ -28,10 +29,10 @@ contract AaveV3WithdrawModuleTest is TestBase {
         modules[1] = address(withdrawModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
-            asset: XTZ,
-            name: "XTZ Vault",
-            symbol: "XTZV",
-            supplyCap: 100000 * 10 ** 18,
+            asset: environment.vaultAsset,
+            name: "Vault",
+            symbol: "VLT",
+            supplyCap: 100000 * 10 ** environment.vaultAssetDecimals,
             minimumDepositAmount: 100,
             instantWithdrawFee: 0,
             superloopModuleRegistry: address(moduleRegistry),
@@ -64,11 +65,11 @@ contract AaveV3WithdrawModuleTest is TestBase {
         _supply();
 
         // Arrange
-        uint256 withdrawAmount = 500 * 10 ** 18; // 1000 XTZ
+        uint256 withdrawAmount = 500 * 10 ** environment.vaultAssetDecimals; // 1000 vaultAsset
 
         // Create withdraw params
         DataTypes.AaveV3ActionParams memory withdrawParams =
-            DataTypes.AaveV3ActionParams({asset: XTZ, amount: withdrawAmount});
+            DataTypes.AaveV3ActionParams({asset: environment.vaultAsset, amount: withdrawAmount});
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
         moduleExecutionData[0] = DataTypes.ModuleExecutionData({
@@ -77,27 +78,28 @@ contract AaveV3WithdrawModuleTest is TestBase {
             data: abi.encodeWithSelector(withdrawModule.execute.selector, withdrawParams)
         });
 
-        (uint256 currentSupply,,,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
-        uint256 currentBalance = IERC20(XTZ).balanceOf(address(superloop));
+        (uint256 currentSupply,,,,,,,,) =
+            poolDataProvider.getUserReserveData(environment.vaultAsset, address(superloop));
+        uint256 currentBalance = IERC20(environment.vaultAsset).balanceOf(address(superloop));
 
         vm.prank(admin);
         superloop.operate(moduleExecutionData);
 
-        (uint256 finalSupply,,,,,,,,) = poolDataProvider.getUserReserveData(XTZ, address(superloop));
-        uint256 finalBalance = IERC20(XTZ).balanceOf(address(superloop));
+        (uint256 finalSupply,,,,,,,,) = poolDataProvider.getUserReserveData(environment.vaultAsset, address(superloop));
+        uint256 finalBalance = IERC20(environment.vaultAsset).balanceOf(address(superloop));
 
         assertTrue(finalSupply <= currentSupply);
         assertTrue(finalBalance > currentBalance);
     }
 
     function _supply() internal {
-        vm.startPrank(XTZ_WHALE);
-        IERC20(XTZ).transfer(address(superloop), 1000 * 10 ** 18);
+        vm.startPrank(environment.vaultAssetWhale);
+        IERC20(environment.vaultAsset).transfer(address(superloop), 1000 * 10 ** environment.vaultAssetDecimals);
         vm.stopPrank();
-        uint256 supplyAmount = 1000 * 10 ** 18; // 1000 XTZ
+        uint256 supplyAmount = 1000 * 10 ** environment.vaultAssetDecimals; // 1000 vaultAsset
 
         DataTypes.AaveV3ActionParams memory supplyParams =
-            DataTypes.AaveV3ActionParams({asset: XTZ, amount: supplyAmount});
+            DataTypes.AaveV3ActionParams({asset: environment.vaultAsset, amount: supplyAmount});
 
         DataTypes.ModuleExecutionData[] memory moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
         moduleExecutionData[0] = DataTypes.ModuleExecutionData({
