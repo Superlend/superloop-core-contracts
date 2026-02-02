@@ -32,6 +32,7 @@ import {MorphoFlashloanModule} from "../src/modules/morpho/MorphoFlashloanModule
 import {MorphoCallbackHandler} from "../src/modules/callback/MorphoCallbackHandler.sol";
 import {MerklModule} from "../src/modules/merkl/MerklModule.sol";
 import {IMorphoFlashLoanCallback} from "morpho-blue/interfaces/IMorphoCallbacks.sol";
+import {VaultSupplyModule} from "../src/modules/vault/VaultSupplyModule.sol";
 
 contract Deploy is Script {
     address public deployer;
@@ -79,6 +80,7 @@ contract Deploy is Script {
     AaveV3WithdrawModule public withdrawModule;
     AaveV3BorrowModule public borrowModule;
     AaveV3RepayModule public repayModule;
+    VaultSupplyModule public vaultSupplyModule;
 
     // morpho module
     MorphoFlashloanModule public morphoFlashloanModule;
@@ -170,7 +172,7 @@ contract Deploy is Script {
         // deploy all the modules
         deployModules();
 
-        address[] memory modules = new address[](13);
+        address[] memory modules = new address[](14);
         modules[0] = address(flashloanModule);
         modules[1] = address(aaveFlashloanCallbackHandler);
         modules[2] = address(emodeModule);
@@ -184,6 +186,7 @@ contract Deploy is Script {
         modules[10] = address(merklModule);
         modules[11] = address(depositManagerCallbackHandler);
         modules[12] = address(withdrawManagerCallbackHandler);
+        modules[13] = address(vaultSupplyModule);
 
         // deploy vault
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
@@ -260,6 +263,10 @@ contract Deploy is Script {
     }
 
     function deployModules() internal {
+        // deploy vault supply module
+        vaultSupplyModule = new VaultSupplyModule();
+        moduleRegistry.setModule("VaultSupplyModule", address(vaultSupplyModule));
+
         // deploy morpho flashloan module
         morphoFlashloanModule = new MorphoFlashloanModule(MORPHO);
         // moduleRegistry.setModule("MorphoFlashloanModule", address(morphoFlashloanModule));
@@ -419,6 +426,11 @@ contract Deploy is Script {
         console.log("AaveV3BorrowModule: %s", address(borrowModule));
         console.log("--------------------------------");
         console.log("AaveV3RepayModule: %s", address(repayModule));
+
+        // log vault supply module
+        console.log("--------------------------------");
+        console.log("Vault Supply Module: %s", address(vaultSupplyModule));
+        console.log("--------------------------------");
 
         // log all the dex modules
         console.log("--------------------------------");
