@@ -15,71 +15,66 @@ def main():
     extensions = [
         "tables",
         "fenced_code",
-        "codehilite",
         "toc",
-        "nl2br",
     ]
-    extension_configs = {
-        "codehilite": {"guess_lang": False, "css_class": "highlight"},
-    }
 
-    html_body = markdown.markdown(
-        md_text, extensions=extensions, extension_configs=extension_configs
-    )
+    html_body = markdown.markdown(md_text, extensions=extensions)
 
-    css = CSS(string="""
+    css_text = """
         @page {
             size: A4;
             margin: 2cm 2.5cm;
             @bottom-center {
-                content: "Superloop — Internal" ;
+                content: "Superloop - Internal";
                 font-size: 9px;
                 color: #888;
+                font-family: 'Liberation Sans', 'DejaVu Sans', sans-serif;
             }
             @bottom-right {
                 content: "Page " counter(page) " of " counter(pages);
                 font-size: 9px;
                 color: #888;
+                font-family: 'Liberation Sans', 'DejaVu Sans', sans-serif;
             }
         }
 
         body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-family: 'Liberation Sans', 'DejaVu Sans', sans-serif;
             font-size: 11px;
             line-height: 1.6;
             color: #1a1a2e;
         }
 
         h1 {
-            font-size: 26px;
+            font-size: 24px;
             color: #0f3460;
             border-bottom: 3px solid #0f3460;
             padding-bottom: 8px;
             margin-top: 30px;
-            page-break-after: avoid;
+            break-after: avoid;
         }
 
         h2 {
-            font-size: 20px;
+            font-size: 18px;
             color: #16213e;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #ccc;
             padding-bottom: 5px;
             margin-top: 25px;
-            page-break-after: avoid;
+            break-after: avoid;
         }
 
         h3 {
-            font-size: 15px;
+            font-size: 14px;
             color: #1a1a2e;
             margin-top: 18px;
-            page-break-after: avoid;
+            break-after: avoid;
         }
 
         h4 {
-            font-size: 13px;
+            font-size: 12px;
             color: #333;
             margin-top: 14px;
-            page-break-after: avoid;
+            break-after: avoid;
         }
 
         p {
@@ -91,7 +86,7 @@ def main():
             width: 100%;
             margin: 12px 0;
             font-size: 10px;
-            page-break-inside: avoid;
+            break-inside: avoid;
         }
 
         th {
@@ -99,12 +94,12 @@ def main():
             color: white;
             padding: 8px 10px;
             text-align: left;
-            font-weight: 600;
+            font-weight: bold;
         }
 
         td {
             padding: 6px 10px;
-            border-bottom: 1px solid #e0e0e0;
+            border-bottom: 1px solid #ddd;
         }
 
         tr:nth-child(even) td {
@@ -112,31 +107,33 @@ def main():
         }
 
         code {
-            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-family: 'Liberation Mono', 'DejaVu Sans Mono', monospace;
             font-size: 9.5px;
-            background-color: #f4f4f8;
+            background-color: #f0f0f5;
             padding: 1px 4px;
             border-radius: 3px;
             color: #c7254e;
         }
 
         pre {
-            background-color: #1e1e2e;
-            color: #cdd6f4;
+            background-color: #2b2b3b;
+            color: #e0e0e0;
             padding: 14px 16px;
             border-radius: 6px;
-            font-size: 9px;
+            font-size: 8.5px;
             line-height: 1.5;
-            overflow-x: auto;
-            page-break-inside: avoid;
+            white-space: pre;
+            overflow-wrap: break-word;
+            break-inside: avoid;
             margin: 10px 0;
         }
 
         pre code {
             background: none;
-            color: #cdd6f4;
+            color: #e0e0e0;
             padding: 0;
-            font-size: 9px;
+            font-size: 8.5px;
+            white-space: pre;
         }
 
         blockquote {
@@ -166,25 +163,27 @@ def main():
             margin: 3px 0;
         }
 
-        /* Title page styling */
         h1:first-of-type {
-            font-size: 32px;
+            font-size: 28px;
             text-align: center;
             border-bottom: 4px solid #0f3460;
             padding-bottom: 12px;
-            margin-top: 60px;
+            margin-top: 40px;
             margin-bottom: 20px;
         }
-    """)
+    """
 
     full_html = f"""<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
+<head>
+<meta charset="utf-8">
+</head>
 <body>
 {html_body}
 </body>
 </html>"""
 
+    css = CSS(string=css_text)
     HTML(string=full_html).write_pdf(str(pdf_path), stylesheets=[css])
     print(f"PDF generated: {pdf_path}")
     print(f"Size: {pdf_path.stat().st_size / 1024:.1f} KB")
