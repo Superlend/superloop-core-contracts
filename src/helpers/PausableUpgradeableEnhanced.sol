@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: UNLICENSED
 // OpenZeppelin Contracts (last updated v5.3.0) (utils/Pausable.sol)
 
 pragma solidity ^0.8.20;

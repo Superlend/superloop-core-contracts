@@ -69,6 +69,7 @@ contract Deploy is Script {
     uint256 public constant sUSDe_SCALE = 10 ** 18;
     uint256 public constant USDC_SCALE = 10 ** 6;
     uint256 public constant USDT_SCALE = 10 ** 6;
+    uint256 public constant DEPOSIT_AMOUNT = 2 * USDe_SCALE;
 
     SuperloopModuleRegistry public moduleRegistry;
 
@@ -114,13 +115,13 @@ contract Deploy is Script {
 
     function setUp() public {
         asset = USDe;
-        name = "Test Superloop USDe";
-        symbol = "TestsloopUSDe";
+        name = "Superloop USDe";
+        symbol = "sloopUSDe";
         supplyCap = 100_000 * USDe_SCALE; // in token terms
-        minimumDepositAmount = 100; // in token terms
+        minimumDepositAmount = USDe_SCALE / 100; // in token terms
         instantWithdrawFee = 10; // 0.1% in BPS
         cashReserve = 100; // 1% in BPS
-        performanceFee = 1000; // 10% in bps
+        performanceFee = 1000; // 15% in bps
         lendAssets = new address[](2);
         lendAssets[0] = USDe;
         lendAssets[1] = sUSDe;
@@ -128,7 +129,7 @@ contract Deploy is Script {
         borrowAssets[0] = USDC;
         borrowAssets[1] = USDT;
 
-        seedAmount = (1 * USDe_SCALE) / 100; // in token terms
+        seedAmount = (1 * USDe_SCALE) / 10; // in token terms
 
         // TODO: Check this config every time before deploying
         console.log("--------------------------------");
@@ -150,9 +151,8 @@ contract Deploy is Script {
         deployer = vm.addr(deployerPvtKey);
 
         vaultAdmin = deployer; // TODO: change to actual address
-        treasury = deployer; // TODO: change to actual address
-        // xtz vault's operator
-        vaultOperator = 0x0E9852b16AE49C99B84b0241E3C6F4a5692C6b05;
+        treasury = deployer;
+        vaultOperator = 0x1A753f2F2BA0071AaD1B147B93404a622bc72386; // actual vault operator
 
         console.log("--------------------------------");
         console.log("Depolyer config and roles: ");
@@ -167,7 +167,7 @@ contract Deploy is Script {
         vm.startBroadcast(deployerPvtKey);
 
         // deploy module registry
-        moduleRegistry = SuperloopModuleRegistry(0x6C520b2f5daDcFdA822AAF7f2b7470b3A686Fe1A);
+        moduleRegistry = new SuperloopModuleRegistry();
 
         // deploy all the modules
         deployModules();
@@ -269,7 +269,8 @@ contract Deploy is Script {
 
         // deploy morpho flashloan module
         morphoFlashloanModule = new MorphoFlashloanModule(MORPHO);
-        // moduleRegistry.setModule("MorphoFlashloanModule", address(morphoFlashloanModule));
+        moduleRegistry.setModule("MorphoFlashloanModule", address(morphoFlashloanModule));
+
         morphoCallbackHandler = new MorphoCallbackHandler();
         moduleRegistry.setModule("MorphoCallbackHandler", address(morphoCallbackHandler));
 
@@ -507,10 +508,11 @@ contract Deploy is Script {
         address[] memory supportedDepositManagers = new address[](1);
         supportedDepositManagers[0] = address(depositManager);
 
-        address[] memory supportedTokens = new address[](3);
+        address[] memory supportedTokens = new address[](4);
         supportedTokens[0] = USDe;
         supportedTokens[1] = USDC;
         supportedTokens[2] = USDT;
+        supportedTokens[3] = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2; // WETH
 
         vaultRouter = new VaultRouter(supportedVaults, supportedTokens, address(dexModule), supportedDepositManagers);
 
