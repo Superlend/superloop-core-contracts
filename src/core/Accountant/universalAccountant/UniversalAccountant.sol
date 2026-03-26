@@ -55,7 +55,7 @@ contract UniversalAccountant is UniversalAccountantBase, ReentrancyGuardUpgradea
         address vault = $.vault;
         uint256 totalAssets = 0;
         for (uint256 i; i < registeredAccountants.length;) {
-            totalAssets += IAaveV3AccountantPlugin(registeredAccountants[i]).getTotalAssets(vault);
+            totalAssets += IAccountantPlugin(registeredAccountants[i]).getTotalAssets(vault);
             unchecked {
                 ++i;
             }

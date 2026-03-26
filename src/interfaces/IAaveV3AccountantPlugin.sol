@@ -2,20 +2,15 @@
 
 pragma solidity ^0.8.13;
 
+import {IAccountantPlugin} from "./IAccountantPlugin.sol";
+
 /**
  * @title IAaveV3AccountantPlugin
  * @author Superlend
  * @notice Interface for Aave V3 accountant plugin operations
  * @dev Handles asset management and configuration for Aave V3 integration
  */
-interface IAaveV3AccountantPlugin {
-    /**
-     * @notice Gets the total assets managed by the accountant
-     * @param vault The address of the vault
-     * @return The total amount of assets
-     */
-    function getTotalAssets(address vault) external view returns (uint256);
-
+interface IAaveV3AccountantPlugin is IAccountantPlugin {
     /**
      * @notice Sets the pool addresses provider
      * @param poolAddressesProvider_ The address of the pool addresses provider
