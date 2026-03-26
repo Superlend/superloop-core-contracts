@@ -3,8 +3,8 @@
 pragma solidity ^0.8.13;
 
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import {IAaveV3AccountantPlugin} from "../../interfaces/IAaveV3AccountantPlugin.sol";
-import {AaveV3AccountantPluginStorage} from "../../core/lib/AaveV3AccountantPluginStorage.sol";
+import {IAaveV3AccountantPlugin} from "../../../interfaces/IAaveV3AccountantPlugin.sol";
+import {AaveV3AccountantPluginStorage} from "../../../core/lib/AaveV3AccountantPluginStorage.sol";
 
 /**
  * @title AaveV3AccountantPluginBase

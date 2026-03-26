@@ -9,7 +9,7 @@ import {
     ReentrancyGuardUpgradeable
 } from "openzeppelin-contracts-upgradeable/contracts/utils/ReentrancyGuardUpgradeable.sol";
 import {Errors} from "../../../common/Errors.sol";
-import {IAaveV3AccountantPlugin} from "../../../interfaces/IAaveV3AccountantPlugin.sol";
+import {IAccountantPlugin} from "../../../interfaces/IAccountantPlugin.sol";
 
 /**
  * @title UniversalAccountant

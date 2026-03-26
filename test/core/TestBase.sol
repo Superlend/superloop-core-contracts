@@ -28,7 +28,7 @@ import {
     TransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UniversalAccountant} from "../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
-import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
+import {AaveV3AccountantPlugin} from "../../src/plugins/Accountant/aave/AaveV3AccountantPlugin.sol";
 import {WithdrawManagerCallbackHandler} from "../../src/modules/callback/WithdrawManagerCallbackHandler.sol";
 import {UnwrapModule} from "../../src/modules/helper/UnwrapModule.sol";
 import {WrapModule} from "../../src/modules/helper/WrapModule.sol";

@@ -14,7 +14,7 @@ import {IPoolAddressesProvider} from "aave-v3-core/contracts/interfaces/IPoolAdd
 import {IPoolDataProvider} from "aave-v3-core/contracts/interfaces/IPoolDataProvider.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 import {IPriceOracleGetter} from "aave-v3-core/contracts/interfaces/IPriceOracleGetter.sol";
-import {AaveV3AccountantPlugin} from "../../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
+import {AaveV3AccountantPlugin} from "../../../src/plugins/Accountant/aave/AaveV3AccountantPlugin.sol";
 
 // TODO : revisit with mutli token setup for eth mainnet
 contract AccountantAaveV3Test is TestBase {

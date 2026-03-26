@@ -24,7 +24,7 @@ import {WithdrawManagerCallbackHandler} from "../src/modules/callback/WithdrawMa
 import {DepositManager} from "../src/core/DepositManager/DepositManager.sol";
 import {WithdrawManager} from "../src/core/WithdrawManager/WithdrawManager.sol";
 import {UniversalAccountant} from "../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
-import {AaveV3AccountantPlugin} from "../src/plugins/accountant/AaveV3AccountantPlugin.sol";
+import {AaveV3AccountantPlugin} from "../src/plugins/Accountant/aave/AaveV3AccountantPlugin.sol";
 import {AaveV3PreliquidationFallbackHandler} from "../src/modules/fallback/AaveV3PreliquidationFallbackHandler.sol";
 import {VaultRouter} from "../src/helpers/VaultRouter.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";

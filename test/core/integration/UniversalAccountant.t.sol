@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {TestBase} from "../TestBase.sol";
 import {UniversalAccountant} from "../../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
-import {AaveV3AccountantPlugin} from "../../../src/plugins/Accountant/AaveV3AccountantPlugin.sol";
+import {AaveV3AccountantPlugin} from "../../../src/plugins/Accountant/aave/AaveV3AccountantPlugin.sol";
 import {
     TransparentUpgradeableProxy
 } from "openzeppelin-contracts/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
