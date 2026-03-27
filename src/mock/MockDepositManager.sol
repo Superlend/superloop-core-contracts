@@ -11,7 +11,7 @@ import {IDepositManager} from "../interfaces/IDepositManager.sol";
  * @notice Mock deposit manager for testing purposes
  * @dev Provides basic deposit manager functionality for testing
  */
-contract MockDepositManager is IDepositManager {
+contract MockDepositManager {
     using SafeERC20 for IERC20;
 
     uint256 public constant MOCK_SHARES_PER_TOKEN = 1e18; // 1:1 ratio for simplicity
@@ -21,7 +21,7 @@ contract MockDepositManager is IDepositManager {
      * @param amount The amount of tokens to deposit
      * @param onBehalfOf The address to receive the shares
      */
-    function requestDeposit(uint256 amount, address onBehalfOf) external override {
+    function requestDeposit(uint256 amount, address onBehalfOf) external {
         // In a real implementation, this would handle the deposit request
         // For testing, we just return a mock number of shares
     }
