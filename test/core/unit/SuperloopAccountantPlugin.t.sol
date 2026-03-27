@@ -7,6 +7,7 @@ import {DataTypes} from "../../../src/common/DataTypes.sol";
 
 contract MockTokenWithDecimals {
     uint8 private immutable _decimals;
+    mapping(address => uint256) private _balances;
 
     constructor(uint8 decimals_) {
         _decimals = decimals_;
@@ -14,6 +15,14 @@ contract MockTokenWithDecimals {
 
     function decimals() external view returns (uint8) {
         return _decimals;
+    }
+
+    function balanceOf(address account) external view returns (uint256) {
+        return _balances[account];
+    }
+
+    function setBalance(address account, uint256 amount) external {
+        _balances[account] = amount;
     }
 }
 
@@ -127,6 +136,14 @@ contract SuperloopAccountantPluginHarness is SuperloopAccountantPlugin {
     {
         return _getAssetsFromUnderlyingVault(params, queryVault);
     }
+
+    function exposedGetIdleUnderlyingVaultAssets(GetAssetsFromManagerParams memory params, address queryVault)
+        external
+        view
+        returns (uint256)
+    {
+        return _getIdleUnderlyingVaultAssets(params, queryVault);
+    }
 }
 
 contract SuperloopAccountantPluginUnitTest is Test {
@@ -172,7 +189,8 @@ contract SuperloopAccountantPluginUnitTest is Test {
             underlyingAssetPrice: UNDERLYING_PRICE,
             baseAssetPrice: BASE_PRICE,
             underlyingAssetDecimals: UNDERLYING_ASSET_DECIMALS,
-            baseAssetDecimals: BASE_ASSET_DECIMALS
+            baseAssetDecimals: BASE_ASSET_DECIMALS,
+            underlyingAsset: address(underlyingAsset)
         });
     }
 
@@ -256,7 +274,6 @@ contract SuperloopAccountantPluginUnitTest is Test {
         assertEq(assets, expectedAssets);
     }
 
-
     function test_getAssetsFromDepositManager_returnsZeroForCancelled() public {
         DataTypes.DepositRequestData memory req = DataTypes.DepositRequestData({
             amount: 9e18,
@@ -268,6 +285,18 @@ contract SuperloopAccountantPluginUnitTest is Test {
         depositManager.setUserDepositRequest(req, 1);
 
         uint256 assets = plugin.exposedGetAssetsFromDepositManager(_params());
+        assertEq(assets, 0);
+    }
+
+    function test_getIdleUnderlyingVaultAssets_returnsConvertedBalance() public {
+        underlyingAsset.setBalance(address(queryVault), 10e18);
+
+        uint256 assets = plugin.exposedGetIdleUnderlyingVaultAssets(_params(), address(queryVault));
+        assertEq(assets, 1e7);
+    }
+
+    function test_getIdleUnderlyingVaultAssets_returnsZeroWhenNoBalance() public {
+        uint256 assets = plugin.exposedGetIdleUnderlyingVaultAssets(_params(), address(queryVault));
         assertEq(assets, 0);
     }
 
@@ -319,8 +348,11 @@ contract SuperloopAccountantPluginUnitTest is Test {
         underlyingVault.setBalance(address(queryVault), 10e18); // 2e7 assets from here
         uint256 expectedAssetsFromUnderlyingVault = 2e7;
 
-        uint256 expectedTotalAssets = 
-            expectedAssetsFromWithdrawManager + expectedAssetsFromDepositManager + expectedAssetsFromUnderlyingVault;
+        underlyingAsset.setBalance(address(queryVault), 5e18); // 5e6 idle assets
+        uint256 expectedIdleAssets = 5e6;
+
+        uint256 expectedTotalAssets = expectedAssetsFromWithdrawManager + expectedAssetsFromDepositManager
+            + expectedAssetsFromUnderlyingVault + expectedIdleAssets;
 
         uint256 totalAssets = plugin.getTotalAssets(address(queryVault));
         assertEq(totalAssets, expectedTotalAssets);

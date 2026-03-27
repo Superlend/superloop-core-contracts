@@ -8,7 +8,7 @@ import {IDepositManager} from "../../../interfaces/IDepositManager.sol";
 import {IWithdrawManager} from "../../../interfaces/IWithdrawManager.sol";
 import {DataTypes} from "../../../common/DataTypes.sol";
 import {Math} from "openzeppelin-contracts/contracts/utils/math/Math.sol";
-import {IERC4626} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
+import {IERC4626, IERC20} from "openzeppelin-contracts/contracts/interfaces/IERC4626.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/interfaces/IERC20Metadata.sol";
 import {SuperloopAccountantPluginStorage} from "../../../core/lib/SuperloopAccountantPluginStorage.sol";
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
@@ -40,14 +40,17 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
             underlyingAssetPrice: underlyingAssetPrice,
             baseAssetPrice: baseAssetPrice,
             underlyingAssetDecimals: underlyingAssetDecimals,
-            baseAssetDecimals: baseAssetDecimals
+            baseAssetDecimals: baseAssetDecimals,
+            underlyingAsset: underlyingAsset
         });
 
         uint256 assetsFromWithdrawQueues = _getAssetsFromWithdrawManager(params);
         uint256 assetsFromDepositQueues = _getAssetsFromDepositManager(params);
         uint256 assetsFromUnderlyingVault = _getAssetsFromUnderlyingVault(params, vault);
+        uint256 idleUnderlyingVaultAssets = _getIdleUnderlyingVaultAssets(params, vault);
 
-        uint256 totalAssets = assetsFromWithdrawQueues + assetsFromDepositQueues + assetsFromUnderlyingVault;
+        uint256 totalAssets =
+            assetsFromWithdrawQueues + assetsFromDepositQueues + assetsFromUnderlyingVault + idleUnderlyingVaultAssets;
 
         return totalAssets;
     }
@@ -60,6 +63,24 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
         uint256 baseAssetPrice;
         uint256 underlyingAssetDecimals;
         uint256 baseAssetDecimals;
+        address underlyingAsset;
+    }
+
+    function _getIdleUnderlyingVaultAssets(GetAssetsFromManagerParams memory params, address vault)
+        internal
+        view
+        returns (uint256)
+    {
+        // get the balance of underlying asset in the vault
+        uint256 idleUnderlyingVaultAssets = IERC20(params.underlyingAsset).balanceOf(vault);
+
+        if (idleUnderlyingVaultAssets == 0) return 0;
+
+        return Math.mulDiv(
+            idleUnderlyingVaultAssets * params.underlyingAssetPrice,
+            10 ** params.baseAssetDecimals,
+            params.baseAssetPrice * 10 ** params.underlyingAssetDecimals
+        );
     }
 
     function _getAssetsFromWithdrawManager(GetAssetsFromManagerParams memory params) internal view returns (uint256) {
