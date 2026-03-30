@@ -39,7 +39,7 @@ import {KinetiqStakeModule} from "../../src/modules/stake/hyperliquid/KinetiqSta
 import {HyperbeatStakingModule} from "../../src/modules/stake/hyperliquid/HyperbeatStakingModule.sol";
 import {VaultSupplyModule} from "../../src/modules/vault/VaultSupplyModule.sol";
 import {VaultWithdrawModule} from "../../src/modules/vault/VaultWithdrawModule.sol";
-
+import {SuperloopDepositModule} from "../../src/modules/superloop/SuperloopDepositModule.sol";
 import {MerklModule} from "../../src/modules/merkl/MerklModule.sol";
 
 import {MorphoFlashloanModule} from "../../src/modules/morpho/MorphoFlashloanModule.sol";
@@ -76,6 +76,7 @@ abstract contract TestBase is TestEnv {
     AaveV3BorrowModule public borrowModule;
     AaveV3RepayModule public repayModule;
     UniversalDexModule public dexModule;
+    SuperloopDepositModule public superloopDepositModule;
     AccountantAaveV3 public accountantAaveV3;
     UniversalAccountant public accountant;
     WithdrawManager public withdrawManager;
@@ -105,7 +106,7 @@ abstract contract TestBase is TestEnv {
     function setUp() public virtual override {
         super.setUp();
 
-        uint256 envIndex = 2; // TODO: move this to config
+        uint256 envIndex = 4; // TODO: move this to config
         environment = testEnvironments[envIndex];
 
         if (environment.morpho != address(0)) {
@@ -179,6 +180,9 @@ abstract contract TestBase is TestEnv {
 
         dexModule = new UniversalDexModule();
         moduleRegistry.setModule("UniversalDexModule", address(dexModule));
+
+        superloopDepositModule = new SuperloopDepositModule(environment.externalVault);
+        moduleRegistry.setModule("SuperloopDepositModule", address(superloopDepositModule));
 
         depositManagerCallbackHandler = new DepositManagerCallbackHandler();
         moduleRegistry.setModule("DepositManagerCallbackHandler", address(depositManagerCallbackHandler));

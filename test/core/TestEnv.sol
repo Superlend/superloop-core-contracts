@@ -24,6 +24,7 @@ abstract contract TestEnv is Test {
         address morpho;
         uint8 emodeCategory;
         address distributor;
+        address externalVault;
     }
 
     // etlk chain
@@ -44,7 +45,8 @@ abstract contract TestEnv is Test {
     address public constant USDC_ETH = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     address public constant USDC_ETH_Whale = 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c;
     address public constant USDT_ETH = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
-
+    address public constant WBTC_ETH = 0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599;
+    address public constant WBTC_ETH_WHALE = 0x5Ee5bf7ae06D1Be5997A1A72006FE6C607eC6DE8;
     // hyperevm
     address public constant WHYPE = 0x5555555555555555555555555555555555555555;
     address public constant WHYPE_WHALE = 0x008ae222661B6A42e3A097bd7AAC15412829106b;
@@ -83,7 +85,8 @@ abstract contract TestEnv is Test {
                 stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f,
                 morpho: 0x0000000000000000000000000000000000000000,
                 emodeCategory: 3,
-                distributor: 0x0000000000000000000000000000000000000000
+                distributor: 0x0000000000000000000000000000000000000000,
+                externalVault: address(0)
             })
         );
 
@@ -108,7 +111,8 @@ abstract contract TestEnv is Test {
                 stablecoinWhale: 0x998098A1B2E95e2b8f15360676428EdFd976861f,
                 morpho: 0x0000000000000000000000000000000000000000,
                 emodeCategory: 2,
-                distributor: 0x0000000000000000000000000000000000000000
+                distributor: 0x0000000000000000000000000000000000000000,
+                externalVault: address(0)
             })
         );
 
@@ -133,7 +137,8 @@ abstract contract TestEnv is Test {
                 stablecoinWhale: USDC_ETH_Whale,
                 morpho: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb,
                 emodeCategory: 2,
-                distributor: 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae
+                distributor: 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae,
+                externalVault: address(0)
             })
         );
 
@@ -158,7 +163,34 @@ abstract contract TestEnv is Test {
                 stablecoinWhale: USDC_ETH_Whale,
                 morpho: 0x0000000000000000000000000000000000000000,
                 emodeCategory: 1,
-                distributor: 0x0000000000000000000000000000000000000000
+                distributor: 0x0000000000000000000000000000000000000000,
+                externalVault: address(0)
+            })
+        );
+
+        // eth mainnet btc carry trade
+        testEnvironments.push(
+            TestEnvironment({
+                chainId: 1,
+                chainName: "mainnet",
+                vaultAsset: WBTC_ETH,
+                vaultAssetDecimals: 8,
+                lendAssets: _singleAddressArray(WBTC_ETH),
+                borrowAssets: _singleAddressArray(USDe),
+                poolAddressesProvider: 0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e,
+                poolDataProvider: 0x0a16f2FCC0D44FaE41cc54e079281D84A363bECD,
+                priceOracle: 0x54586bE62E3c3580375aE3723C145253060Ca0C2,
+                pool: 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2,
+                vaultAssetWhale: WBTC_ETH_WHALE,
+                poolConfigurator: 0x64b761D848206f447Fe2dd461b0c635Ec39EbB27,
+                poolAdmin: 0x72B8fD3eb0c08275b8B60F96aAb0C8a50Cb80EcA,
+                router: 0xE592427A0AEce92De3Edee1F18E0157C05861564,
+                stablecoin: USDC_ETH,
+                stablecoinWhale: USDC_ETH_Whale,
+                morpho: 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb,
+                emodeCategory: 0,
+                distributor: 0x3Ef3D8bA38EBe18DB133cEc108f4D14CE00Dd9Ae,
+                externalVault: 0x86A849d858c525b0A37ea9605bAb228bc877Cb0f
             })
         );
     }

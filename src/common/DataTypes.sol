@@ -396,4 +396,36 @@ library DataTypes {
         uint256 amount;
         bytes callbackExecutionData;
     }
+
+    /**
+     * @notice Structure for Superloop accountant plugin module initialization
+     * @param underlyingVault The address of the underlying vault
+     * @param aaveOracle The address of the Aave oracle
+     */
+    struct SuperloopAccountantPluginModuleInitData {
+        address underlyingVault;
+        address aaveOracle;
+    }
+
+    /**
+     * @notice Structure for Superloop deposit parameters
+     * @param asset The address of the asset to deposit
+     * @param amount The amount of the asset to deposit
+     */
+    struct SuperloopDepositParams {
+        address asset;
+        uint256 amount;
+    }
+
+    /**
+     * @notice Structure for Superloop withdraw parameters
+     * @param asset The address of the asset to withdraw
+     * @param amount The amount of the asset to withdraw
+     * @param requestType The type of withdraw request
+     */
+    struct SuperloopWithdrawParams {
+        address asset;
+        uint256 amount;
+        WithdrawRequestType requestType;
+    }
 }

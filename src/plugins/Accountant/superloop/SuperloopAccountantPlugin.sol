@@ -14,7 +14,12 @@ import {SuperloopAccountantPluginStorage} from "../../../core/lib/SuperloopAccou
 import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 
 contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
-    constructor(address owner) SuperloopAccountantPluginBase(owner) {}
+    constructor(DataTypes.SuperloopAccountantPluginModuleInitData memory data)
+        SuperloopAccountantPluginBase(_msgSender())
+    {
+        SuperloopAccountantPluginStorage.setUnderlyingVault(data.underlyingVault);
+        SuperloopAccountantPluginStorage.setAaveOracle(data.aaveOracle);
+    }
 
     function getTotalAssets(address vault) external view returns (uint256) {
         SuperloopAccountantPluginStorage.SuperloopAccountantPluginState storage $ =
@@ -34,20 +39,23 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
         uint256 baseAssetPrice = IAaveOracle($.aaveOracle).getAssetPrice(baseAsset);
 
         GetAssetsFromManagerParams memory params = GetAssetsFromManagerParams({
+            // underlying vault stuff
             vault: underlyingVault,
             vaultDecimals: underlyingVaultDecimals,
             exchangeRate: exchangeRate,
             underlyingAssetPrice: underlyingAssetPrice,
-            baseAssetPrice: baseAssetPrice,
             underlyingAssetDecimals: underlyingAssetDecimals,
-            baseAssetDecimals: baseAssetDecimals,
-            underlyingAsset: underlyingAsset
+            underlyingAsset: underlyingAsset,
+            // query vault stuff
+            queryVault: vault,
+            baseAssetPrice: baseAssetPrice,
+            baseAssetDecimals: baseAssetDecimals
         });
 
         uint256 assetsFromWithdrawQueues = _getAssetsFromWithdrawManager(params);
         uint256 assetsFromDepositQueues = _getAssetsFromDepositManager(params);
-        uint256 assetsFromUnderlyingVault = _getAssetsFromUnderlyingVault(params, vault);
-        uint256 idleUnderlyingVaultAssets = _getIdleUnderlyingVaultAssets(params, vault);
+        uint256 assetsFromUnderlyingVault = _getAssetsFromUnderlyingVault(params);
+        uint256 idleUnderlyingVaultAssets = _getIdleUnderlyingVaultAssets(params);
 
         uint256 totalAssets =
             assetsFromWithdrawQueues + assetsFromDepositQueues + assetsFromUnderlyingVault + idleUnderlyingVaultAssets;
@@ -60,19 +68,17 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
         uint8 vaultDecimals;
         uint256 exchangeRate;
         uint256 underlyingAssetPrice;
-        uint256 baseAssetPrice;
         uint256 underlyingAssetDecimals;
-        uint256 baseAssetDecimals;
         address underlyingAsset;
+
+        address queryVault;
+        uint256 baseAssetPrice;
+        uint256 baseAssetDecimals;
     }
 
-    function _getIdleUnderlyingVaultAssets(GetAssetsFromManagerParams memory params, address vault)
-        internal
-        view
-        returns (uint256)
-    {
+    function _getIdleUnderlyingVaultAssets(GetAssetsFromManagerParams memory params) internal view returns (uint256) {
         // get the balance of underlying asset in the vault
-        uint256 idleUnderlyingVaultAssets = IERC20(params.underlyingAsset).balanceOf(vault);
+        uint256 idleUnderlyingVaultAssets = IERC20(params.underlyingAsset).balanceOf(params.queryVault);
 
         if (idleUnderlyingVaultAssets == 0) return 0;
 
@@ -107,7 +113,8 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
         GetAssetsFromManagerParams memory params,
         DataTypes.WithdrawRequestType requestType
     ) private view returns (uint256) {
-        (DataTypes.WithdrawRequestData memory req,) = withdrawManager.userWithdrawRequest(params.vault, requestType);
+        (DataTypes.WithdrawRequestData memory req,) =
+            withdrawManager.userWithdrawRequest(params.queryVault, requestType);
 
         DataTypes.RequestProcessingState state = req.state;
         if (
@@ -126,7 +133,7 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
     function _getAssetsFromDepositManager(GetAssetsFromManagerParams memory params) internal view returns (uint256) {
         IDepositManager depositManager = IDepositManager(ISuperloop(params.vault).depositManagerModule());
 
-        (DataTypes.DepositRequestData memory depositRequest,) = depositManager.userDepositRequest(params.vault);
+        (DataTypes.DepositRequestData memory depositRequest,) = depositManager.userDepositRequest(params.queryVault);
 
         // if there is a pending or partially processed request, then use the
         //amount of tokens left to be processed, because rest shares worth rest of the tokens are already minted to the user
@@ -148,12 +155,8 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
         );
     }
 
-    function _getAssetsFromUnderlyingVault(GetAssetsFromManagerParams memory params, address queryVault)
-        internal
-        view
-        returns (uint256)
-    {
-        uint256 totalShares = IERC4626(params.vault).balanceOf(queryVault);
+    function _getAssetsFromUnderlyingVault(GetAssetsFromManagerParams memory params) internal view returns (uint256) {
+        uint256 totalShares = IERC4626(params.vault).balanceOf(params.queryVault);
         uint256 amountFromShares = totalShares * params.exchangeRate / 10 ** params.vaultDecimals;
 
         return Math.mulDiv(

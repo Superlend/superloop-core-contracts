@@ -18,6 +18,7 @@ import {console} from "forge-std/console.sol";
 import {IMorphoFlashLoanCallback} from "morpho-blue/interfaces/IMorphoCallbacks.sol";
 import {IUniPool} from "../../../src/mock/IUniPool.sol";
 import {IERC20Metadata} from "openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IDepositManager} from "../../../src/interfaces/IDepositManager.sol";
 
 abstract contract IntegrationBase is TestBase {
     struct CURVE_IJ {
@@ -61,7 +62,7 @@ abstract contract IntegrationBase is TestBase {
         vm.startPrank(admin);
         _deployModules();
 
-        address[] memory modules = new address[](12);
+        address[] memory modules = new address[](13);
         modules[0] = address(dexModule);
         modules[1] = address(flashloanModule);
         modules[2] = address(callbackHandler);
@@ -74,6 +75,7 @@ abstract contract IntegrationBase is TestBase {
         modules[9] = address(morphoFlashloanModule);
         modules[10] = address(morphoCallbackHandler);
         modules[11] = address(vaultSupplyModule);
+        modules[12] = address(superloopDepositModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
             asset: environment.vaultAsset,
@@ -204,6 +206,29 @@ abstract contract IntegrationBase is TestBase {
             executionType: DataTypes.CallType.DELEGATECALL,
             module: address(morphoFlashloanModule),
             data: abi.encodeWithSelector(morphoFlashloanModule.execute.selector, flashloanParams)
+        });
+    }
+
+    function _superloopDepositCall(uint256 amount, address asset)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(superloopDepositModule),
+            data: abi.encodeWithSelector(
+                superloopDepositModule.execute.selector,
+                DataTypes.SuperloopDepositParams({asset: asset, amount: amount})
+            )
+        });
+    }
+
+    function _superloopExitDepositCall(uint256 requestId) internal view returns (DataTypes.ModuleExecutionData memory) {
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(superloopDepositModule),
+            data: abi.encodeWithSelector(superloopDepositModule.exit.selector, requestId)
         });
     }
 

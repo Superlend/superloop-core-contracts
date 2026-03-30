@@ -111,7 +111,7 @@ contract MockQueryVaultForPlugin {
 }
 
 contract SuperloopAccountantPluginHarness is SuperloopAccountantPlugin {
-    constructor(address owner) SuperloopAccountantPlugin(owner) {}
+    constructor(DataTypes.SuperloopAccountantPluginModuleInitData memory data) SuperloopAccountantPlugin(data) {}
 
     function exposedGetAssetsFromWithdrawManager(GetAssetsFromManagerParams memory params)
         external
@@ -129,20 +129,20 @@ contract SuperloopAccountantPluginHarness is SuperloopAccountantPlugin {
         return _getAssetsFromDepositManager(params);
     }
 
-    function exposedGetAssetsFromUnderlyingVault(GetAssetsFromManagerParams memory params, address queryVault)
+    function exposedGetAssetsFromUnderlyingVault(GetAssetsFromManagerParams memory params)
         external
         view
         returns (uint256)
     {
-        return _getAssetsFromUnderlyingVault(params, queryVault);
+        return _getAssetsFromUnderlyingVault(params);
     }
 
-    function exposedGetIdleUnderlyingVaultAssets(GetAssetsFromManagerParams memory params, address queryVault)
+    function exposedGetIdleUnderlyingVaultAssets(GetAssetsFromManagerParams memory params)
         external
         view
         returns (uint256)
     {
-        return _getIdleUnderlyingVaultAssets(params, queryVault);
+        return _getIdleUnderlyingVaultAssets(params);
     }
 }
 
@@ -164,7 +164,11 @@ contract SuperloopAccountantPluginUnitTest is Test {
     uint256 internal constant BASE_PRICE = 100 * 1e8;
 
     function setUp() public {
-        plugin = new SuperloopAccountantPluginHarness(address(this));
+        plugin = new SuperloopAccountantPluginHarness(
+            DataTypes.SuperloopAccountantPluginModuleInitData({
+                underlyingVault: address(underlyingVault), aaveOracle: address(oracle)
+            })
+        );
         underlyingAsset = new MockTokenWithDecimals(UNDERLYING_ASSET_DECIMALS);
         baseAsset = new MockTokenWithDecimals(BASE_ASSET_DECIMALS);
         oracle = new MockAaveOracle();
@@ -190,7 +194,8 @@ contract SuperloopAccountantPluginUnitTest is Test {
             baseAssetPrice: BASE_PRICE,
             underlyingAssetDecimals: UNDERLYING_ASSET_DECIMALS,
             baseAssetDecimals: BASE_ASSET_DECIMALS,
-            underlyingAsset: address(underlyingAsset)
+            underlyingAsset: address(underlyingAsset),
+            queryVault: address(queryVault)
         });
     }
 
@@ -291,12 +296,12 @@ contract SuperloopAccountantPluginUnitTest is Test {
     function test_getIdleUnderlyingVaultAssets_returnsConvertedBalance() public {
         underlyingAsset.setBalance(address(queryVault), 10e18);
 
-        uint256 assets = plugin.exposedGetIdleUnderlyingVaultAssets(_params(), address(queryVault));
+        uint256 assets = plugin.exposedGetIdleUnderlyingVaultAssets(_params());
         assertEq(assets, 1e7);
     }
 
     function test_getIdleUnderlyingVaultAssets_returnsZeroWhenNoBalance() public {
-        uint256 assets = plugin.exposedGetIdleUnderlyingVaultAssets(_params(), address(queryVault));
+        uint256 assets = plugin.exposedGetIdleUnderlyingVaultAssets(_params());
         assertEq(assets, 0);
     }
 
