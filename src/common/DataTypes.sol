@@ -428,4 +428,14 @@ library DataTypes {
         uint256 amount;
         WithdrawRequestType requestType;
     }
+
+    /**
+     * @notice Structure for Superloop exit withdraw parameters
+     * @param requestId The id of the withdraw request to cancel
+     * @param requestType The type of withdraw request
+     */
+    struct SuperloopExitWithdrawParams {
+        uint256 requestId;
+        WithdrawRequestType requestType;
+    }
 }
