@@ -40,6 +40,7 @@ import {HyperbeatStakingModule} from "../../src/modules/stake/hyperliquid/Hyperb
 import {VaultSupplyModule} from "../../src/modules/vault/VaultSupplyModule.sol";
 import {VaultWithdrawModule} from "../../src/modules/vault/VaultWithdrawModule.sol";
 import {SuperloopDepositModule} from "../../src/modules/superloop/SuperloopDepositModule.sol";
+import {SuperloopWithdrawModule} from "../../src/modules/superloop/SuperloopWithdrawModule.sol";
 import {MerklModule} from "../../src/modules/merkl/MerklModule.sol";
 
 import {MorphoFlashloanModule} from "../../src/modules/morpho/MorphoFlashloanModule.sol";
@@ -77,6 +78,7 @@ abstract contract TestBase is TestEnv {
     AaveV3RepayModule public repayModule;
     UniversalDexModule public dexModule;
     SuperloopDepositModule public superloopDepositModule;
+    SuperloopWithdrawModule public superloopWithdrawModule;
     AccountantAaveV3 public accountantAaveV3;
     UniversalAccountant public accountant;
     WithdrawManager public withdrawManager;
@@ -183,6 +185,9 @@ abstract contract TestBase is TestEnv {
 
         superloopDepositModule = new SuperloopDepositModule(environment.externalVault);
         moduleRegistry.setModule("SuperloopDepositModule", address(superloopDepositModule));
+
+        superloopWithdrawModule = new SuperloopWithdrawModule(environment.externalVault);
+        moduleRegistry.setModule("SuperloopWithdrawModule", address(superloopWithdrawModule));
 
         depositManagerCallbackHandler = new DepositManagerCallbackHandler();
         moduleRegistry.setModule("DepositManagerCallbackHandler", address(depositManagerCallbackHandler));

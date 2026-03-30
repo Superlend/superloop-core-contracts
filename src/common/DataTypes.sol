@@ -419,12 +419,10 @@ library DataTypes {
 
     /**
      * @notice Structure for Superloop withdraw parameters
-     * @param asset The address of the asset to withdraw
      * @param amount The amount of the asset to withdraw
      * @param requestType The type of withdraw request
      */
     struct SuperloopWithdrawParams {
-        address asset;
         uint256 amount;
         WithdrawRequestType requestType;
     }

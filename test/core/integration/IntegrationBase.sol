@@ -62,7 +62,7 @@ abstract contract IntegrationBase is TestBase {
         vm.startPrank(admin);
         _deployModules();
 
-        address[] memory modules = new address[](13);
+        address[] memory modules = new address[](14);
         modules[0] = address(dexModule);
         modules[1] = address(flashloanModule);
         modules[2] = address(callbackHandler);
@@ -76,6 +76,7 @@ abstract contract IntegrationBase is TestBase {
         modules[10] = address(morphoCallbackHandler);
         modules[11] = address(vaultSupplyModule);
         modules[12] = address(superloopDepositModule);
+        modules[13] = address(superloopWithdrawModule);
 
         DataTypes.VaultInitData memory initData = DataTypes.VaultInitData({
             asset: environment.vaultAsset,
@@ -194,6 +195,23 @@ abstract contract IntegrationBase is TestBase {
         });
     }
 
+    function _resolveWithdrawRequestsCall(
+        uint256 shares,
+        DataTypes.WithdrawRequestType requestType,
+        address _withdrawManager,
+        bytes memory data
+    ) internal view returns (DataTypes.ModuleExecutionData memory) {
+        DataTypes.ResolveWithdrawRequestsData memory resolveWithdrawRequestsData =
+            DataTypes.ResolveWithdrawRequestsData({
+                shares: shares, requestType: requestType, callbackExecutionData: data
+            });
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.CALL,
+            module: _withdrawManager,
+            data: abi.encodeWithSelector(withdrawManager.resolveWithdrawRequests.selector, resolveWithdrawRequestsData)
+        });
+    }
+
     function _flashloanCall(address asset, uint256 amount, bytes memory data)
         internal
         view
@@ -243,6 +261,51 @@ abstract contract IntegrationBase is TestBase {
             executionType: DataTypes.CallType.DELEGATECALL,
             module: address(superloopDepositModule),
             data: abi.encodeWithSelector(superloopDepositModule.exit.selector, requestId)
+        });
+    }
+
+    function _superloopWithdrawCall(uint256 amount, DataTypes.WithdrawRequestType requestType)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(superloopWithdrawModule),
+            data: abi.encodeWithSelector(
+                superloopWithdrawModule.execute.selector,
+                DataTypes.SuperloopWithdrawParams({amount: amount, requestType: requestType})
+            )
+        });
+    }
+
+    function _superloopExitWithdrawCall(uint256 requestId, DataTypes.WithdrawRequestType requestType)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(superloopWithdrawModule),
+            data: abi.encodeWithSelector(
+                superloopWithdrawModule.exit.selector,
+                DataTypes.SuperloopExitWithdrawParams({requestId: requestId, requestType: requestType})
+            )
+        });
+    }
+
+    function _superloopClaimWithdrawCall(uint256 requestId, DataTypes.WithdrawRequestType requestType)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.DELEGATECALL,
+            module: address(superloopWithdrawModule),
+            data: abi.encodeWithSelector(
+                superloopWithdrawModule.resolve.selector,
+                DataTypes.SuperloopExitWithdrawParams({requestId: requestId, requestType: requestType})
+            )
         });
     }
 

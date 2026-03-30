@@ -126,7 +126,7 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
         }
 
         uint256 remainingShares = req.shares - req.sharesProcessed;
-        uint256 amountFromShares = remainingShares * params.exchangeRate / 10 ** params.vaultDecimals;
+        uint256 amountFromShares = (remainingShares * params.exchangeRate) / 10 ** params.vaultDecimals;
         return amountFromShares + req.amountClaimable;
     }
 
@@ -157,7 +157,7 @@ contract SuperloopAccountantPlugin is SuperloopAccountantPluginBase {
 
     function _getAssetsFromUnderlyingVault(GetAssetsFromManagerParams memory params) internal view returns (uint256) {
         uint256 totalShares = IERC4626(params.vault).balanceOf(params.queryVault);
-        uint256 amountFromShares = totalShares * params.exchangeRate / 10 ** params.vaultDecimals;
+        uint256 amountFromShares = (totalShares * params.exchangeRate) / 10 ** params.vaultDecimals;
 
         return Math.mulDiv(
             amountFromShares * params.underlyingAssetPrice,

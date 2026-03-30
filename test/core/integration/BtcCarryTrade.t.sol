@@ -10,6 +10,8 @@ import {IPoolDataProvider} from "../../../lib/aave-v3-core/contracts/interfaces/
 import {UniversalAccountant} from "../../../src/core/Accountant/universalAccountant/UniversalAccountant.sol";
 import {IDepositManager} from "../../../src/interfaces/IDepositManager.sol";
 import {ISuperloop} from "../../../src/interfaces/ISuperloop.sol";
+import {IWithdrawManager} from "../../../src/interfaces/IWithdrawManager.sol";
+import {IAaveOracle} from "aave-v3-core/contracts/interfaces/IAaveOracle.sol";
 
 contract BtcCarryTradeTest is IntegrationBase {
     SuperloopAccountantPlugin public superloopPlugin;
@@ -182,17 +184,122 @@ contract BtcCarryTradeTest is IntegrationBase {
         totalAssets = superloop.totalAssets();
         assertApproxEqAbs(totalAssets, depositAmount, 100);
 
-        // donate some USDe to the underlying vault => simulating yield generation
-        deal(environment.borrowAssets[0], address(environment.externalVault), 100_000 * usdeAssetScale);
+        // donate some USDe to the underlying vault => simulating yield
+        // make the exchange rate exactly 2
+        uint256 amountToDonate = (2 * ISuperloop(environment.externalVault).totalSupply() / 100)
+            - ISuperloop(environment.externalVault).totalAssets() + 100;
+        address tempUser = makeAddr("tempUser");
+        deal(environment.borrowAssets[0], tempUser, amountToDonate);
+
+        vm.prank(tempUser);
+        IERC20(environment.borrowAssets[0]).transfer(address(environment.externalVault), amountToDonate);
+
+        ISuperloop(environment.externalVault).realizePerformanceFee();
+
         exchangeRate = ISuperloop(environment.externalVault).convertToAssets(ONE_SHARE);
         totalAssets = superloop.totalAssets();
         // observe the total assets
         assertTrue(totalAssets > depositAmount); // because of yield generation
+        uint256 totalAssetsBenchmark = totalAssets;
 
         // make 2 withdraw requests for the vault
+        moduleExecutionData = new DataTypes.ModuleExecutionData[](2);
+        moduleExecutionData[0] = _superloopWithdrawCall(100 * ONE_SHARE, DataTypes.WithdrawRequestType.GENERAL);
+        moduleExecutionData[1] = _superloopWithdrawCall(200 * ONE_SHARE, DataTypes.WithdrawRequestType.INSTANT);
+
+        vm.prank(admin);
+        superloop.operate(moduleExecutionData);
+
+        address usdeWithdrawManager = ISuperloop(environment.externalVault).withdrawManager();
+        (DataTypes.WithdrawRequestData memory withdrawRequestGeneral, uint256 withdrawRequestIdGeneral) = IWithdrawManager(
+                usdeWithdrawManager
+            ).userWithdrawRequest(address(superloop), DataTypes.WithdrawRequestType.GENERAL);
+        (DataTypes.WithdrawRequestData memory withdrawRequestInstant, uint256 withdrawRequestIdInstant) = IWithdrawManager(
+                usdeWithdrawManager
+            ).userWithdrawRequest(address(superloop), DataTypes.WithdrawRequestType.INSTANT);
+
         // observe the total assets
+        assertEq(withdrawRequestGeneral.shares, 100 * ONE_SHARE);
+        assertEq(withdrawRequestGeneral.sharesProcessed, 0);
+        assertEq(uint256(withdrawRequestGeneral.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
+        assertEq(withdrawRequestInstant.shares, 200 * ONE_SHARE);
+        assertEq(withdrawRequestInstant.sharesProcessed, 0);
+        assertEq(uint256(withdrawRequestInstant.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
+
+        totalAssets = superloop.totalAssets();
+        assertApproxEqAbs(totalAssets, totalAssetsBenchmark, 100);
 
         // process one and cancel the other withdraw request
         // observe the total assets
+        moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
+        moduleExecutionData[0] =
+            _superloopExitWithdrawCall(withdrawRequestIdInstant, DataTypes.WithdrawRequestType.INSTANT);
+        vm.prank(admin);
+        superloop.operate(moduleExecutionData);
+
+        withdrawRequestInstant = IWithdrawManager(usdeWithdrawManager)
+            .withdrawRequest(withdrawRequestIdInstant, DataTypes.WithdrawRequestType.INSTANT);
+        assertEq(withdrawRequestInstant.shares, 200 * ONE_SHARE);
+        assertEq(withdrawRequestInstant.sharesProcessed, 0);
+        assertEq(withdrawRequestInstant.amountClaimed, 0);
+        assertEq(withdrawRequestInstant.amountClaimable, 0);
+        assertEq(uint256(withdrawRequestInstant.state), uint256(DataTypes.RequestProcessingState.CANCELLED));
+
+        totalAssets = superloop.totalAssets();
+        assertApproxEqAbs(totalAssets, totalAssetsBenchmark, 100);
+
+        // process one withdraw, don't claim yet just resolve and query total assets
+        emptyModuleExecutionData = new DataTypes.ModuleExecutionData[](0);
+        emptyResolutionExecutionData = new DataTypes.ModuleExecutionData[](1);
+        emptyResolutionExecutionData[0] = _resolveWithdrawRequestsCall(
+            50 * ONE_SHARE,
+            DataTypes.WithdrawRequestType.GENERAL,
+            usdeWithdrawManager,
+            abi.encode(emptyModuleExecutionData)
+        );
+
+        vm.prank(usdeAdmin);
+        ISuperloop(environment.externalVault).operate(emptyResolutionExecutionData);
+
+        withdrawRequestInstant = IWithdrawManager(usdeWithdrawManager)
+            .withdrawRequest(withdrawRequestIdGeneral, DataTypes.WithdrawRequestType.GENERAL);
+        assertEq(withdrawRequestInstant.shares, 100 * ONE_SHARE);
+        assertEq(withdrawRequestInstant.sharesProcessed, 50 * ONE_SHARE);
+        assertEq(withdrawRequestInstant.amountClaimed, 0);
+        assertTrue(withdrawRequestInstant.amountClaimable > 0);
+        assertEq(uint256(withdrawRequestInstant.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_PROCESSED));
+
+        totalAssets = superloop.totalAssets();
+        assertApproxEqAbs(totalAssets, totalAssetsBenchmark, 100);
+
+        moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
+        moduleExecutionData[0] =
+            _superloopClaimWithdrawCall(withdrawRequestIdGeneral, DataTypes.WithdrawRequestType.GENERAL);
+
+        vm.prank(admin);
+        superloop.operate(moduleExecutionData);
+        withdrawRequestInstant = IWithdrawManager(usdeWithdrawManager)
+            .withdrawRequest(withdrawRequestIdGeneral, DataTypes.WithdrawRequestType.GENERAL);
+        assertEq(withdrawRequestInstant.shares, 100 * ONE_SHARE);
+        assertEq(withdrawRequestInstant.sharesProcessed, 50 * ONE_SHARE);
+        assertTrue(withdrawRequestInstant.amountClaimable == 0);
+        assertTrue(withdrawRequestInstant.amountClaimed > 0);
+        assertEq(uint256(withdrawRequestInstant.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_PROCESSED));
+
+        totalAssets = superloop.totalAssets();
+        assertApproxEqAbs(totalAssets, totalAssetsBenchmark, 100);
+
+        vm.prank(usdeAdmin);
+        ISuperloop(environment.externalVault).operate(emptyResolutionExecutionData);
+        withdrawRequestInstant = IWithdrawManager(usdeWithdrawManager)
+            .withdrawRequest(withdrawRequestIdGeneral, DataTypes.WithdrawRequestType.GENERAL);
+        assertEq(withdrawRequestInstant.shares, 100 * ONE_SHARE);
+        assertEq(withdrawRequestInstant.sharesProcessed, 100 * ONE_SHARE);
+        assertTrue(withdrawRequestInstant.amountClaimable > 0);
+        assertTrue(withdrawRequestInstant.amountClaimed > 0);
+        assertEq(uint256(withdrawRequestInstant.state), uint256(DataTypes.RequestProcessingState.FULLY_PROCESSED));
+
+        totalAssets = superloop.totalAssets();
+        assertApproxEqAbs(totalAssets, totalAssetsBenchmark, 100);
     }
 }
