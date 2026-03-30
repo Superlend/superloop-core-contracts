@@ -165,6 +165,20 @@ abstract contract IntegrationBase is TestBase {
         });
     }
 
+    function _resolveDepositRequestsCall(address asset, uint256 amount, address _depositManager, bytes memory data)
+        internal
+        view
+        returns (DataTypes.ModuleExecutionData memory)
+    {
+        DataTypes.ResolveDepositRequestsData memory resolveDepositRequestsData =
+            DataTypes.ResolveDepositRequestsData({asset: asset, amount: amount, callbackExecutionData: data});
+        return DataTypes.ModuleExecutionData({
+            executionType: DataTypes.CallType.CALL,
+            module: _depositManager,
+            data: abi.encodeWithSelector(depositManager.resolveDepositRequests.selector, resolveDepositRequestsData)
+        });
+    }
+
     function _resolveWithdrawRequestsCall(uint256 shares, DataTypes.WithdrawRequestType requestType, bytes memory data)
         internal
         view

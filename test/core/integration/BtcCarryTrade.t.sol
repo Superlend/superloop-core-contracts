@@ -103,9 +103,10 @@ contract BtcCarryTradeTest is IntegrationBase {
         assertApproxEqAbs(currentSupply, depositAmount, 10);
         assertApproxEqAbs(currentBorrowBalance, borrowAmount, 10);
 
-        (DataTypes.DepositRequestData memory _depositRequest,) = IDepositManager(
-                ISuperloop(environment.externalVault).depositManagerModule()
-            ).userDepositRequest(address(superloop));
+        address usdeDepositManager = ISuperloop(environment.externalVault).depositManagerModule();
+
+        (DataTypes.DepositRequestData memory _depositRequest,) =
+            IDepositManager(usdeDepositManager).userDepositRequest(address(superloop));
 
         assertApproxEqAbs(_depositRequest.amount, depositAmountToProcess, 100);
         assertApproxEqAbs(_depositRequest.amountProcessed, 0, 10);
@@ -114,13 +115,79 @@ contract BtcCarryTradeTest is IntegrationBase {
         assertEq(uint256(_depositRequest.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
 
         // partially resolve the vault's deposit request => have a partially processed deposit request
+        address usdeAdmin = ISuperloop(environment.externalVault).vaultOperator();
+        // do am empty resolution of 10k USDe from USDe vault admin
+        DataTypes.ModuleExecutionData[] memory emptyModuleExecutionData = new DataTypes.ModuleExecutionData[](0);
+        DataTypes.ModuleExecutionData[] memory emptyResolutionExecutionData = new DataTypes.ModuleExecutionData[](1);
+        emptyResolutionExecutionData[0] = _resolveDepositRequestsCall(
+            environment.borrowAssets[0],
+            depositAmountToProcess / 2,
+            usdeDepositManager,
+            abi.encode(emptyModuleExecutionData)
+        );
+
+        vm.prank(usdeAdmin);
+        ISuperloop(environment.externalVault).operate(emptyResolutionExecutionData);
+
+        (_depositRequest,) = IDepositManager(usdeDepositManager).userDepositRequest(address(superloop));
+        assertApproxEqAbs(_depositRequest.amount, depositAmountToProcess, 100);
+        assertApproxEqAbs(_depositRequest.amountProcessed, depositAmountToProcess / 2, 10);
+        assertEq(uint256(_depositRequest.state), uint256(DataTypes.RequestProcessingState.PARTIALLY_PROCESSED));
+
+        uint256 shareBalance = ISuperloop(environment.externalVault).balanceOf(address(superloop));
+        uint256 exchangeRate = ISuperloop(environment.externalVault).convertToAssets(ONE_SHARE);
+
         // observe the total assets
+        totalAssets = superloop.totalAssets();
+        uint256 estimatedProcessedAssets = shareBalance * exchangeRate / 1e20;
+        assertApproxEqAbs(estimatedProcessedAssets, depositAmountToProcess / 2, 1e6);
+        assertApproxEqAbs(totalAssets, depositAmount, 100);
 
         // completely process the vault's deposit request => have a fully processed deposit request
         // observe the total assets
+        vm.prank(usdeAdmin);
+        ISuperloop(environment.externalVault).operate(emptyResolutionExecutionData);
+        (_depositRequest,) = IDepositManager(usdeDepositManager).userDepositRequest(address(superloop));
+        assertApproxEqAbs(_depositRequest.amount, depositAmountToProcess, 100);
+        assertApproxEqAbs(_depositRequest.amountProcessed, depositAmountToProcess, 10);
+        assertEq(uint256(_depositRequest.state), uint256(DataTypes.RequestProcessingState.FULLY_PROCESSED));
+        shareBalance = ISuperloop(environment.externalVault).balanceOf(address(superloop));
+        exchangeRate = ISuperloop(environment.externalVault).convertToAssets(ONE_SHARE);
+
+        totalAssets = superloop.totalAssets();
+        estimatedProcessedAssets = shareBalance * exchangeRate / 1e20;
+        assertApproxEqAbs(estimatedProcessedAssets, depositAmountToProcess, 1e6);
+        assertApproxEqAbs(totalAssets, depositAmount, 100);
+
+        // make another deposit request and cancel it.
+        moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
+        moduleExecutionData[0] =
+            _superloopDepositCall((borrowAmount - depositAmountToProcess) / 2, environment.borrowAssets[0]);
+        vm.prank(admin);
+        superloop.operate(moduleExecutionData);
+
+        (DataTypes.DepositRequestData memory __depositRequest, uint256 requestId) =
+            IDepositManager(usdeDepositManager).userDepositRequest(address(superloop));
+        assertApproxEqAbs(__depositRequest.amount, (borrowAmount - depositAmountToProcess) / 2, 100);
+        assertApproxEqAbs(__depositRequest.amountProcessed, 0, 10);
+        assertEq(uint256(__depositRequest.state), uint256(DataTypes.RequestProcessingState.UNPROCESSED));
+
+        totalAssets = superloop.totalAssets();
+        assertApproxEqAbs(totalAssets, depositAmount, 100);
+
+        moduleExecutionData = new DataTypes.ModuleExecutionData[](1);
+        moduleExecutionData[0] = _superloopExitDepositCall(requestId);
+        vm.prank(admin);
+        superloop.operate(moduleExecutionData);
+        totalAssets = superloop.totalAssets();
+        assertApproxEqAbs(totalAssets, depositAmount, 100);
 
         // donate some USDe to the underlying vault => simulating yield generation
+        deal(environment.borrowAssets[0], address(environment.externalVault), 100_000 * usdeAssetScale);
+        exchangeRate = ISuperloop(environment.externalVault).convertToAssets(ONE_SHARE);
+        totalAssets = superloop.totalAssets();
         // observe the total assets
+        assertTrue(totalAssets > depositAmount); // because of yield generation
 
         // make 2 withdraw requests for the vault
         // observe the total assets
